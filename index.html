@@ -8,9 +8,9 @@
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body { font-family: system-ui, sans-serif; background: #0a0a0f; color: #fff; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
     
-    #header { height: 50px; background: #141420; border-bottom: 1px solid #2a2a3a; display: flex; align-items: center; padding: 0 10px; gap: 10px; z-index: 10; flex-shrink: 0; }
-    .logo { color: #00e5ff; font-weight: 900; letter-spacing: 1px; font-size: 14px; }
-    .btn { background: #2a2a3a; color: #ccc; border: none; padding: 8px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+    #header { height: 50px; background: #141420; border-bottom: 1px solid #2a2a3a; display: flex; align-items: center; padding: 0 10px; gap: 10px; z-index: 10; flex-shrink: 0; overflow-x: auto; white-space: nowrap; }
+    .logo { color: #00e5ff; font-weight: 900; letter-spacing: 1px; font-size: 14px; flex-shrink: 0; }
+    .btn { background: #2a2a3a; color: #ccc; border: none; padding: 8px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; flex-shrink: 0; }
     .btn:hover { background: #3a3a4a; color: #fff; }
     .btn.primary { background: #00e5ff; color: #000; }
     .btn.green { background: #4ade80; color: #000; }
@@ -210,7 +210,6 @@
         let selected = null;
         let idCounter = 1;
         
-        // حالة اللاعب
         let player = null;
         let isPlaying = false;
 
@@ -339,12 +338,10 @@
                 
                 const mixer = new THREE.AnimationMixer(model);
                 const actions = {};
-                // تجهيز كل الحركات المتاحة
                 gltf.animations.forEach(clip => {
                     actions[clip.name] = mixer.clipAction(clip);
                 });
 
-                // تشغيل حركة الوقوف كبداية
                 if (actions['Idle']) actions['Idle'].play();
 
                 model.userData = { 
@@ -444,15 +441,12 @@
             } catch(e) { console.error(e); addObject('cube'); }
         }
 
-        // --- وضع التشغيل والتحكم ---
         document.getElementById('btn-play').onclick = () => {
-            // البحث عن شخصية لتحكم بها
             player = objects.find(o => o.userData.type === 'character');
             if (!player) { alert('أضف شخصية أولاً لتتمكن من اللعب!'); return; }
             
             isPlaying = true;
             document.body.classList.add('play-mode');
-            // نقل الكاميرا خلف الشخصية
             camera.position.copy(player.position).add(new THREE.Vector3(0, 3, -6));
             controls.target.copy(player.position);
             resize();
@@ -464,36 +458,27 @@
             resize();
         };
 
-        // عصا التحكم (Joystick Logic)
         const jZone = document.getElementById('joystick-zone');
         const jKnob = document.getElementById('joystick-knob');
         let jActive = false;
         let jVector = new THREE.Vector2(0, 0);
         const maxJDist = 35;
 
-        function handleJoyStart(e) {
-            jActive = true;
-            handleJoyMove(e);
-        }
+        function handleJoyStart(e) { jActive = true; handleJoyMove(e); }
         function handleJoyMove(e) {
             if (!jActive) return;
             const touch = e.touches ? e.touches[0] : e;
             const rect = jZone.getBoundingClientRect();
             const centerX = rect.left + rect.width / 2;
             const centerY = rect.top + rect.height / 2;
-            
             let dx = touch.clientX - centerX;
             let dy = touch.clientY - centerY;
             const dist = Math.sqrt(dx*dx + dy*dy);
-            
             if (dist > maxJDist) {
                 dx = (dx / dist) * maxJDist;
                 dy = (dy / dist) * maxJDist;
             }
-            
             jKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-            
-            // حساب اتجاه الحركة (تطبيع)
             jVector.x = dx / maxJDist;
             jVector.y = dy / maxJDist;
         }
@@ -506,7 +491,6 @@
         jZone.addEventListener('touchstart', handleJoyStart, {passive: false});
         jZone.addEventListener('touchmove', handleJoyMove, {passive: false});
         jZone.addEventListener('touchend', handleJoyEnd);
-        
         jZone.addEventListener('mousedown', handleJoyStart);
         window.addEventListener('mousemove', handleJoyMove);
         window.addEventListener('mouseup', handleJoyEnd);
@@ -532,7 +516,6 @@
 
             objects.forEach(o => {
                 if (o.userData.mixer) o.userData.mixer.update(dt);
-                
                 const p = o.userData.physics;
                 if (p && p.enabled && o.isMesh) {
                     p.vy -= 9.8 * dt;
@@ -548,29 +531,20 @@
                 }
             });
 
-            // --- تحديث حركة الشخصية ---
             if (isPlaying && player) {
                 const speed = 5;
-                // تحريك الشخصية بناءً على عصا التحكم
                 if (jVector.lengthSq() > 0.01) {
-                    // الحركة للأمام والخلف بناءً على المحور Y للشاشة
                     player.position.z -= jVector.y * speed * dt;
-                    // الحركة يمين ويسار بناءً على المحور X
                     player.position.x += jVector.x * speed * dt;
-                    
-                    // تدوير الشخصية باتجاه الحركة
                     const targetRot = Math.atan2(jVector.x, -jVector.y);
-                    // دوران ناعم
                     player.rotation.y = THREE.MathUtils.lerp(player.rotation.y, targetRot, 10 * dt);
 
-                    // تبديل الأنيميشن إلى المشي
                     if (player.userData.actions && player.userData.actions['Walking'] && player.userData.currentAction !== 'Walking') {
                         if (player.userData.actions[player.userData.currentAction]) player.userData.actions[player.userData.currentAction].fadeOut(0.2);
                         player.userData.actions['Walking'].reset().fadeIn(0.2).play();
                         player.userData.currentAction = 'Walking';
                     }
                 } else {
-                    // العودة لأنيميشن الوقوف
                     if (player.userData.actions && player.userData.actions['Idle'] && player.userData.currentAction !== 'Idle') {
                         if (player.userData.actions[player.userData.currentAction]) player.userData.actions[player.userData.currentAction].fadeOut(0.2);
                         player.userData.actions['Idle'].reset().fadeIn(0.2).play();
@@ -578,7 +552,6 @@
                     }
                 }
 
-                // الكاميرا تتبع الشخصية (Third Person)
                 const targetCamPos = player.position.clone().add(new THREE.Vector3(0, 3, -6).applyAxisAngle(new THREE.Vector3(0,1,0), player.rotation.y));
                 camera.position.lerp(targetCamPos, 5 * dt);
                 controls.target.lerp(player.position.clone().add(new THREE.Vector3(0, 1, 0)), 5 * dt);
