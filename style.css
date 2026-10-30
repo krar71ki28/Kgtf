@@ -57,3 +57,9 @@ body.play-mode #status-bar { left: auto; right: 15px; z-index: 30; background: r
     .prop-row { margin-bottom: 6px; }
     .panel-section { padding: 8px; }
 }
+
+/* HUD (Health & Score) */
+#hud { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: none; gap: 20px; z-index: 30; font-weight: bold; font-family: monospace; font-size: 16px; background: rgba(0,0,0,0.5); padding: 10px 20px; border-radius: 8px; border: 1px solid #444; }
+body.play-mode #hud { display: flex; }
+#health-bar { color: #ff5577; }
+#score-bar { color: #ffaa00; }

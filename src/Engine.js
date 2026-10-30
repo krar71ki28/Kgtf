@@ -89,6 +89,28 @@ export class Engine {
         );
         this.scene.add(this.moon);
 
+        // === المطر (Rain System) ===
+        this.isRaining = false;
+        this.rainCount = 4000;
+        this.rainSpeed = 25;
+        this.rainRange = 60;
+        this.rainGeometry = new THREE.BufferGeometry();
+        const rainPositions = new Float32Array(this.rainCount * 3);
+        for (let i = 0; i < this.rainCount * 3; i += 3) {
+            rainPositions[i] = (Math.random() - 0.5) * this.rainRange;
+            rainPositions[i + 1] = Math.random() * 30;
+            rainPositions[i + 2] = (Math.random() - 0.5) * this.rainRange;
+        }
+        this.rainGeometry.setAttribute('position', new THREE.BufferAttribute(rainPositions, 3));
+        this.rainMaterial = new THREE.PointsMaterial({ color: 0x88bbff, size: 0.15, transparent: true, opacity: 0.7 });
+        this.rain = new THREE.Points(this.rainGeometry, this.rainMaterial);
+        this.rain.visible = false;
+        this.scene.add(this.rain);
+
+        // === الأعداء (Enemies) ===
+        this.enemies = [];
+        this.obstacles = [];
+
         this.objects = [];
         this.selected = null;
         this.idCounter = 1;
@@ -136,6 +158,14 @@ export class Engine {
         else if (type === 'building') {
             obj = new THREE.Mesh(new THREE.BoxGeometry(2, 4, 2), this.makeMaterial('glass', 0x88ccff));
             obj.position.y = 2;
+        }
+        else if (type === 'enemy') {
+            obj = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0xff0000 }));
+            obj.position.y = 0.5;
+            obj.userData = { id: 'enemy_' + (this.idCounter++), type: 'enemy', speed: 2 };
+            this.scene.add(obj);
+            this.enemies.push(obj);
+            return obj;
         }
 
         if (obj.isMesh || obj.isGroup) {
@@ -201,6 +231,13 @@ export class Engine {
             this.scene.remove(this.selected);
             if (this.selected.material) this.selected.material.dispose();
             this.objects.splice(idx, 1);
+            
+            // إذا كان عدو، نمسحه من مصفوفة الأعداء
+            if (this.selected.userData.type === 'enemy') {
+                const eIdx = this.enemies.indexOf(this.selected);
+                if (eIdx !== -1) this.enemies.splice(eIdx, 1);
+            }
+
             this.selectObject(null);
             if (this.onSceneChange) this.onSceneChange();
         }
@@ -208,6 +245,7 @@ export class Engine {
 
     clearScene() {
         this.sceneVersion++;
+        this.enemies = [];
         this.objects.forEach(obj => {
             this.scene.remove(obj);
             if (obj.traverse) {
@@ -357,6 +395,37 @@ export class Engine {
         this.moon.position.z = Math.sin(angle + Math.PI) * 20;
 
         this.stars.rotation.y += 0.01 * dt;
+
+        // === تحديث المطر ===
+        if (this.isRaining) {
+            const positions = this.rainGeometry.attributes.position.array;
+            for (let i = 1; i < positions.length; i += 3) {
+                positions[i] -= this.rainSpeed * dt; // تحريك للأسفل
+                if (positions[i] < 0) {
+                    positions[i] = 30; // إعادة للأعلى
+                }
+            }
+            this.rainGeometry.attributes.position.needsUpdate = true;
+        }
+
+        // === تحديث الأعداء ===
+        if (document.body.classList.contains('play-mode') && window.playerInstance && window.playerInstance.playerModel) {
+            for (let i = this.enemies.length - 1; i >= 0; i--) {
+                const enemy = this.enemies[i];
+                const direction = new THREE.Vector3().subVectors(window.playerInstance.playerModel.position, enemy.position);
+                direction.y = 0;
+                const distance = direction.length();
+
+                if (distance < 1.0) {
+                    window.playerInstance.takeDamage(10);
+                    // ننقل العدو بعيد شوي عشان ما يضرب بسرعة
+                    enemy.position.add(direction.clone().normalize().multiplyScalar(-5));
+                } else {
+                    direction.normalize();
+                    enemy.position.add(direction.multiplyScalar(enemy.userData.speed * dt));
+                }
+            }
+        }
 
         const box = new THREE.Box3(), size = new THREE.Vector3();
         this.objects.forEach(o => {

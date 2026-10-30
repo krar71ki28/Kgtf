@@ -21,9 +21,17 @@
             <button class="icon-btn" id="btn-jumppad"><span>🟢</span>منصة قفز</button>
             <button class="icon-btn" id="btn-light"><span>💡</span>ضوء</button>
             <button class="icon-btn" id="btn-character"><span>🏃</span>شخصية</button>
+            <button class="icon-btn" id="btn-enemy"><span>👹</span>عدو</button>
         </div>
         <div id="viewport-container">
             <canvas id="viewport"></canvas>
+            
+            <!-- واجهة اللعبة (HUD) -->
+            <div id="hud">
+                <div id="health-bar">❤️ الصحة: <span id="health-val">100</span></div>
+                <div id="score-bar">🪙 النقاط: <span id="score-val">0</span></div>
+            </div>
+
             <div id="floating-controls">
                 <button class="fab-btn green" id="btn-play">▶ تشغيل</button>
                 <button class="fab-btn" id="btn-save">💾 حفظ</button>
@@ -83,13 +91,12 @@
         </div>
     </div>
     
-    <!-- ملفات الصوت -->
     <audio id="bgm" loop src="https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3"></audio>
     <audio id="jump-sfx" src="https://assets.mixkit.co/active_storage/sfx/224/224-preview.mp3"></audio>
 
     <script type="importmap">
     { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
-    <script type="module" src="src/main.js?v=31"></script>
+    <script type="module" src="src/main.js?v=32"></script>
 </body>
 </html>
