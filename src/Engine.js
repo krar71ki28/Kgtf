@@ -88,6 +88,7 @@ export class Engine {
         if (opts.material && obj.isMesh) { obj.material.dispose(); obj.material = this.makeMaterial(opts.material, opts.color); obj.userData.material = opts.material; }
         else if (opts.color && obj.isMesh) obj.material.color.set(opts.color);
         if (opts.color && obj.isLight) obj.color.set(opts.color);
+        if (opts.intensity && obj.isLight) obj.intensity = opts.intensity;
         if (opts.physics) obj.userData.physics = { ...obj.userData.physics, ...opts.physics };
         
         this.scene.add(obj);
@@ -97,13 +98,28 @@ export class Engine {
         return obj;
     }
 
+    duplicateObject() {
+        if (!this.selected || this.selected.userData.type === 'character') return;
+        const obj = this.selected;
+        const opts = {
+            position: [obj.position.x + 1.5, obj.position.y, obj.position.z],
+            rotation: [obj.rotation.x, obj.rotation.y, obj.rotation.z],
+            scale: [obj.scale.x, obj.scale.y, obj.scale.z],
+            material: obj.userData.material,
+            color: obj.isMesh ? obj.material.color.getHex() : (obj.isLight ? obj.color.getHex() : null),
+            physics: { ...obj.userData.physics }
+        };
+        if (obj.isLight) opts.intensity = obj.intensity;
+        return this.addObject(obj.userData.type, opts);
+    }
+
     selectObject(obj) {
         this.selected = obj;
         if (this.onSelect) this.onSelect(obj);
     }
 
     deleteSelected() {
-        if (!this.selected) return;
+        if (!this.selected || this.selected.userData.type === 'character') return;
         const idx = this.objects.indexOf(this.selected);
         if (idx !== -1) {
             this.scene.remove(this.selected);
@@ -148,7 +164,7 @@ export class Engine {
         if (!saved) { this.addObject('cube'); return; }
         try {
             const data = JSON.parse(saved);
-            data.forEach(d => { this.addObject(d.type, { material: d.material, color: d.color, intensity: d.intensity, position: d.position, rotation: d.rotation, scale: d.scale, physics: d.physics }); });
+            data.forEach(d => { this.addObject(d.type, d); });
         } catch(e) { this.addObject('cube'); }
     }
 

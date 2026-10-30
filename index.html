@@ -21,6 +21,9 @@
             <div id="floating-controls">
                 <button class="fab-btn green" id="btn-play">▶ تشغيل</button>
                 <button class="fab-btn" id="btn-save">💾 حفظ</button>
+                <button class="fab-btn" id="btn-gizmo-translate" style="background:#00e5ff; padding: 10px; font-size: 18px;" title="تحريك">✥</button>
+                <button class="fab-btn" id="btn-gizmo-rotate" style="background:#ffaa00; padding: 10px; font-size: 18px;" title="تدوير">↻</button>
+                <button class="fab-btn" id="btn-gizmo-scale" style="background:#4ade80; padding: 10px; font-size: 18px;" title="تكبير">⤢</button>
             </div>
             <button id="exit-play">✕ خروج</button>
             <div id="status-bar">FPS: <span id="fps">--</span></div>
@@ -39,8 +42,9 @@
             </div>
             <div class="panel-section" id="inspector" style="display:none;">
                 <div class="panel-title">PROPERTIES</div>
-                <div class="prop-row" style="margin-bottom:15px;">
-                    <button class="btn" id="btn-delete" style="width:100%; background:#3a1a1a; color:#ff5577; padding:10px;">🗑️ حذف العنصر المحدد</button>
+                <div class="prop-row" style="margin-bottom:15px; display: flex; gap: 10px;">
+                    <button class="btn" id="btn-duplicate" style="flex:1; background:#1a3a2a; color:#4ade80; padding:10px;">📑 تكرار</button>
+                    <button class="btn" id="btn-delete" style="flex:1; background:#3a1a1a; color:#ff5577; padding:10px;">🗑️ حذف</button>
                 </div>
                 <div class="prop-row"><label>المادة</label><select id="prop-material"><option value="default">عادي</option><option value="wood">خشب</option><option value="metal">معدن</option><option value="gold">ذهب</option><option value="glass">زجاج</option><option value="rubber">مطاط</option><option value="marble">رخام</option><option value="emissive">مضيء</option></select></div>
                 <div class="prop-row"><label>اللون</label><input type="color" id="prop-color" value="#00e5ff"></div>

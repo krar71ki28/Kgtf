@@ -1,9 +1,25 @@
+import { TransformControls } from 'three/addons/controls/TransformControls.js';
+
 export class Editor {
     constructor(engine) {
         this.engine = engine;
         this.inspector = document.getElementById('inspector');
+        
+        this.gizmo = new TransformControls(this.engine.camera, this.engine.renderer.domElement);
+        this.gizmo.setSize(0.8);
+        this.engine.scene.add(this.gizmo);
+
+        this.gizmo.addEventListener('dragging-changed', (event) => {
+            this.engine.controls.enabled = !event.value;
+        });
+
+        this.gizmo.addEventListener('objectChange', () => {
+            this.updateUIValues();
+        });
+
         this.bindButtons();
         this.bindInspector();
+        
         engine.onSelect = (obj) => this.updateInspector(obj);
         engine.onSceneChange = () => this.updateList();
         this.updateList();
@@ -15,74 +31,85 @@ export class Editor {
         document.getElementById('btn-cylinder').onclick = () => this.engine.addObject('cylinder');
         document.getElementById('btn-light').onclick = () => this.engine.addObject('light');
         document.getElementById('btn-character').onclick = () => this.engine.loadCharacter();
-        document.getElementById('btn-save').onclick = () => this.engine.saveScene();
+        
+        document.getElementById('btn-gizmo-translate').onclick = () => this.gizmo.setMode('translate');
+        document.getElementById('btn-gizmo-rotate').onclick = () => this.gizmo.setMode('rotate');
+        document.getElementById('btn-gizmo-scale').onclick = () => this.gizmo.setMode('scale');
+
+        document.getElementById('btn-duplicate').onclick = () => {
+            const newObj = this.engine.duplicateObject();
+            if (newObj) this.engine.selectObject(newObj);
+        };
         document.getElementById('btn-delete').onclick = () => this.engine.deleteSelected();
+        document.getElementById('btn-save').onclick = () => this.engine.saveScene();
     }
 
     bindInspector() {
-        document.getElementById('prop-material').onchange = (e) => {
-            if (this.engine.selected && this.engine.selected.isMesh) {
-                const oldColor = this.engine.selected.material.color.getHex();
-                this.engine.selected.material.dispose();
-                this.engine.selected.material = this.engine.makeMaterial(e.target.value, oldColor);
-                this.engine.selected.userData.material = e.target.value;
-                document.getElementById('prop-color').value = '#' + oldColor.toString(16).padStart(6, '0');
+        const bindProp = (id, callback) => {
+            const el = document.getElementById(id);
+            el.addEventListener('input', (e) => {
+                if (!this.engine.selected) return;
+                callback(this.engine.selected, el.type === 'checkbox' ? el.checked : (el.type === 'range' ? parseFloat(el.value) : el.value));
+                this.gizmo.attach(this.engine.selected);
+            });
+        };
+
+        bindProp('prop-x', (obj, v) => obj.position.x = v);
+        bindProp('prop-y', (obj, v) => obj.position.y = v);
+        bindProp('prop-z', (obj, v) => obj.position.z = v);
+        bindProp('prop-rot', (obj, v) => obj.rotation.y = v);
+        bindProp('prop-scale', (obj, v) => obj.scale.set(v, v, v));
+        bindProp('prop-color', (obj, v) => { if (obj.isMesh) obj.material.color.set(v); else if (obj.isLight) obj.color.set(v); });
+        bindProp('prop-physics', (obj, v) => { if(obj.userData.physics) obj.userData.physics.enabled = v; });
+        bindProp('prop-bounce', (obj, v) => { if(obj.userData.physics) obj.userData.physics.bounce = v; });
+        
+        bindProp('prop-material', (obj, v) => {
+            if (obj.isMesh && obj.userData.type !== 'character') {
+                obj.material.dispose();
+                obj.material = this.engine.makeMaterial(v);
+                obj.userData.material = v;
             }
-        };
-        document.getElementById('prop-color').oninput = (e) => {
-            const s = this.engine.selected; if (!s) return;
-            if (s.isMesh) s.material.color.set(e.target.value); else if (s.isLight) s.color.set(e.target.value);
-        };
-        ['x','y','z','rot','scale'].forEach(prop => {
-            document.getElementById('prop-' + prop).oninput = (e) => {
-                const s = this.engine.selected; if (!s) return;
-                const val = parseFloat(e.target.value);
-                if (prop === 'x') s.position.x = val;
-                if (prop === 'y') { s.position.y = val; if (s.userData.physics) s.userData.physics.vy = 0; }
-                if (prop === 'z') s.position.z = val;
-                if (prop === 'rot') s.rotation.y = val;
-                if (prop === 'scale') s.scale.setScalar(val);
-            };
         });
-        document.getElementById('prop-physics').onchange = (e) => {
-            const s = this.engine.selected; if (s && s.userData.physics) { s.userData.physics.enabled = e.target.checked; s.userData.physics.vy = 0; }
-        };
-        document.getElementById('prop-bounce').oninput = (e) => {
-            const s = this.engine.selected; if (s && s.userData.physics) s.userData.physics.bounce = parseFloat(e.target.value);
-        };
+    }
+
+    updateUIValues() {
+        const obj = this.engine.selected;
+        if (!obj) return;
+        document.getElementById('prop-x').value = obj.position.x.toFixed(2);
+        document.getElementById('prop-y').value = obj.position.y.toFixed(2);
+        document.getElementById('prop-z').value = obj.position.z.toFixed(2);
+        document.getElementById('prop-rot').value = obj.rotation.y;
+        document.getElementById('prop-scale').value = obj.scale.x;
+        if (obj.isMesh && obj.material) document.getElementById('prop-color').value = '#' + obj.material.color.getHexString();
+        else if (obj.isLight) document.getElementById('prop-color').value = '#' + obj.color.getHexString();
     }
 
     updateInspector(obj) {
-        if (!obj) { this.inspector.style.display = 'none'; return; }
+        if (!obj) {
+            this.inspector.style.display = 'none';
+            this.gizmo.detach();
+            return;
+        }
         this.inspector.style.display = 'block';
-        const isMesh = obj.isMesh;
-        document.getElementById('prop-physics').disabled = !isMesh;
-        document.getElementById('prop-bounce').disabled = !isMesh;
-        if (isMesh) {
-            document.getElementById('prop-color').value = '#' + obj.material.color.getHexString();
-            document.getElementById('prop-material').value = obj.userData.material || 'default';
+        this.gizmo.attach(obj);
+        this.updateUIValues();
+        
+        if (obj.userData.physics) {
             document.getElementById('prop-physics').checked = obj.userData.physics.enabled;
             document.getElementById('prop-bounce').value = obj.userData.physics.bounce;
-        } else {
-            document.getElementById('prop-physics').checked = false;
-            if (obj.isLight) document.getElementById('prop-color').value = '#' + obj.color.getHexString();
         }
-        document.getElementById('prop-x').value = obj.position.x;
-        document.getElementById('prop-y').value = obj.position.y;
-        document.getElementById('prop-z').value = obj.position.z;
-        document.getElementById('prop-rot').value = obj.rotation.y;
-        document.getElementById('prop-scale').value = obj.scale.x;
     }
 
     updateList() {
         const list = document.getElementById('object-list');
         list.innerHTML = '';
-        this.engine.objects.forEach(o => {
+        this.engine.objects.forEach(obj => {
             const div = document.createElement('div');
-            div.innerText = o.userData.type + ' — ' + o.userData.id;
-            div.style.cursor = 'pointer'; div.style.padding = '4px'; div.style.borderRadius = '4px';
-            if (o === this.engine.selected) { div.style.background = '#1a2a3a'; div.style.color = '#00e5ff'; }
-            div.onclick = () => this.engine.selectObject(o);
+            div.style.padding = '4px';
+            div.style.cursor = 'pointer';
+            div.style.borderBottom = '1px solid #222';
+            div.innerText = obj.userData.id + ' - ' + obj.userData.type;
+            div.onclick = () => this.engine.selectObject(obj);
             list.appendChild(div);
         });
     }
