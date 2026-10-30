@@ -20,7 +20,6 @@ export class Editor {
         });
         this.gizmo.addEventListener('objectChange', () => this.updateUIValues());
 
-        // استدعاء كل الدوال
         this.bindButtons();
         this.bindInspector();
         this.bindMaterialProps();
@@ -51,7 +50,8 @@ export class Editor {
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                 document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
                 btn.classList.add('active');
-                document.getElementById(btn.dataset.target).classList.add('active');
+                const target = document.getElementById(btn.dataset.target);
+                if(target) target.classList.add('active');
             });
         });
     }
@@ -60,8 +60,15 @@ export class Editor {
         const btn = document.getElementById('btn-add-menu');
         const menu = document.getElementById('add-menu');
         if(btn && menu) {
-            btn.onclick = (e) => { e.stopPropagation(); menu.classList.toggle('show'); };
-            document.addEventListener('click', (e) => { if (!menu.contains(e.target) && e.target !== btn) menu.classList.remove('show'); });
+            btn.onclick = (e) => { 
+                e.stopPropagation(); 
+                menu.classList.toggle('show'); 
+            };
+            document.addEventListener('click', (e) => { 
+                if (!menu.contains(e.target) && e.target !== btn) {
+                    menu.classList.remove('show'); 
+                }
+            });
         }
         
         const types = ['cube','sphere','cylinder','cone','torus','tree','rock','building','light','character'];
@@ -430,7 +437,7 @@ export class Editor {
                 input.addEventListener('input', (e) => {
                     const val = input.type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value;
                     currentParams[paramKey] = val;
-                    if (this.engine.selected.userData.behaviorStates) delete this.engine.selected.userData.behaviorStates[bName];
+                    if (this.engine.selected.userData.behaviorStates) delete this.engine.selected.userData.behaviorStates[paramKey];
                 });
                 row.appendChild(paramLabel); row.appendChild(input); card.appendChild(row);
             }

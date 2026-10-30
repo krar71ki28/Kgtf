@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>KGTF ENGINE</title>
-<link rel="stylesheet" href="style.css?v=8">
+<link rel="stylesheet" href="style.css?v=9">
 <script>
     if (window.location.search.includes("reset")) {
         localStorage.removeItem("kgtf_scene_final");
@@ -145,7 +145,6 @@
                 <div id="asset-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; padding: 10px; overflow-y: auto;"></div>
             </div>
 
-            <!-- تبويب المشاهد (Scenes) الجديد -->
             <div class="panel-section tab-pane" id="tab-scenes">
                 <div class="panel-header">
                     <span class="panel-title" style="color:#00e5ff;">SCENE MANAGER</span>
@@ -156,9 +155,7 @@
                         <input type="text" id="new-scene-name" placeholder="اسم المشهد..." style="flex:1; background:#121215; border:1px solid #333; color:#fff; padding:8px; border-radius:4px;">
                         <button class="btn-small" id="btn-save-scene-as" style="background:#3b82f6; color:#fff;">حفظ باسم</button>
                     </div>
-                    <div id="scene-list" style="display: flex; flex-direction: column; gap: 8px; overflow-y: auto; max-height: 25vh;">
-                        <!-- سيتم تعبئتها ديناميكياً -->
-                    </div>
+                    <div id="scene-list" style="display: flex; flex-direction: column; gap: 8px; overflow-y: auto; max-height: 25vh;"></div>
                 </div>
             </div>
 
@@ -205,6 +202,6 @@
         "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" 
     } }
     </script>
-    <script type="module" src="src/main.js?v=56"></script>
+    <script type="module" src="src/main.js?v=63"></script>
 </body>
 </html>
