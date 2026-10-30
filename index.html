@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>KGTF ENGINE</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0a0f;font-family:system-ui,sans-serif}
+#viewport{width:100%;height:100%;display:block}
+#hud{position:fixed;top:10px;left:10px;background:rgba(20,20,30,.92);color:#00e5ff;padding:8px 12px;border-radius:8px;font-size:11px;font-family:monospace;pointer-events:none;z-index:10;border:1px solid #2a2a3a;line-height:1.6}
+#hud b{color:#fff;letter-spacing:1px}
+#hint{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(20,20,30,.9);color:#888;padding:6px 14px;border-radius:20px;font-size:11px;border:1px solid #2a2a3a;pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="viewport"></canvas>
+<div id="hud"><div><b>KGTF ENGINE</b> v0.0</div><div>FPS: <span id="fps">--</span></div><div>Draw Calls: <span id="dc">--</span></div><div>Triangles: <span id="tri">--</span></div></div>
+<div id="hint">اسحب للدوران · بإصبعين للتقريب</div>
+<script type="importmap">
+{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+class KGClock{constructor(){this.last=performance.now();this.dt=0}tick(){const n=performance.now();this.dt=(n-this.last)/1000;this.last=n;return this.dt}}
+let nextId=1;
+class Entity{constructor(o,m={}){this.id='e'+(nextId++);this.object3d=o;this.meta=m}}
+class SceneGraph{constructor(){this.root=new THREE.Scene();this.root.background=new THREE.Color(0x0a0a0f);this.entities=new Map()}add(e){this.entities.set(e.id,e);this.root.add(e.object3d);return e.id}remove(id){const e=this.entities.get(id);if(e){this.root.remove(e.object3d);this.entities.delete(id)}}list(){return Array.from(this.entities.values())}}
+class KRenderer{constructor(c){this.r=new THREE.WebGLRenderer({canvas:c,antialias:true});this.r.setPixelRatio(Math.min(window.devicePixelRatio,2));this.r.shadowMap.enabled=true;this.r.shadowMap.type=THREE.PCFSoftShadowMap;this.r.toneMapping=THREE.ACESFilmicToneMapping;this.r.toneMappingExposure=1.0}setSize(w,h){this.r.setSize(w,h,false)}render(s,c){this.r.render(s,c)}info(){return this.r.info.render}}
+class CameraRig{constructor(c){this.camera=new THREE.PerspectiveCamera(60,1,0.1,500);this.camera.position.set(4,3.5,6);this.controls=new OrbitControls(this.camera,c);this.controls.enableDamping=true;this.controls.dampingFactor=0.08;this.controls.target.set(0,0.5,0);this.controls.minDistance=2;this.controls.maxDistance=30;this.controls.maxPolarAngle=Math.PI/2.05}resize(w,h){this.camera.aspect=w/h;this.camera.updateProjectionMatrix()}update(){this.controls.update()}}
+class LightManager{constructor(s){const h=new THREE.HemisphereLight(0x88aaff,0x221133,0.55);s.add(h);const k=new THREE.DirectionalLight(0xffffff,1.6);k.position.set(6,10,5);k.castShadow=true;k.shadow.mapSize.set(1024,1024);const sc=k.shadow.camera;sc.left=-8;sc.right=8;sc.top=8;sc.bottom=-8;sc.near=0.5;sc.far=30;s.add(k);const f=new THREE.DirectionalLight(0x00e5ff,0.35);f.position.set(-6,4,-6);s.add(f);const r=new THREE.DirectionalLight(0xff5577,0.25);r.position.set(0,2,-8);s.add(r)}}
+class Engine{
+constructor(c){this.canvas=c;this.clock=new KGClock();this.sceneGraph=new SceneGraph();this.renderer=new KRenderer(c);this.cameraRig=new CameraRig(c);new LightManager(this.sceneGraph.root);this.fpsAccum=0;this.fpsFrames=0;this.buildInitialScene();this.resize();window.addEventListener('resize',()=>this.resize());this.loop=this.loop.bind(this);requestAnimationFrame(this.loop)}
+buildInitialScene(){
+const g=new THREE.Mesh(new THREE.PlaneGeometry(40,40),new THREE.MeshStandardMaterial({color:0x1a1a2e,roughness:0.95,metalness:0}));g.rotation.x=-Math.PI/2;g.receiveShadow=true;this.sceneGraph.add(new Entity(g,{name:'ground',type:'plane'}));
+const grid=new THREE.GridHelper(40,40,0x2a2a3a,0x1a1a2e);grid.position.y=0.001;this.sceneGraph.root.add(grid);
+this.cube=new THREE.Mesh(new THREE.BoxGeometry(1.2,1.2,1.2),new THREE.MeshStandardMaterial({color:0x00e5ff,roughness:0.25,metalness:0.75,emissive:0x003344,emissiveIntensity:0.4}));this.cube.position.y=0.6;this.cube.castShadow=true;this.cubeEntity=new Entity(this.cube,{name:'hero-cube',type:'box'});this.sceneGraph.add(this.cubeEntity);
+const sp=new THREE.Mesh(new THREE.SphereGeometry(0.5,32,32),new THREE.MeshStandardMaterial({color:0xff5577,roughness:0.15,metalness:0.2}));sp.position.set(2.2,0.5,0);sp.castShadow=true;this.sceneGraph.add(new Entity(sp,{name:'red-sphere',type:'sphere'}));
+this.torus=new THREE.Mesh(new THREE.TorusGeometry(0.55,0.16,20,64),new THREE.MeshStandardMaterial({color:0xffaa00,roughness:0.35,metalness:0.85}));this.torus.position.set(-2.2,0.75,0);this.torus.castShadow=true;this.torusEntity=new Entity(this.torus,{name:'gold-torus',type:'torus'});this.sceneGraph.add(this.torusEntity);
+}
+resize(){const w=window.innerWidth,h=window.innerHeight;this.renderer.setSize(w,h);this.cameraRig.resize(w,h)}
+loop(){const dt=this.clock.tick();
+if(this.cubeEntity){this.cubeEntity.object3d.rotation.y+=dt*0.7;this.cubeEntity.object3d.rotation.x+=dt*0.4}
+if(this.torusEntity){this.torusEntity.object3d.rotation.x+=dt*0.9;this.torusEntity.object3d.rotation.z+=dt*0.5}
+this.cameraRig.update();this.renderer.render(this.sceneGraph.root,this.cameraRig.camera);
+this.fpsAccum+=dt;this.fpsFrames++;
+if(this.fpsAccum>=0.5){document.getElementById('fps').textContent=Math.round(this.fpsFrames/this.fpsAccum);const i=this.renderer.info();document.getElementById('dc').textContent=i.calls;document.getElementById('tri').textContent=i.triangles;this.fpsAccum=0;this.fpsFrames=0}
+requestAnimationFrame(this.loop)}
+}
+const engine=new Engine(document.getElementById('viewport'));
+window.KGTF={engine,THREE};
+</script>
+</body>
+</html>
