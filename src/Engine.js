@@ -18,17 +18,24 @@ export class Engine {
     constructor(canvas) {
         this.canvas = canvas;
         this.scene = new THREE.Scene();
+        
+        // 1. تغيير الخلفية للون السماء (أزرق فاتح)
+        this.scene.background = new THREE.Color(0x87CEEB);
+        
+        // 2. إضافة ضباب (Fog) عشان يعطي إحساس بالمسافة والعمق
+        this.scene.fog = new THREE.Fog(0x87CEEB, 30, 120);
+
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 1.2;
+        this.renderer.toneMappingExposure = 1.0; // تقليل السطوع شوي عشان الشمس
         
+        // الحفاظ على انعكاسات البيئة للمعادن
         const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
         const envMap = pmremGenerator.fromScene(new RoomEnvironment()).texture;
         this.scene.environment = envMap;
-        this.scene.background = new THREE.Color(0x0a0a0f);
 
         this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
         this.camera.position.set(8, 6, 10);
@@ -38,8 +45,13 @@ export class Engine {
         this.controls.target.set(0, 2, 0);
         this.controls.maxPolarAngle = Math.PI / 2.05;
 
-        const sun = new THREE.DirectionalLight(0xffffff, 2.5);
-        sun.position.set(15, 30, 15);
+        // 3. إضافة ضوء السماء (HemisphereLight) عشان يمنع الظلال من أن تصبح سوداء تماماً
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5);
+        this.scene.add(hemiLight);
+
+        // 4. تعديل ضوء الشمس ليكون نهارياً
+        const sun = new THREE.DirectionalLight(0xfff5e6, 2.0);
+        sun.position.set(20, 40, 20);
         sun.castShadow = true;
         sun.shadow.mapSize.width = 2048;
         sun.shadow.mapSize.height = 2048;
@@ -50,16 +62,18 @@ export class Engine {
         sun.shadow.bias = -0.0005;
         this.scene.add(sun);
 
+        // 5. تغيير لون الأرضية ليكون متناسق مع البيئة (أخضر عشبي غامق)
         const groundGeo = new THREE.PlaneGeometry(200, 200);
-        const groundMat = new THREE.MeshStandardMaterial({ color: 0x1a1a2e, roughness: 0.8, metalness: 0.2 });
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x3a5a40, roughness: 0.9, metalness: 0.1 });
         const ground = new THREE.Mesh(groundGeo, groundMat);
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
         this.scene.add(ground);
 
-        const grid = new THREE.GridHelper(200, 200, 0x00e5ff, 0x444455);
+        // 6. تعديل ألوان الشبكة لتكون أوضح على الأرضية الجديدة
+        const grid = new THREE.GridHelper(200, 100, 0x00e5ff, 0x556677);
         grid.position.y = 0.05; 
-        grid.material.opacity = 0.6;
+        grid.material.opacity = 0.4;
         grid.material.transparent = true;
         this.scene.add(grid);
 
@@ -137,14 +151,9 @@ export class Engine {
     checkCollision(box1, excludeObj) {
         for (let obj of this.objects) {
             if (obj === excludeObj || obj.userData.type === 'character' || obj.userData.type === 'light') continue;
-            
-            // تحديث المصفوفة قبل الفحص (هذا هو الحل السحري للاختراق)
             obj.updateMatrixWorld(true);
-            
             const box2 = new THREE.Box3().setFromObject(obj);
-            if (box1.intersectsBox(box2)) {
-                return true;
-            }
+            if (box1.intersectsBox(box2)) return true;
         }
         return false;
     }
