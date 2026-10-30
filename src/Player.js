@@ -5,7 +5,6 @@ export class Player {
         this.engine = engine;
         this.isPlaying = false;
         this.keys = {};
-        this.velocity = new THREE.Vector3();
         this.direction = new THREE.Vector3();
         this.joystickActive = false;
         this.joystickDir = { x: 0, y: 0 };
@@ -69,12 +68,16 @@ export class Player {
         // إخفاء الأسهم
         this.engine.selectObject(null);
         
-        // تعطيل تحكم الكاميرا اليدوي (OrbitControls) عشان ما تتصادم
+        // تعطيل تحكم الكاميرا اليدوي (OrbitControls) نهائياً
         this.engine.controls.enabled = false;
         
-        // ضبط كاميرا البداية (خلف الشخصية وفوقها)
-        this.engine.camera.position.copy(this.playerModel.position).add(new THREE.Vector3(0, 4, -8));
-        this.engine.controls.target.copy(this.playerModel.position);
+        // وضع الكاميرا خلف الشخصية مباشرة
+        const camOffset = new THREE.Vector3(0, 4, -8);
+        camOffset.applyAxisAngle(new THREE.Vector3(0,1,0), this.playerModel.rotation.y);
+        this.engine.camera.position.copy(this.playerModel.position).add(camOffset);
+        
+        // جعل الكاميرا تنظر لصدر الشخصية
+        this.engine.camera.lookAt(this.playerModel.position.x, this.playerModel.position.y + 1.5, this.playerModel.position.z);
         this.engine.resize();
     }
 
@@ -85,6 +88,7 @@ export class Player {
         // إعادة تفعيل تحكم الكاميرا
         this.engine.controls.enabled = true;
         
+        // إعادة الكاميرا لمكانها الأصلي
         this.engine.camera.position.set(8, 6, 10);
         this.engine.controls.target.set(0, 2, 0);
         this.engine.resize();
@@ -96,11 +100,13 @@ export class Player {
         const speed = 5;
         this.direction.set(0, 0, 0);
 
+        // حركة الكيبورد
         if (this.keys['KeyW'] || this.keys['ArrowUp']) this.direction.z -= 1;
         if (this.keys['KeyS'] || this.keys['ArrowDown']) this.direction.z += 1;
         if (this.keys['KeyA'] || this.keys['ArrowLeft']) this.direction.x -= 1;
         if (this.keys['KeyD'] || this.keys['ArrowRight']) this.direction.x += 1;
 
+        // حركة الجويستيك
         if (this.joystickActive) {
             this.direction.x += this.joystickDir.x;
             this.direction.z += this.joystickDir.y;
@@ -109,12 +115,15 @@ export class Player {
         if (this.direction.lengthSq() > 0) {
             this.direction.normalize();
             
+            // تدوير الشخصية باتجاه الحركة
             const targetAngle = Math.atan2(this.direction.x, this.direction.z);
             this.playerModel.rotation.y = targetAngle;
 
+            // تحريك الشخصية
             this.playerModel.position.x += this.direction.x * speed * dt;
             this.playerModel.position.z += this.direction.z * speed * dt;
 
+            // تشغيل أنيميشن المشي
             if (this.playerModel.userData.actions && this.playerModel.userData.actions['Walking']) {
                 if (this.playerModel.userData.currentAction !== 'Walking') {
                     this.playerModel.userData.actions['Idle'].stop();
@@ -123,6 +132,7 @@ export class Player {
                 }
             }
         } else {
+            // العودة لوضع الوقوف
             if (this.playerModel.userData.actions && this.playerModel.userData.actions['Idle']) {
                 if (this.playerModel.userData.currentAction !== 'Idle') {
                     if (this.playerModel.userData.actions['Walking']) this.playerModel.userData.actions['Walking'].stop();
@@ -132,21 +142,17 @@ export class Player {
             }
         }
 
-        // --- إصلاح الكاميرا ---
-        const targetPos = this.playerModel.position.clone();
-        targetPos.y += 1.5; // نقطة النظر تكون عند صدر الشخصية
-        
-        // حساب موقع الكاميرا المطلوب (خلف الشخصية بـ 7 وحدات، وفوقها بـ 4)
-        const camOffset = new THREE.Vector3(0, 4, -7); 
+        // --- قفل الكاميرا خلف الشخصية (بدون لخبطة) ---
+        const camOffset = new THREE.Vector3(0, 4, -8);
+        // تدوير مسافة الكاميرا بناءً على اتجاه الشخصية
         camOffset.applyAxisAngle(new THREE.Vector3(0,1,0), this.playerModel.rotation.y);
         
         const desiredCamPos = this.playerModel.position.clone().add(camOffset);
         
-        // تحريك الكاميرا بسلاسة
-        this.engine.camera.position.lerp(desiredCamPos, 0.1);
-        this.engine.controls.target.lerp(targetPos, 0.1);
+        // نقل الكاميرا فوراً للموقع الجديد
+        this.engine.camera.position.copy(desiredCamPos);
         
-        // إجبار الكاميرا على النظر لصدر الشخصية
-        this.engine.camera.lookAt(this.engine.controls.target);
+        // جعل الكاميرا تنظر دائماً لصدر الشخصية
+        this.engine.camera.lookAt(this.playerModel.position.x, this.playerModel.position.y + 1.5, this.playerModel.position.z);
     }
 }
