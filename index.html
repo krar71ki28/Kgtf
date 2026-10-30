@@ -3,29 +3,34 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>KGTF ENGINE - Character Controller</title>
+<title>KGTF ENGINE</title>
 <style>
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body { font-family: system-ui, sans-serif; background: #0a0a0f; color: #fff; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
     
-    #header { height: 50px; background: #141420; border-bottom: 1px solid #2a2a3a; display: flex; align-items: center; padding: 0 10px; gap: 10px; z-index: 10; flex-shrink: 0; overflow-x: auto; white-space: nowrap; }
-    .logo { color: #00e5ff; font-weight: 900; letter-spacing: 1px; font-size: 14px; flex-shrink: 0; }
-    .btn { background: #2a2a3a; color: #ccc; border: none; padding: 8px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; flex-shrink: 0; }
+    /* الشريط العلوي */
+    #header { height: 50px; background: #141420; border-bottom: 1px solid #2a2a3a; display: flex; align-items: center; padding: 0 10px; gap: 10px; z-index: 10; flex-shrink: 0; }
+    .logo { color: #00e5ff; font-weight: 900; letter-spacing: 1px; font-size: 14px; margin-left: auto; }
+    .btn { background: #2a2a3a; color: #ccc; border: none; padding: 8px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; white-space: nowrap; }
     .btn:hover { background: #3a3a4a; color: #fff; }
     .btn.primary { background: #00e5ff; color: #000; }
     .btn.green { background: #4ade80; color: #000; }
     
+    /* تقسيم الشاشة */
     #workspace { flex: 1; display: flex; overflow: hidden; position: relative; }
     
-    #left-panel { width: 70px; background: #141420; border-left: 1px solid #2a2a3a; display: flex; flex-direction: column; align-items: center; padding: 10px 0; gap: 8px; z-index: 10; overflow-y: auto; }
+    /* القائمة الجانبية */
+    #left-panel { width: 70px; background: #141420; border-left: 1px solid #2a2a3a; display: flex; flex-direction: column; align-items: center; padding: 10px 0; gap: 8px; z-index: 10; overflow-y: auto; flex-shrink: 0; }
     .icon-btn { width: 52px; height: 52px; background: #1e1e30; border: 1px solid #2a2a3a; border-radius: 8px; color: #fff; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 9px; gap: 2px; padding: 4px; }
     .icon-btn span { font-size: 18px; }
     .icon-btn:hover { border-color: #00e5ff; color: #00e5ff; }
 
-    #viewport-container { flex: 1; position: relative; background: #000; overflow: hidden; }
-    #viewport { width: 100%; height: 100%; display: block; }
+    /* منطقة العرض 3D */
+    #viewport-container { flex: 1; position: relative; background: #000; overflow: hidden; display: flex; flex-direction: column; }
+    #viewport { width: 100%; height: 100%; display: block; flex: 1; }
 
-    #right-panel { width: 250px; background: #141420; border-right: 1px solid #2a2a3a; display: flex; flex-direction: column; z-index: 10; overflow-y: auto; }
+    /* لوحة الخصائص */
+    #right-panel { width: 250px; background: #141420; border-right: 1px solid #2a2a3a; display: flex; flex-direction: column; z-index: 10; overflow-y: auto; flex-shrink: 0; }
     .panel-section { border-bottom: 1px solid #2a2a3a; padding: 10px; }
     .panel-title { font-size: 11px; color: #888; font-weight: bold; margin-bottom: 8px; letter-spacing: 1px; }
     .prop-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 5px; }
@@ -37,6 +42,7 @@
 
     #status-bar { position: absolute; bottom: 10px; left: 10px; background: rgba(20,20,30,0.8); padding: 5px 10px; border-radius: 4px; font-size: 10px; font-family: monospace; color: #0f0; z-index: 5; border: 1px solid #2a2a3a; }
 
+    /* المساعد الذكي */
     #ai-fab { position: absolute; bottom: 20px; right: 20px; width: 50px; height: 50px; background: #ff5577; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; box-shadow: 0 4px 15px rgba(255,85,119,0.5); z-index: 20; }
     #ai-chat { position: absolute; bottom: 80px; right: 20px; width: 300px; max-width: calc(100vw - 40px); height: 400px; background: #141420; border: 1px solid #ff5577; border-radius: 12px; display: none; flex-direction: column; z-index: 20; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
     .ai-header { padding: 10px; background: #1e1e30; color: #ff5577; font-weight: bold; font-size: 12px; display: flex; justify-content: space-between; align-items: center; }
@@ -50,36 +56,32 @@
     #joystick-base { width: 100%; height: 100%; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; position: relative; }
     #joystick-knob { width: 50px; height: 50px; background: #00e5ff; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px rgba(0,229,255,0.6); }
 
+    /* وضع اللعب */
     body.play-mode #header, body.play-mode #left-panel, body.play-mode #right-panel, body.play-mode #ai-fab { display: none !important; }
     body.play-mode #workspace { flex-direction: column; }
     body.play-mode #joystick-zone { display: block; }
-    #exit-play { position: absolute; top: 15px; left: 15px; z-index: 30; display: none; }
+    #exit-play { position: absolute; top: 15px; left: 15px; z-index: 30; display: none; background: #ff5577; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
     body.play-mode #exit-play { display: block; }
 
-    
+    /* تصميم الموبايل */
     @media (max-width: 768px) {
-        #header { display: none !important; }
-        #workspace { flex-direction: column; height: 100vh; }
-        #left-panel { width: 100%; height: 62px; flex-direction: row; justify-content: space-around; border-left: none; border-bottom: 1px solid #2a2a3a; padding: 4px; gap: 4px; }
-        .icon-btn { width: 48px; height: 48px; }
-        #right-panel { width: 100%; height: 260px; border-right: none; border-top: 1px solid #2a2a3a; }
-        #ai-chat { right: 10px; bottom: 70px; width: calc(100% - 20px); height: 60vh; }
-        #status-bar { bottom: 270px; left: 10px; }
-    }
-        #left-panel { width: 100%; height: 62px; flex-direction: row; justify-content: space-around; border-left: none; border-bottom: 1px solid #2a2a3a; padding: 4px; gap: 4px; }
-        .icon-btn { width: 48px; height: 48px; }
-        #right-panel { width: 100%; height: 260px; border-right: none; border-top: 1px solid #2a2a3a; }
-        #ai-chat { right: 10px; bottom: 70px; width: calc(100% - 20px); height: 60vh; }
-        #status-bar { bottom: 270px; left: 10px; }
+        #header { height: auto; padding: 8px; flex-wrap: wrap; justify-content: space-between; }
+        .logo { margin-left: 0; width: 100%; text-align: center; margin-bottom: 5px; }
+        #workspace { flex-direction: column; }
+        #left-panel { width: 100%; height: 64px; flex-direction: row; justify-content: flex-start; border-left: none; border-bottom: 1px solid #2a2a3a; padding: 5px 10px; overflow-x: auto; flex-shrink: 0; }
+        .icon-btn { width: 50px; height: 50px; flex-shrink: 0; }
+        #right-panel { width: 100%; height: 35vh; border-right: none; border-top: 1px solid #2a2a3a; flex-shrink: 0; }
+        #viewport-container { flex: 1; min-height: 30vh; }
+        #ai-chat { right: 10px; bottom: 70px; width: calc(100% - 20px); height: 50vh; }
+        #status-bar { top: 10px; left: 10px; bottom: auto; }
     }
 </style>
 </head>
 <body>
     <div id="header">
-        <div class="logo">KGTF ENGINE</div>
-        <div style="flex:1"></div>
         <button class="btn" id="btn-save">💾 حفظ</button>
         <button class="btn green" id="btn-play">▶ تشغيل</button>
+        <div class="logo">KGTF ENGINE</div>
     </div>
 
     <div id="workspace">
@@ -93,13 +95,7 @@
 
         <div id="viewport-container">
             <canvas id="viewport"></canvas>
-
-            <div id="floating-controls" style="position: absolute; top: 15px; right: 15px; z-index: 50; display: flex; gap: 10px; flex-direction: column;">
-                <button class="btn green" id="btn-play-fab" style="padding: 12px 20px; font-size: 14px; border-radius: 8px; box-shadow: 0 4px 15px rgba(74,222,128,0.4);">▶ تشغيل</button>
-                <button class="btn" id="btn-save-fab" style="padding: 10px 20px; font-size: 13px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">💾 حفظ</button>
-            </div>
-
-            <button class="btn primary" id="exit-play">✕ خروج</button>
+            <button id="exit-play">✕ خروج</button>
             <div id="status-bar">FPS: <span id="fps">--</span></div>
             
             <div id="joystick-zone">
@@ -110,8 +106,8 @@
 
             <div id="ai-fab">🤖</div>
             <div id="ai-chat">
-                <div class="ai-header"><span>KGTF AI Assistant</span><span id="close-ai" style="cursor:pointer;">✕</span></div>
-                <div class="ai-messages" id="ai-messages">مرحباً! أنا مساعدك. اطلب مني كود Three.js.</div>
+                <div class="ai-header"><span>KGTF AI</span><span id="close-ai" style="cursor:pointer;">✕</span></div>
+                <div class="ai-messages" id="ai-messages">مرحباً! اطلب مني كود Three.js.</div>
                 <div class="ai-input-row">
                     <input type="text" id="ai-input" placeholder="اطلب كود..." />
                     <button id="ai-send">إرسال</button>
@@ -122,7 +118,7 @@
         <div id="right-panel">
             <div class="panel-section">
                 <div class="panel-title">HIERARCHY</div>
-                <div id="object-list" style="font-size:12px; color:#aaa; max-height:110px; overflow-y:auto;"></div>
+                <div id="object-list" style="font-size:12px; color:#aaa; max-height:100px; overflow-y:auto;"></div>
             </div>
             
             <div class="panel-section" id="inspector" style="display:none;">
@@ -150,7 +146,10 @@
                 <div class="prop-row"><label>جاذبية</label><input type="checkbox" id="prop-physics"></div>
                 <div class="prop-row"><label>ارتداد</label><input type="range" id="prop-bounce" min="0" max="1" step="0.1" value="0.5"></div>
                 
-                <div class="prop-row" style="margin-top:10px;"><label>حذف</label><button class="btn" id="btn-delete" style="width:100%; background:#3a1a1a; color:#ff5577;">حذف العنصر</button></div>
+                <!-- زر الحذف هنا -->
+                <div class="prop-row" style="margin-top:15px;">
+                    <button class="btn" id="btn-delete" style="width:100%; background:#3a1a1a; color:#ff5577;">🗑️ حذف العنصر</button>
+                </div>
             </div>
         </div>
     </div>
@@ -223,7 +222,6 @@
         let objects = [];
         let selected = null;
         let idCounter = 1;
-        
         let player = null;
         let isPlaying = false;
 
@@ -352,10 +350,7 @@
                 
                 const mixer = new THREE.AnimationMixer(model);
                 const actions = {};
-                gltf.animations.forEach(clip => {
-                    actions[clip.name] = mixer.clipAction(clip);
-                });
-
+                gltf.animations.forEach(clip => { actions[clip.name] = mixer.clipAction(clip); });
                 if (actions['Idle']) actions['Idle'].play();
 
                 model.userData = { 
@@ -432,12 +427,12 @@
                     scale: o.scale.toArray(),
                     physics: o.userData.physics
                 }));
-            localStorage.setItem('kgtf_scene_v5', JSON.stringify(data));
-            alert('تم حفظ المشهد (' + data.length + ' كائن)');
+            localStorage.setItem('kgtf_scene_v6', JSON.stringify(data));
+            alert('تم حفظ المشهد بنجاح!');
         };
 
         function loadScene() {
-            const saved = localStorage.getItem('kgtf_scene_v5');
+            const saved = localStorage.getItem('kgtf_scene_v6');
             if (!saved) { addObject('cube'); return; }
             try {
                 const data = JSON.parse(saved);
@@ -457,7 +452,7 @@
 
         document.getElementById('btn-play').onclick = () => {
             player = objects.find(o => o.userData.type === 'character');
-            if (!player) { alert('أضف شخصية أولاً لتتمكن من اللعب!'); return; }
+            if (!player) { alert('أضف شخصية أولاً (🏃) لتتمكن من اللعب!'); return; }
             
             isPlaying = true;
             document.body.classList.add('play-mode');
@@ -522,7 +517,7 @@
             renderer.setSize(w, h, false);
         }
         window.addEventListener('resize', resize);
-        setTimeout(resize, 50);
+        setTimeout(resize, 100); // تأخير بسيط لضمان تحميل الواجهة
 
         function animate() {
             requestAnimationFrame(animate);
@@ -580,6 +575,41 @@
                 fpsAcc = 0; frames = 0;
             }
         }
+
+        // AI Assistant Logic
+        const aiFab = document.getElementById('ai-fab');
+        const aiChat = document.getElementById('ai-chat');
+        aiFab.onclick = () => { aiChat.style.display = aiChat.style.display === 'flex' ? 'none' : 'flex'; };
+        document.getElementById('close-ai').onclick = () => { aiChat.style.display = 'none'; };
+        document.getElementById('ai-send').onclick = async () => {
+            const text = document.getElementById('ai-input').value.trim();
+            if (!text) return;
+            const msgs = document.getElementById('ai-messages');
+            document.getElementById('ai-input').value = '';
+            msgs.innerHTML += `<div style="color:#ff5577;margin-bottom:6px;">👤 ${text}</div>`;
+            msgs.innerHTML += `<div id="ai-loading" style="color:#888;">...</div>`;
+            msgs.scrollTop = msgs.scrollHeight;
+            try {
+                const res = await fetch('https://text.pollinations.ai/openai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: 'openai',
+                        messages: [
+                            { role: 'system', content: 'أنت خبير Three.js. أجب بكود مختصر عند الطلب.' },
+                            { role: 'user', content: text }
+                        ]
+                    })
+                });
+                const data = await res.json();
+                document.getElementById('ai-loading').remove();
+                msgs.innerHTML += `<div style="color:#00e5ff;margin-bottom:6px;white-space:pre-wrap;">🤖 ${data.choices[0].message.content}</div>`;
+            } catch(e) {
+                document.getElementById('ai-loading').remove();
+                msgs.innerHTML += `<div style="color:#f00;">خطأ في الاتصال</div>`;
+            }
+            msgs.scrollTop = msgs.scrollHeight;
+        };
 
         loadScene();
         animate();
