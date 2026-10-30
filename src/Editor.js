@@ -6,6 +6,8 @@ export class Editor {
     constructor(engine) {
         this.engine = engine;
         this.inspector = document.getElementById('inspector');
+        this.bottomPanel = document.getElementById('bottom-panel');
+        this.inspectorHeader = document.getElementById('inspector-header');
         this.raycaster = new THREE.Raycaster();
         this.pointerDown = { x: 0, y: 0 };
         this.isDraggingGizmo = false;
@@ -28,11 +30,16 @@ export class Editor {
         engine.onSelect = (obj) => this.updateInspector(obj);
         engine.onSceneChange = () => this.updateList();
         
-        // ربط شاشة النقاط
         engine.onScoreChanged = (score) => {
             const scoreVal = document.getElementById('score-val');
             if(scoreVal) scoreVal.innerText = score;
         };
+
+        // سحب اللوحة السفلية
+        const dragHandle = document.querySelector('.drag-handle');
+        dragHandle.addEventListener('click', () => {
+            this.bottomPanel.classList.toggle('closed');
+        });
 
         this.updateList();
         if (this.engine.selected) this.updateInspector(this.engine.selected);
@@ -69,7 +76,11 @@ export class Editor {
             if (hits.length > 0) {
                 let root = hits[0].object;
                 while (root && root.parent !== this.engine.scene) root = root.parent;
-                if (root) return this.engine.selectObject(root);
+                if (root) {
+                    this.engine.selectObject(root);
+                    this.bottomPanel.classList.remove('closed'); // فتح اللوحة عند التحديد
+                    return;
+                }
             }
             this.engine.selectObject(null);
         });
@@ -87,9 +98,11 @@ export class Editor {
         document.getElementById('btn-light').onclick = () => this.engine.addObject('light');
         document.getElementById('btn-character').onclick = () => this.engine.loadCharacter();
         
-        document.getElementById('btn-gizmo-translate').onclick = () => this.gizmo.setMode('translate');
-        document.getElementById('btn-gizmo-rotate').onclick = () => this.gizmo.setMode('rotate');
-        document.getElementById('btn-gizmo-scale').onclick = () => this.gizmo.setMode('scale');
+        document.getElementById('btn-gizmo-translate').onclick = () => { this.gizmo.setMode('translate'); this.setActiveTool('btn-gizmo-translate'); };
+        document.getElementById('btn-gizmo-rotate').onclick = () => { this.gizmo.setMode('rotate'); this.setActiveTool('btn-gizmo-rotate'); };
+        document.getElementById('btn-gizmo-scale').onclick = () => { this.gizmo.setMode('scale'); this.setActiveTool('btn-gizmo-scale'); };
+
+        document.getElementById('btn-toggle-panel').onclick = () => this.bottomPanel.classList.toggle('closed');
 
         document.getElementById('btn-duplicate').onclick = () => {
             const newObj = this.engine.duplicateObject();
@@ -155,6 +168,11 @@ export class Editor {
             reader.readAsDataURL(file);
             e.target.value = '';
         };
+    }
+
+    setActiveTool(id) {
+        document.querySelectorAll('#right-toolbar .tool-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
     }
 
     bindInspector() {
@@ -293,10 +311,12 @@ export class Editor {
     updateInspector(obj) {
         if (!obj) {
             this.inspector.style.display = 'none';
+            this.inspectorHeader.style.display = 'none';
             this.gizmo.detach();
             return;
         }
         this.inspector.style.display = 'block';
+        this.inspectorHeader.style.display = 'flex';
         this.gizmo.attach(obj);
         this.updateUIValues();
         this.renderBehaviorsUI();
@@ -321,11 +341,17 @@ export class Editor {
         list.innerHTML = '';
         this.engine.objects.forEach(obj => {
             const div = document.createElement('div');
-            div.style.padding = '4px';
+            div.style.padding = '4px 8px';
             div.style.cursor = 'pointer';
-            div.style.borderBottom = '1px solid #222';
-            div.innerText = obj.userData.id + ' - ' + obj.userData.type;
-            div.onclick = () => this.engine.selectObject(obj);
+            div.style.background = '#1e1e30';
+            div.style.borderRadius = '4px';
+            div.style.fontSize = '10px';
+            div.style.border = '1px solid transparent';
+            div.innerText = obj.userData.type;
+            div.onclick = () => {
+                this.engine.selectObject(obj);
+                this.bottomPanel.classList.remove('closed');
+            };
             list.appendChild(div);
         });
     }
