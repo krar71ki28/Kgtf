@@ -20,6 +20,7 @@ export class Editor {
         });
         this.gizmo.addEventListener('objectChange', () => this.updateUIValues());
 
+        // استدعاء كل الدوال
         this.bindButtons();
         this.bindInspector();
         this.bindMaterialProps();
@@ -58,8 +59,10 @@ export class Editor {
     setupDropdown() {
         const btn = document.getElementById('btn-add-menu');
         const menu = document.getElementById('add-menu');
-        btn.onclick = (e) => { e.stopPropagation(); menu.classList.toggle('show'); };
-        document.addEventListener('click', (e) => { if (!menu.contains(e.target) && e.target !== btn) menu.classList.remove('show'); });
+        if(btn && menu) {
+            btn.onclick = (e) => { e.stopPropagation(); menu.classList.toggle('show'); };
+            document.addEventListener('click', (e) => { if (!menu.contains(e.target) && e.target !== btn) menu.classList.remove('show'); });
+        }
         
         const types = ['cube','sphere','cylinder','cone','torus','tree','rock','building','light','character'];
         types.forEach(t => {
@@ -67,22 +70,23 @@ export class Editor {
             if(el) el.onclick = () => {
                 if(t === 'character') this.engine.loadCharacter();
                 else this.engine.addObject(t);
-                menu.classList.remove('show');
+                if(menu) menu.classList.remove('show');
             };
         });
         
         const vfxFire = document.getElementById('btn-vfx-fire');
-        if(vfxFire) vfxFire.onclick = () => { this.engine.createParticleSystem('fire', new THREE.Vector3(0, 0.5, 0)); menu.classList.remove('show'); };
+        if(vfxFire) vfxFire.onclick = () => { this.engine.createParticleSystem('fire', new THREE.Vector3(0, 0.5, 0)); if(menu) menu.classList.remove('show'); };
         const vfxSparks = document.getElementById('btn-vfx-sparks');
-        if(vfxSparks) vfxSparks.onclick = () => { this.engine.createParticleSystem('sparks', new THREE.Vector3(0, 0.5, 0)); menu.classList.remove('show'); };
+        if(vfxSparks) vfxSparks.onclick = () => { this.engine.createParticleSystem('sparks', new THREE.Vector3(0, 0.5, 0)); if(menu) menu.classList.remove('show'); };
         const vfxSmoke = document.getElementById('btn-vfx-smoke');
-        if(vfxSmoke) vfxSmoke.onclick = () => { this.engine.createParticleSystem('smoke', new THREE.Vector3(0, 0.5, 0)); menu.classList.remove('show'); };
+        if(vfxSmoke) vfxSmoke.onclick = () => { this.engine.createParticleSystem('smoke', new THREE.Vector3(0, 0.5, 0)); if(menu) menu.classList.remove('show'); };
         const audioBtn = document.getElementById('btn-audio');
-        if(audioBtn) audioBtn.onclick = () => { this.engine.createAudioEmitter(new THREE.Vector3(0, 1, 0)); menu.classList.remove('show'); };
+        if(audioBtn) audioBtn.onclick = () => { this.engine.createAudioEmitter(new THREE.Vector3(0, 1, 0)); if(menu) menu.classList.remove('show'); };
     }
 
     populateBehaviorSelect() {
         const select = document.getElementById('add-behavior-select');
+        if(!select) return;
         select.innerHTML = '<option value="">-- اختر سلوك --</option>';
         for (const key in BEHAVIORS) {
             const option = document.createElement('option');
@@ -112,48 +116,50 @@ export class Editor {
     }
 
     bindButtons() {
-        document.getElementById('btn-gizmo-translate').onclick = () => { this.gizmo.setMode('translate'); this.setActiveTool('btn-gizmo-translate'); };
-        document.getElementById('btn-gizmo-rotate').onclick = () => { this.gizmo.setMode('rotate'); this.setActiveTool('btn-gizmo-rotate'); };
-        document.getElementById('btn-gizmo-scale').onclick = () => { this.gizmo.setMode('scale'); this.setActiveTool('btn-gizmo-scale'); };
-
-        document.getElementById('btn-duplicate').onclick = () => {
-            const newObj = this.engine.duplicateObject();
-            if (newObj) this.engine.selectObject(newObj);
-        };
-        document.getElementById('btn-delete').onclick = () => this.engine.deleteSelected();
-        document.getElementById('btn-save').onclick = () => this.engine.saveScene();
-        document.getElementById('btn-export').onclick = () => this.engine.exportScene();
-        document.getElementById('btn-import').onclick = () => document.getElementById('file-import').click();
+        const gTrans = document.getElementById('btn-gizmo-translate');
+        if(gTrans) gTrans.onclick = () => { this.gizmo.setMode('translate'); this.setActiveTool('btn-gizmo-translate'); };
         
-        document.getElementById('file-import').onchange = (e) => {
-            if (e.target.files.length > 0) { this.engine.importScene(e.target.files[0]); e.target.value = ''; }
-        };
+        const gRot = document.getElementById('btn-gizmo-rotate');
+        if(gRot) gRot.onclick = () => { this.gizmo.setMode('rotate'); this.setActiveTool('btn-gizmo-rotate'); };
         
-        document.getElementById('btn-clear-scene').onclick = () => {
-            if (confirm('هل أنت متأكد من مسح المشهد بالكامل؟')) this.engine.clearScene();
-        };
+        const gScale = document.getElementById('btn-gizmo-scale');
+        if(gScale) gScale.onclick = () => { this.gizmo.setMode('scale'); this.setActiveTool('btn-gizmo-scale'); };
 
-        document.getElementById('btn-clear-assets').onclick = () => {
-            if (confirm('هل أنت متأكد من مسح كل الأصول المحفوظة؟')) {
-                this.engine.assets = [];
-                localStorage.removeItem('kgtf_assets');
-                this.renderAssets();
-            }
-        };
+        const dupBtn = document.getElementById('btn-duplicate');
+        if(dupBtn) dupBtn.onclick = () => { const newObj = this.engine.duplicateObject(); if (newObj) this.engine.selectObject(newObj); };
         
-        document.getElementById('btn-save-asset').onclick = () => {
-            if (!this.engine.selected) return;
-            this.engine.saveAsAsset(this.engine.selected);
-            this.renderAssets();
-            document.querySelector('[data-target="tab-content"]').click();
-        };
+        const delBtn = document.getElementById('btn-delete');
+        if(delBtn) delBtn.onclick = () => this.engine.deleteSelected();
+        
+        const saveBtn = document.getElementById('btn-save');
+        if(saveBtn) saveBtn.onclick = () => this.engine.saveScene();
+        
+        const exportBtn = document.getElementById('btn-export');
+        if(exportBtn) exportBtn.onclick = () => this.engine.exportScene();
+        
+        const importBtn = document.getElementById('btn-import');
+        if(importBtn) importBtn.onclick = () => document.getElementById('file-import').click();
+        
+        const fileImport = document.getElementById('file-import');
+        if(fileImport) fileImport.onchange = (e) => { if (e.target.files.length > 0) { this.engine.importScene(e.target.files[0]); e.target.value = ''; } };
+        
+        const clearSceneBtn = document.getElementById('btn-clear-scene');
+        if(clearSceneBtn) clearSceneBtn.onclick = () => { if (confirm('هل أنت متأكد من مسح المشهد بالكامل؟')) this.engine.clearScene(); };
 
-        document.getElementById('prop-snap').addEventListener('change', (e) => {
+        const clearAssetsBtn = document.getElementById('btn-clear-assets');
+        if(clearAssetsBtn) clearAssetsBtn.onclick = () => { if (confirm('هل أنت متأكد من مسح كل الأصول المحفوظة؟')) { this.engine.assets = []; localStorage.removeItem('kgtf_assets'); this.renderAssets(); } };
+        
+        const saveAssetBtn = document.getElementById('btn-save-asset');
+        if(saveAssetBtn) saveAssetBtn.onclick = () => { if (!this.engine.selected) return; this.engine.saveAsAsset(this.engine.selected); this.renderAssets(); document.querySelector('[data-target="tab-content"]').click(); };
+
+        const snapProp = document.getElementById('prop-snap');
+        if(snapProp) snapProp.addEventListener('change', (e) => {
             if (e.target.checked) { this.gizmo.translationSnap = 0.5; this.gizmo.rotationSnap = Math.PI / 12; } 
             else { this.gizmo.translationSnap = null; this.gizmo.rotationSnap = null; }
         });
 
-        document.getElementById('btn-add-behavior').onclick = () => {
+        const addBehBtn = document.getElementById('btn-add-behavior');
+        if(addBehBtn) addBehBtn.onclick = () => {
             if (!this.engine.selected) return;
             const select = document.getElementById('add-behavior-select');
             const bName = select.value;
@@ -167,8 +173,11 @@ export class Editor {
             select.value = '';
         };
 
-        document.getElementById('btn-upload-texture').onclick = () => document.getElementById('texture-input').click();
-        document.getElementById('texture-input').onchange = (e) => {
+        const texBtn = document.getElementById('btn-upload-texture');
+        if(texBtn) texBtn.onclick = () => document.getElementById('texture-input').click();
+        
+        const texInput = document.getElementById('texture-input');
+        if(texInput) texInput.onchange = (e) => {
             if (!this.engine.selected || !this.engine.selected.isMesh) return;
             const file = e.target.files[0];
             if (!file) return;
@@ -202,35 +211,58 @@ export class Editor {
     }
 
     bindWorldSettings() {
-        document.getElementById('pp-bloom-strength').addEventListener('input', (e) => { this.engine.bloomPass.strength = parseFloat(e.target.value); });
-        document.getElementById('pp-bloom-radius').addEventListener('input', (e) => { this.engine.bloomPass.radius = parseFloat(e.target.value); });
-        document.getElementById('pp-bloom-threshold').addEventListener('input', (e) => { this.engine.bloomPass.threshold = parseFloat(e.target.value); });
-        document.getElementById('pp-vignette-enabled').addEventListener('change', (e) => { this.engine.vignettePass.enabled = e.target.checked; });
-        document.getElementById('pp-vignette-strength').addEventListener('input', (e) => { this.engine.vignettePass.uniforms["darkness"].value = parseFloat(e.target.value); });
+        const bloomStr = document.getElementById('pp-bloom-strength');
+        if(bloomStr) bloomStr.addEventListener('input', (e) => { this.engine.bloomPass.strength = parseFloat(e.target.value); });
+        
+        const bloomRad = document.getElementById('pp-bloom-radius');
+        if(bloomRad) bloomRad.addEventListener('input', (e) => { this.engine.bloomPass.radius = parseFloat(e.target.value); });
+        
+        const bloomThr = document.getElementById('pp-bloom-threshold');
+        if(bloomThr) bloomThr.addEventListener('input', (e) => { this.engine.bloomPass.threshold = parseFloat(e.target.value); });
+        
+        const vigEn = document.getElementById('pp-vignette-enabled');
+        if(vigEn) vigEn.addEventListener('change', (e) => { this.engine.vignettePass.enabled = e.target.checked; });
+        
+        const vigStr = document.getElementById('pp-vignette-strength');
+        if(vigStr) vigStr.addEventListener('input', (e) => { this.engine.vignettePass.uniforms["darkness"].value = parseFloat(e.target.value); });
     }
 
     bindPhase5Settings() {
-        document.getElementById('btn-focus').onclick = () => {
+        const focusBtn = document.getElementById('btn-focus');
+        if(focusBtn) focusBtn.onclick = () => {
             if (this.engine.selected) this.engine.focusOnObject(this.engine.selected);
             else alert('الرجاء تحديد مجسم أولاً للتركيز عليه.');
         };
 
-        document.getElementById('env-auto-cycle').addEventListener('change', (e) => { this.engine.autoTime = e.target.checked; });
-        document.getElementById('env-time-slider').addEventListener('input', (e) => {
+        const autoCyc = document.getElementById('env-auto-cycle');
+        if(autoCyc) autoCyc.addEventListener('change', (e) => { this.engine.autoTime = e.target.checked; });
+        
+        const timeSl = document.getElementById('env-time-slider');
+        if(timeSl) timeSl.addEventListener('input', (e) => {
             this.engine.setTimeOfDay(parseFloat(e.target.value));
-            document.getElementById('env-auto-cycle').checked = false;
+            if(autoCyc) autoCyc.checked = false;
             this.engine.autoTime = false;
         });
-        document.getElementById('env-time-speed').addEventListener('input', (e) => { this.engine.daySpeed = parseFloat(e.target.value); });
-        document.getElementById('env-sun-intensity').addEventListener('input', (e) => {
+        
+        const timeSp = document.getElementById('env-time-speed');
+        if(timeSp) timeSp.addEventListener('input', (e) => { this.engine.daySpeed = parseFloat(e.target.value); });
+        
+        const sunInt = document.getElementById('env-sun-intensity');
+        if(sunInt) sunInt.addEventListener('input', (e) => {
             this.engine.isManualSun = true;
             this.engine.sun.intensity = parseFloat(e.target.value);
         });
-        document.getElementById('env-fog-distance').addEventListener('input', (e) => { this.engine.scene.fog.far = parseFloat(e.target.value); });
-        document.getElementById('env-rain-toggle').addEventListener('change', (e) => { this.engine.toggleRain(e.target.checked); });
+        
+        const fogDist = document.getElementById('env-fog-distance');
+        if(fogDist) fogDist.addEventListener('input', (e) => { this.engine.scene.fog.far = parseFloat(e.target.value); });
+        
+        const rainTog = document.getElementById('env-rain-toggle');
+        if(rainTog) rainTog.addEventListener('change', (e) => { this.engine.toggleRain(e.target.checked); });
 
         const bindRot = (id, axis) => {
-            document.getElementById(id).addEventListener('input', (e) => {
+            const el = document.getElementById(id);
+            if(!el) return;
+            el.addEventListener('input', (e) => {
                 if (!this.engine.selected) return;
                 this.engine.selected.rotation[axis] = parseFloat(e.target.value);
                 this.gizmo.attach(this.engine.selected);
@@ -295,7 +327,8 @@ export class Editor {
 
     setActiveTool(id) {
         document.querySelectorAll('.gizmo-group .icon-btn').forEach(btn => btn.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
+        const el = document.getElementById(id);
+        if(el) el.classList.add('active');
     }
 
     renderAssets() {
