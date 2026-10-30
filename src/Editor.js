@@ -25,7 +25,6 @@ export class Editor {
         
         this.updateList();
         
-        // إجبار المحرر يحدد المكعب الافتراضي أول ما يفتح
         if (this.engine.selected) {
             this.updateInspector(this.engine.selected);
         }
@@ -48,6 +47,13 @@ export class Editor {
         };
         document.getElementById('btn-delete').onclick = () => this.engine.deleteSelected();
         document.getElementById('btn-save').onclick = () => this.engine.saveScene();
+        
+        // ربط زر مسح المشهد
+        document.getElementById('btn-clear-scene').onclick = () => {
+            if (confirm('هل أنت متأكد من مسح المشهد بالكامل؟')) {
+                this.engine.clearScene();
+            }
+        };
     }
 
     bindInspector() {
