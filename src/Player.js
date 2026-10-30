@@ -66,11 +66,11 @@ export class Player {
         this.playerModel = playerObj;
         document.body.classList.add('play-mode');
         
-        // 1. إلغاء تحديد المجسم عشان تختفي الأسهم (Gizmo) والقائمة
+        // إخفاء الأسهم بالقوة
         this.engine.selectObject(null);
         
-        // 2. إبعاد الكاميرا للخلف والأعلى
-        this.engine.camera.position.copy(this.playerModel.position).add(new THREE.Vector3(0, 5, -10));
+        // ضبط كاميرا البداية (أعلى وأبعد)
+        this.engine.camera.position.copy(this.playerModel.position).add(new THREE.Vector3(0, 4, -8));
         this.engine.controls.target.copy(this.playerModel.position);
         this.engine.resize();
     }
@@ -125,16 +125,15 @@ export class Player {
             }
         }
 
-        // متابعة الكاميرا للشخصية (تعديل المسافة والارتفاع)
+        // متابعة الكاميرا للشخصية
         const targetPos = this.playerModel.position.clone();
-        targetPos.y += 2; 
+        targetPos.y += 1.5; 
         this.engine.controls.target.lerp(targetPos, 0.1);
         
-        const desiredCamPos = this.playerModel.position.clone();
-        desiredCamPos.y += 5; // رفع الكاميرا
-        desiredCamPos.z -= 10; // إبعاد الكاميرا للخلف
+        const desiredCamPos = new THREE.Vector3(0, 4, -8); // المسافة والارتفاع
         desiredCamPos.applyAxisAngle(new THREE.Vector3(0,1,0), this.playerModel.rotation.y);
+        desiredCamPos.add(this.playerModel.position);
         
-        this.engine.camera.position.lerp(desiredCamPos, 0.05);
+        this.engine.camera.position.lerp(desiredCamPos, 0.1);
     }
 }

@@ -47,5 +47,5 @@ body.play-mode #exit-play { display: block; }
     #viewport-container { order: 1; flex: 1; min-height: 45vh; }
     #left-panel { order: 2; width: 100%; height: 65px; flex-direction: row; justify-content: flex-start; border-left: none; border-top: 1px solid #2a2a3a; border-bottom: 1px solid #2a2a3a; padding: 5px 10px; overflow-x: auto; flex-shrink: 0; }
     .icon-btn { width: 65px; height: 55px; flex-shrink: 0; }
-    #right-panel { order: 3; width: 100%; height: 35vh; border-right: none; border-top: 1px solid #2a2a3a; flex-shrink: 0; }
+    #right-panel { order: 3; width: 100%; height: 42vh; border-right: none; border-top: 1px solid #2a2a3a; flex-shrink: 0; }
 }

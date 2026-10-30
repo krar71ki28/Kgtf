@@ -135,7 +135,7 @@ export class Engine {
         loader.load('https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb', (gltf) => {
             const model = gltf.scene;
             model.position.y = 0; 
-            model.scale.set(1.2, 1.2, 1.2); // <--- تم تكبير الحجم من 0.5 إلى 1.2
+            model.scale.set(0.7, 0.7, 0.7); // تصغير الحجم ليناسب الكاميرا
             model.traverse(o => { if(o.isMesh) o.castShadow = true; });
             const mixer = new THREE.AnimationMixer(model);
             const actions = {};
@@ -184,7 +184,11 @@ export class Engine {
                 }
             }
         });
-        this.controls.update();
+        
+        // لا نحدث الكاميرا الأوربت في وضع اللعب عشان ما تتصادم مع كاميرا اللاعب
+        if (!document.body.classList.contains('play-mode')) {
+            this.controls.update();
+        }
     }
 
     render() { this.renderer.render(this.scene, this.camera); }
