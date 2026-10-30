@@ -65,6 +65,9 @@ export class Engine {
         this.idCounter = 1;
         this.onSelect = null;
         this.onSceneChange = null;
+        
+        // رقم النسخة لمنع الشخصيات القديمة من الظهور بعد المسح
+        this.sceneVersion = 0;
 
         this.loadScene();
         this.resize();
@@ -137,7 +140,10 @@ export class Engine {
     }
 
     clearScene() {
-        // مسح كل الكائنات من المشهد والمصفوفة
+        // زيادة رقم النسخة عشان نلغي أي تحميلات سابقة
+        this.sceneVersion++;
+        
+        // مسح الكائنات
         this.objects.forEach(obj => {
             this.scene.remove(obj);
             if (obj.material) obj.material.dispose();
@@ -145,17 +151,21 @@ export class Engine {
         this.objects = [];
         this.selectObject(null);
         
-        // مسح البيانات المحفوظة في المتصفح
+        // مسح البيانات من المتصفح
         localStorage.removeItem('kgtf_scene_final');
         
-        // إضافة مكعب افتراضي عشان ما يطلع الشاشة فاضية
+        // إضافة مكعب افتراضي
         this.addObject('cube');
         if (this.onSceneChange) this.onSceneChange();
     }
 
     loadCharacter(opts = {}) {
+        const currentVersion = this.sceneVersion;
         const loader = new GLTFLoader();
         loader.load('https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb', (gltf) => {
+            // إذا تم مسح المشهد أثناء التحميل، نتجاهل هذه الشخصية
+            if (this.sceneVersion !== currentVersion) return;
+
             const model = gltf.scene;
             model.position.y = 0; 
             model.scale.set(0.7, 0.7, 0.7);
