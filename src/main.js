@@ -6,7 +6,8 @@ import { Player } from './Player.js';
 if (window.location.search.includes('reset')) {
     localStorage.removeItem('kgtf_scene_final');
     localStorage.removeItem('kgtf_assets');
-    alert('تم مسح المشهد القديم بنجاح! سيتم إعادة تشغيل المحرك الآن.');
+    localStorage.removeItem('kgtf_all_scenes');
+    alert('تم مسح كل البيانات القديمة بنجاح! سيتم إعادة تشغيل المحرك الآن.');
     window.location.href = window.location.pathname; 
 }
 

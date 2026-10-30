@@ -25,6 +25,7 @@ export class Editor {
         this.bindMaterialProps();
         this.bindWorldSettings();
         this.bindPhase5Settings();
+        this.bindSceneManager();
         this.setupRaycaster();
         this.setupDropdown();
         this.setupTabs();
@@ -62,17 +63,22 @@ export class Editor {
         
         const types = ['cube','sphere','cylinder','cone','torus','tree','rock','building','light','character'];
         types.forEach(t => {
-            document.getElementById(`btn-${t}`).onclick = () => {
+            const el = document.getElementById(`btn-${t}`);
+            if(el) el.onclick = () => {
                 if(t === 'character') this.engine.loadCharacter();
                 else this.engine.addObject(t);
                 menu.classList.remove('show');
             };
         });
         
-        document.getElementById('btn-vfx-fire').onclick = () => { this.engine.createParticleSystem('fire', new THREE.Vector3(0, 0.5, 0)); menu.classList.remove('show'); };
-        document.getElementById('btn-vfx-sparks').onclick = () => { this.engine.createParticleSystem('sparks', new THREE.Vector3(0, 0.5, 0)); menu.classList.remove('show'); };
-        document.getElementById('btn-vfx-smoke').onclick = () => { this.engine.createParticleSystem('smoke', new THREE.Vector3(0, 0.5, 0)); menu.classList.remove('show'); };
-        document.getElementById('btn-audio').onclick = () => { this.engine.createAudioEmitter(new THREE.Vector3(0, 1, 0)); menu.classList.remove('show'); };
+        const vfxFire = document.getElementById('btn-vfx-fire');
+        if(vfxFire) vfxFire.onclick = () => { this.engine.createParticleSystem('fire', new THREE.Vector3(0, 0.5, 0)); menu.classList.remove('show'); };
+        const vfxSparks = document.getElementById('btn-vfx-sparks');
+        if(vfxSparks) vfxSparks.onclick = () => { this.engine.createParticleSystem('sparks', new THREE.Vector3(0, 0.5, 0)); menu.classList.remove('show'); };
+        const vfxSmoke = document.getElementById('btn-vfx-smoke');
+        if(vfxSmoke) vfxSmoke.onclick = () => { this.engine.createParticleSystem('smoke', new THREE.Vector3(0, 0.5, 0)); menu.classList.remove('show'); };
+        const audioBtn = document.getElementById('btn-audio');
+        if(audioBtn) audioBtn.onclick = () => { this.engine.createAudioEmitter(new THREE.Vector3(0, 1, 0)); menu.classList.remove('show'); };
     }
 
     populateBehaviorSelect() {
@@ -189,9 +195,7 @@ export class Editor {
                 if (!this.engine.selected || !this.engine.selected.material) return;
                 const val = parseFloat(e.target.value);
                 this.engine.selected.material[prop] = val;
-                if (prop === 'opacity') {
-                    this.engine.selected.material.transparent = val < 1.0;
-                }
+                if (prop === 'opacity') this.engine.selected.material.transparent = val < 1.0;
                 this.engine.selected.material.needsUpdate = true;
             });
         });
@@ -207,19 +211,23 @@ export class Editor {
 
     bindPhase5Settings() {
         document.getElementById('btn-focus').onclick = () => {
-            if (this.engine.selected) {
-                this.engine.focusOnObject(this.engine.selected);
-            } else {
-                alert('الرجاء تحديد مجسم أولاً للتركيز عليه.');
-            }
+            if (this.engine.selected) this.engine.focusOnObject(this.engine.selected);
+            else alert('الرجاء تحديد مجسم أولاً للتركيز عليه.');
         };
 
+        document.getElementById('env-auto-cycle').addEventListener('change', (e) => { this.engine.autoTime = e.target.checked; });
+        document.getElementById('env-time-slider').addEventListener('input', (e) => {
+            this.engine.setTimeOfDay(parseFloat(e.target.value));
+            document.getElementById('env-auto-cycle').checked = false;
+            this.engine.autoTime = false;
+        });
+        document.getElementById('env-time-speed').addEventListener('input', (e) => { this.engine.daySpeed = parseFloat(e.target.value); });
         document.getElementById('env-sun-intensity').addEventListener('input', (e) => {
+            this.engine.isManualSun = true;
             this.engine.sun.intensity = parseFloat(e.target.value);
         });
-        document.getElementById('env-fog-distance').addEventListener('input', (e) => {
-            this.engine.scene.fog.far = parseFloat(e.target.value);
-        });
+        document.getElementById('env-fog-distance').addEventListener('input', (e) => { this.engine.scene.fog.far = parseFloat(e.target.value); });
+        document.getElementById('env-rain-toggle').addEventListener('change', (e) => { this.engine.toggleRain(e.target.checked); });
 
         const bindRot = (id, axis) => {
             document.getElementById(id).addEventListener('input', (e) => {
@@ -233,6 +241,58 @@ export class Editor {
         bindRot('prop-rot-z', 'z');
     }
 
+    bindSceneManager() {
+        const renderSceneList = () => {
+            const list = document.getElementById('scene-list');
+            if(!list) return;
+            list.innerHTML = '';
+            const allScenes = JSON.parse(localStorage.getItem('kgtf_all_scenes') || '{}');
+            
+            if (Object.keys(allScenes).length === 0) {
+                list.innerHTML = '<div style="color:#666; font-size:11px; text-align:center;">لا توجد مشاهد محفوظة.</div>';
+                return;
+            }
+
+            for (const name in allScenes) {
+                const div = document.createElement('div');
+                div.style.display = 'flex'; div.style.justifyContent = 'space-between'; div.style.alignItems = 'center';
+                div.style.background = '#25252b'; div.style.padding = '6px 10px'; div.style.borderRadius = '4px'; div.style.border = '1px solid #3c3c45';
+                
+                const title = document.createElement('span');
+                title.innerText = name; title.style.fontSize = '12px'; title.style.cursor = 'pointer'; title.style.color = '#4ade80';
+                title.onclick = () => {
+                    if(confirm('هل تريد فتح هذا المشهد؟ (سيتم استبدال المشهد الحالي)')) this.engine.loadSceneByName(name);
+                };
+
+                const delBtn = document.createElement('span');
+                delBtn.innerText = '✕'; delBtn.style.color = '#ff5577'; delBtn.style.cursor = 'pointer';
+                delBtn.onclick = () => {
+                    if(confirm('هل أنت متأكد من حذف هذا المشهد؟')) { this.engine.deleteSceneByName(name); renderSceneList(); }
+                };
+
+                div.appendChild(title); div.appendChild(delBtn); list.appendChild(div);
+            }
+        };
+
+        const saveAsBtn = document.getElementById('btn-save-scene-as');
+        if(saveAsBtn) saveAsBtn.onclick = () => {
+            const name = document.getElementById('new-scene-name').value.trim();
+            if (name) { this.engine.saveSceneAs(name); document.getElementById('new-scene-name').value = ''; renderSceneList(); }
+        };
+
+        const newSceneBtn = document.getElementById('btn-new-scene');
+        if(newSceneBtn) newSceneBtn.onclick = () => {
+            if (confirm('هل تريد إنشاء مشهد جديد فارغ؟ (سيتم مسح المشهد الحالي إذا لم يتم حفظه)')) {
+                this.engine.clearScene(); this.engine.addObject('cube'); renderSceneList();
+                document.querySelector('[data-target="tab-outliner"]').click();
+            }
+        };
+
+        renderSceneList();
+        const scenesTab = document.querySelector('[data-target="tab-scenes"]');
+        if(scenesTab) scenesTab.addEventListener('click', renderSceneList);
+    }
+
     setActiveTool(id) {
         document.querySelectorAll('.gizmo-group .icon-btn').forEach(btn => btn.classList.remove('active'));
         document.getElementById(id).classList.add('active');
@@ -240,6 +300,7 @@ export class Editor {
 
     renderAssets() {
         const grid = document.getElementById('asset-grid');
+        if(!grid) return;
         grid.innerHTML = '';
         if (this.engine.assets.length === 0) {
             grid.innerHTML = '<div style="color:#666; font-size:12px; grid-column: 1/-1; text-align:center; margin-top:20px;">لا توجد أصول محفوظة.<br>حدد مجسماً واضغط "حفظ كأصل".</div>';
@@ -247,30 +308,12 @@ export class Editor {
         }
         this.engine.assets.forEach(asset => {
             const card = document.createElement('div');
-            card.className = 'asset-card';
-            card.style.position = 'relative';
-            
-            const icon = document.createElement('div');
-            icon.className = 'asset-icon';
-            icon.innerText = asset.type === 'cube' ? '📦' : asset.type === 'tree' ? '🌲' : '🧊'; 
-            
-            const name = document.createElement('div');
-            name.className = 'asset-name';
-            name.innerText = asset.name;
-
-            const delBtn = document.createElement('div');
-            delBtn.innerText = '✕';
-            delBtn.style.color = '#ff5577';
-            delBtn.style.position = 'absolute';
-            delBtn.style.top = '2px';
-            delBtn.style.left = '2px';
-            delBtn.style.fontSize = '10px';
-            delBtn.style.cursor = 'pointer';
+            card.className = 'asset-card'; card.style.position = 'relative';
+            const icon = document.createElement('div'); icon.className = 'asset-icon'; icon.innerText = asset.type === 'cube' ? '📦' : asset.type === 'tree' ? '🌲' : '🧊'; 
+            const name = document.createElement('div'); name.className = 'asset-name'; name.innerText = asset.name;
+            const delBtn = document.createElement('div'); delBtn.innerText = '✕'; delBtn.style.color = '#ff5577'; delBtn.style.position = 'absolute'; delBtn.style.top = '2px'; delBtn.style.left = '2px'; delBtn.style.fontSize = '10px'; delBtn.style.cursor = 'pointer';
             delBtn.onclick = (e) => { e.stopPropagation(); this.engine.removeAsset(asset.id); this.renderAssets(); };
-
-            card.appendChild(icon);
-            card.appendChild(name);
-            card.appendChild(delBtn);
+            card.appendChild(icon); card.appendChild(name); card.appendChild(delBtn);
             card.onclick = () => { this.engine.spawnAsset(asset.id); };
             grid.appendChild(card);
         });
@@ -279,6 +322,7 @@ export class Editor {
     bindInspector() {
         const bindProp = (id, callback) => {
             const el = document.getElementById(id);
+            if(!el) return;
             el.addEventListener('input', (e) => {
                 if (!this.engine.selected) return;
                 callback(this.engine.selected, el.type === 'checkbox' ? el.checked : (el.type === 'range' ? parseFloat(el.value) : el.value));
@@ -296,9 +340,7 @@ export class Editor {
         bindProp('prop-light-distance', (obj, v) => { if(obj.isLight) obj.distance = v; });
         bindProp('prop-material', (obj, v) => {
             if (obj.isMesh && obj.userData.type !== 'character') {
-                obj.material.dispose();
-                obj.material = this.engine.makeMaterial(v);
-                obj.userData.material = v;
+                obj.material.dispose(); obj.material = this.engine.makeMaterial(v); obj.userData.material = v;
             }
         });
     }
@@ -318,8 +360,7 @@ export class Editor {
             document.getElementById('prop-roughness').value = obj.material.roughness !== undefined ? obj.material.roughness : 0.5;
             document.getElementById('prop-metalness').value = obj.material.metalness !== undefined ? obj.material.metalness : 0.1;
             document.getElementById('prop-opacity').value = obj.material.opacity !== undefined ? obj.material.opacity : 1.0;
-        }
-        else if (obj.isLight) {
+        } else if (obj.isLight) {
             document.getElementById('prop-color').value = '#' + obj.color.getHexString();
             document.getElementById('prop-light-intensity').value = obj.intensity;
             document.getElementById('prop-light-distance').value = obj.distance;
@@ -328,6 +369,7 @@ export class Editor {
 
     renderBehaviorsUI() {
         const container = document.getElementById('active-behaviors-list');
+        if(!container) return;
         container.innerHTML = '';
         if (!this.engine.selected) return;
         const behaviors = this.engine.selected.userData.behaviors || {};
@@ -390,12 +432,12 @@ export class Editor {
             document.getElementById('prop-physics').checked = obj.userData.physics.enabled;
             document.getElementById('prop-bounce').value = obj.userData.physics.bounce;
         }
-        
         this.updateList();
     }
 
     updateList() {
         const list = document.getElementById('object-list');
+        if(!list) return;
         list.innerHTML = '';
         this.engine.objects.forEach(obj => {
             const div = document.createElement('div');
@@ -406,85 +448,3 @@ export class Editor {
         });
     }
 }
-
-// دالة ربط إدارة المشاهد
-Editor.prototype.bindSceneManager = function() {
-    const renderSceneList = () => {
-        const list = document.getElementById('scene-list');
-        list.innerHTML = '';
-        const allScenes = JSON.parse(localStorage.getItem('kgtf_all_scenes') || '{}');
-        
-        if (Object.keys(allScenes).length === 0) {
-            list.innerHTML = '<div style="color:#666; font-size:11px; text-align:center;">لا توجد مشاهد محفوظة.</div>';
-            return;
-        }
-
-        for (const name in allScenes) {
-            const div = document.createElement('div');
-            div.style.display = 'flex';
-            div.style.justifyContent = 'space-between';
-            div.style.alignItems = 'center';
-            div.style.background = '#25252b';
-            div.style.padding = '6px 10px';
-            div.style.borderRadius = '4px';
-            div.style.border = '1px solid #3c3c45';
-            
-            const title = document.createElement('span');
-            title.innerText = name;
-            title.style.fontSize = '12px';
-            title.style.cursor = 'pointer';
-            title.style.color = '#4ade80';
-            title.onclick = () => {
-                if(confirm('هل تريد فتح هذا المشهد؟ (سيتم استبدال المشهد الحالي)')) {
-                    this.engine.loadSceneByName(name);
-                }
-            };
-
-            const delBtn = document.createElement('span');
-            delBtn.innerText = '✕';
-            delBtn.style.color = '#ff5577';
-            delBtn.style.cursor = 'pointer';
-            delBtn.onclick = () => {
-                if(confirm('هل أنت متأكد من حذف هذا المشهد؟')) {
-                    this.engine.deleteSceneByName(name);
-                    renderSceneList();
-                }
-            };
-
-            div.appendChild(title);
-            div.appendChild(delBtn);
-            list.appendChild(div);
-        }
-    };
-
-    // حفظ مشهد باسم جديد
-    document.getElementById('btn-save-scene-as').onclick = () => {
-        const name = document.getElementById('new-scene-name').value.trim();
-        if (name) {
-            this.engine.saveSceneAs(name);
-            document.getElementById('new-scene-name').value = '';
-            renderSceneList();
-        }
-    };
-
-    // مشهد جديد (تفريغ الشاشة)
-    document.getElementById('btn-new-scene').onclick = () => {
-        if (confirm('هل تريد إنشاء مشهد جديد فارغ؟ (سيتم مسح المشهد الحالي إذا لم يتم حفظه)')) {
-            this.engine.clearScene();
-            this.engine.addObject('cube'); // نضع مكعب افتراضي
-            renderSceneList();
-            document.querySelector('[data-target="tab-outliner"]').click();
-        }
-    };
-
-    renderSceneList();
-    // تحديث القائمة كل ما رجعنا للتبويب
-    document.querySelector('[data-target="tab-scenes"]').addEventListener('click', renderSceneList);
-};
-
-// استدعاء الدالة الجديدة في الـ constructor
-const originalBindPhase5 = Editor.prototype.bindPhase5Settings;
-Editor.prototype.bindPhase5Settings = function() {
-    originalBindPhase5.call(this);
-    this.bindSceneManager();
-};
