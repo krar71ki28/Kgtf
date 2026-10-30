@@ -51,13 +51,18 @@
             </div>
             <div class="panel-section" id="inspector" style="display:none;">
                 <div class="panel-title">PROPERTIES</div>
+                
+                <!-- خيار المحاذاة صار أول شي هنا عشان يطلع قدامك -->
+                <div class="prop-row" style="margin-bottom:15px; background: #1e1e30; padding: 8px; border-radius: 6px;">
+                    <label style="color:#00e5ff; font-weight:bold;">محاذاة الشبكة</label>
+                    <input type="checkbox" id="prop-snap">
+                </div>
+
                 <div class="prop-row" style="margin-bottom:15px; display: flex; gap: 10px;">
                     <button class="btn" id="btn-duplicate" style="flex:1; background:#1a3a2a; color:#4ade80; padding:10px;">📑 تكرار</button>
                     <button class="btn" id="btn-delete" style="flex:1; background:#3a1a1a; color:#ff5577; padding:10px;">🗑️ حذف</button>
                 </div>
                 
-                <div class="prop-row"><label style="color:#00e5ff; font-weight:bold;">محاذاة الشبكة</label><input type="checkbox" id="prop-snap"></div>
-
                 <div class="panel-title" style="color:#ffaa00;">PHYSICS</div>
                 <div class="prop-row"><label>جاذبية</label><input type="checkbox" id="prop-physics"></div>
                 <div class="prop-row"><label>ارتداد</label><input type="range" id="prop-bounce" min="0" max="1" step="0.1" value="0.5"></div>
@@ -76,6 +81,6 @@
     <script type="importmap">
     { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
-    <script type="module" src="src/main.js?v=17"></script>
+    <script type="module" src="src/main.js?v=18"></script>
 </body>
 </html>

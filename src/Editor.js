@@ -7,19 +7,9 @@ export class Editor {
         this.gizmo = new TransformControls(this.engine.camera, this.engine.renderer.domElement);
         this.gizmo.setSize(0.8);
         this.engine.scene.add(this.gizmo);
-        this.snapEnabled = false;
 
         this.gizmo.addEventListener('dragging-changed', (event) => { this.engine.controls.enabled = !event.value; });
-        
-        this.gizmo.addEventListener('objectChange', () => {
-            if (this.snapEnabled && this.gizmo.getMode() === 'translate' && this.engine.selected) {
-                const p = this.engine.selected.position;
-                p.x = Math.round(p.x * 2) / 2; // Snap to 0.5
-                p.y = Math.round(p.y * 2) / 2;
-                p.z = Math.round(p.z * 2) / 2;
-            }
-            this.updateUIValues();
-        });
+        this.gizmo.addEventListener('objectChange', () => this.updateUIValues());
 
         this.bindButtons();
         this.bindInspector();
@@ -58,9 +48,15 @@ export class Editor {
             if (confirm('هل أنت متأكد من مسح المشهد بالكامل؟')) this.engine.clearScene();
         };
         
-        // تفعيل/تعطيل الـ Snap
+        // تفعيل/تعطيل الـ Snap باستخدام الخاصية المدمجة في Three.js
         document.getElementById('prop-snap').addEventListener('change', (e) => {
-            this.snapEnabled = e.target.checked;
+            if (e.target.checked) {
+                this.gizmo.translationSnap = 0.5; // محاذاة كل نصف متر
+                this.gizmo.rotationSnap = Math.PI / 12; // محاذاة كل 15 درجة
+            } else {
+                this.gizmo.translationSnap = null;
+                this.gizmo.rotationSnap = null;
+            }
         });
     }
 
