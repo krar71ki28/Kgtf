@@ -134,6 +134,18 @@ export class Engine {
         return obj;
     }
 
+    // دالة فحص الاصطدام
+    checkCollision(box1, excludeObj) {
+        for (let obj of this.objects) {
+            if (obj === excludeObj || obj.userData.type === 'character' || obj.userData.type === 'light') continue;
+            const box2 = new THREE.Box3().setFromObject(obj);
+            if (box1.intersectsBox(box2)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     duplicateObject() {
         if (!this.selected || this.selected.userData.type === 'character') return;
         const obj = this.selected;

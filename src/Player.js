@@ -13,10 +13,12 @@ export class Player {
         this.velocityY = 0;
         this.isGrounded = true;
 
-        // إعدادات كاميرا اللعب
-        this.cameraYaw = 0; // دوران الكاميرا حول اللاعب
-        this.cameraPitch = 0.4; // ارتفاع/انخفاض الكاميرا
+        this.cameraYaw = 0; 
+        this.cameraPitch = 0.4; 
         this.lastTouch = { x: 0, y: 0 };
+
+        // صندوق اصطدام اللاعب (نصغر حجمه شوي عشان يكون عادل)
+        this.playerBoxSize = new THREE.Vector3(0.8, 1.6, 0.8);
 
         this.setupControls();
     }
@@ -50,13 +52,11 @@ export class Player {
         });
         zone.addEventListener('touchend', () => { this.joystickActive = false; knob.style.transform = `translate(-50%, -50%)`; this.joystickDir = { x: 0, y: 0 }; });
 
-        // زر القفز
         document.getElementById('btn-jump').addEventListener('touchstart', (e) => {
             e.preventDefault(); e.stopPropagation();
             if (this.isGrounded) { this.velocityY = 8; this.isGrounded = false; }
         });
 
-        // سحب الشاشة لتدوير الكاميرا في وضع اللعب
         const canvas = document.getElementById('viewport');
         canvas.addEventListener('touchstart', (e) => {
             if (!this.isPlaying) return;
@@ -67,10 +67,8 @@ export class Player {
             const touch = e.touches[0];
             const dx = touch.clientX - this.lastTouch.x;
             const dy = touch.clientY - this.lastTouch.y;
-            
             this.cameraYaw -= dx * 0.01;
             this.cameraPitch = Math.max(0.1, Math.min(1.5, this.cameraPitch + dy * 0.01));
-            
             this.lastTouch = { x: touch.clientX, y: touch.clientY };
         });
     }
@@ -88,7 +86,7 @@ export class Player {
         this.cameraYaw = this.playerModel.rotation.y;
         this.cameraPitch = 0.4;
         
-        this.updateCamera(1); // استدعاء مرة وحدة عشان نضبط الكاميرا
+        this.updateCamera(1); 
         this.engine.resize();
     }
 
@@ -104,17 +102,13 @@ export class Player {
     updateCamera(dt) {
         const dist = 8;
         const h = 4;
-        
-        // حساب الموقع بناءً على الزوايا
         const offsetX = Math.sin(this.cameraYaw) * dist * Math.cos(this.cameraPitch);
         const offsetZ = Math.cos(this.cameraYaw) * dist * Math.cos(this.cameraPitch);
         const offsetY = h + Math.sin(this.cameraPitch) * dist;
 
         const desiredCamPos = this.playerModel.position.clone().add(new THREE.Vector3(offsetX, offsetY, offsetZ));
-        
         this.engine.camera.position.lerp(desiredCamPos, 10 * dt);
         if (this.engine.camera.position.y < 0.5) this.engine.camera.position.y = 0.5;
-
         this.engine.camera.lookAt(this.playerModel.position.x, this.playerModel.position.y + 1.5, this.playerModel.position.z);
     }
 
@@ -124,7 +118,6 @@ export class Player {
         const maxSpeed = 6;
         this.direction.set(0, 0, 0);
 
-        // حساب اتجاه الكاميرا
         const camForward = new THREE.Vector3();
         this.engine.camera.getWorldDirection(camForward);
         camForward.y = 0; camForward.normalize();
@@ -154,15 +147,44 @@ export class Player {
         this.currentVelocity.lerp(this.targetVelocity, 10 * dt);
 
         if (this.currentVelocity.lengthSq() > 0.1) {
-            this.playerModel.position.x += this.currentVelocity.x * dt;
-            this.playerModel.position.z += this.currentVelocity.z * dt;
-            
             const targetAngle = Math.atan2(this.currentVelocity.x, this.currentVelocity.z);
             let diff = targetAngle - this.playerModel.rotation.y;
             while (diff < -Math.PI) diff += Math.PI * 2;
             while (diff > Math.PI) diff -= Math.PI * 2;
             this.playerModel.rotation.y += diff * 10 * dt;
         }
+
+        // --- تطبيق حركة الاصطدام ---
+        const deltaX = this.currentVelocity.x * dt;
+        const deltaZ = this.currentVelocity.z * dt;
+
+        // فحص حركة المحور X
+        if (Math.abs(deltaX) > 0.001) {
+            const nextPos = this.playerModel.position.clone().add(new THREE.Vector3(deltaX, 0, 0));
+            // رفع الصندوق للنص عشان يغطي جسم الشخصية
+            const centerPos = nextPos.clone().add(new THREE.Vector3(0, this.playerBoxSize.y / 2, 0));
+            const playerBox = new THREE.Box3().setFromCenterAndSize(centerPos, this.playerBoxSize);
+            
+            if (!this.engine.checkCollision(playerBox, this.playerModel)) {
+                this.playerModel.position.x += deltaX;
+            } else {
+                this.currentVelocity.x = 0; // توقف عن الحركة في هذا المحور
+            }
+        }
+
+        // فحص حركة المحور Z
+        if (Math.abs(deltaZ) > 0.001) {
+            const nextPos = this.playerModel.position.clone().add(new THREE.Vector3(0, 0, deltaZ));
+            const centerPos = nextPos.clone().add(new THREE.Vector3(0, this.playerBoxSize.y / 2, 0));
+            const playerBox = new THREE.Box3().setFromCenterAndSize(centerPos, this.playerBoxSize);
+            
+            if (!this.engine.checkCollision(playerBox, this.playerModel)) {
+                this.playerModel.position.z += deltaZ;
+            } else {
+                this.currentVelocity.z = 0;
+            }
+        }
+        // -------------------------
 
         const isMoving = this.currentVelocity.lengthSq() > 1;
         const actions = this.playerModel.userData.actions;
