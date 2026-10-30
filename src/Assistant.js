@@ -7,14 +7,10 @@ export class Assistant {
         this.input = document.getElementById('ai-input');
         this.messages = document.getElementById('ai-messages');
 
-        this.apiKey = localStorage.getItem('gemini_api_key');
+        // المفتاح الجديد
+        this.apiKey = '';
 
         this.fab.onclick = () => {
-            if (!this.apiKey) {
-                this.apiKey = prompt("مرحباً! لإ activación المساعد الذكي، يرجى إدخال Google Gemini API Key:");
-                if (this.apiKey) localStorage.setItem('gemini_api_key', this.apiKey);
-                else return;
-            }
             this.chat.style.display = this.chat.style.display === 'flex' ? 'none' : 'flex';
         };
         this.closeBtn.onclick = () => this.chat.style.display = 'none';
@@ -81,7 +77,7 @@ export class Assistant {
 
         if (!response.ok) {
             const err = await response.json();
-            throw new Error(err.error?.message || 'فشل الاتصال');
+            throw new Error(err.error?.message || 'فشل الاتصال، تأكد من صحة المفتاح');
         }
 
         const data = await response.json();
