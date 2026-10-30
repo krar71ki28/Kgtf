@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>KGTF ENGINE</title>
+<title>KGTF ENGINE - Physics</title>
 <style>
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body { font-family: system-ui, sans-serif; background: #0a0a0f; color: #fff; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
@@ -29,9 +29,10 @@
     .panel-section { border-bottom: 1px solid #2a2a3a; padding: 10px; }
     .panel-title { font-size: 11px; color: #888; font-weight: bold; margin-bottom: 8px; letter-spacing: 1px; }
     .prop-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 5px; }
-    .prop-row label { font-size: 11px; color: #aaa; width: 45px; flex-shrink: 0; }
+    .prop-row label { font-size: 11px; color: #aaa; width: 50px; flex-shrink: 0; }
     .prop-row input[type="range"] { flex: 1; }
     .prop-row input[type="color"] { width: 32px; height: 32px; border: none; background: none; cursor: pointer; }
+    .prop-row input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; }
     .prop-row select { flex: 1; background: #0a0a0f; border: 1px solid #2a2a3a; color: #fff; padding: 4px; border-radius: 4px; font-size: 11px; }
 
     #status-bar { position: absolute; bottom: 10px; left: 10px; background: rgba(20,20,30,0.8); padding: 5px 10px; border-radius: 4px; font-size: 10px; font-family: monospace; color: #0f0; z-index: 5; border: 1px solid #2a2a3a; }
@@ -44,7 +45,6 @@
     .ai-input-row input { flex: 1; background: #0a0a0f; border: 1px solid #2a2a3a; color: #fff; padding: 8px; border-radius: 4px; outline: none; }
     .ai-input-row button { background: #ff5577; color: #fff; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; }
 
-    /* وضع التشغيل */
     body.play-mode #header,
     body.play-mode #left-panel,
     body.play-mode #right-panel,
@@ -57,9 +57,9 @@
         #workspace { flex-direction: column; }
         #left-panel { width: 100%; height: 62px; flex-direction: row; justify-content: space-around; border-left: none; border-bottom: 1px solid #2a2a3a; padding: 4px; gap: 4px; }
         .icon-btn { width: 48px; height: 48px; }
-        #right-panel { width: 100%; height: 240px; border-right: none; border-top: 1px solid #2a2a3a; }
+        #right-panel { width: 100%; height: 260px; border-right: none; border-top: 1px solid #2a2a3a; }
         #ai-chat { right: 10px; bottom: 70px; width: calc(100% - 20px); height: 60vh; }
-        #status-bar { bottom: 250px; left: 10px; }
+        #status-bar { bottom: 270px; left: 10px; }
     }
 </style>
 </head>
@@ -122,7 +122,12 @@
                 <div class="prop-row"><label>Z</label><input type="range" id="prop-z" min="-20" max="20" step="0.1" value="0"></div>
                 <div class="prop-row"><label>دوران</label><input type="range" id="prop-rot" min="0" max="6.28" step="0.1" value="0"></div>
                 <div class="prop-row"><label>حجم</label><input type="range" id="prop-scale" min="0.1" max="4" step="0.1" value="1"></div>
-                <div class="prop-row"><label>حذف</label><button class="btn" id="btn-delete" style="width:100%; background:#3a1a1a; color:#ff5577;">حذف العنصر</button></div>
+                
+                <div class="panel-title" style="margin-top:15px; color:#ffaa00;">PHYSICS</div>
+                <div class="prop-row"><label>جاذبية</label><input type="checkbox" id="prop-physics"></div>
+                <div class="prop-row"><label>ارتداد</label><input type="range" id="prop-bounce" min="0" max="1" step="0.1" value="0.5"></div>
+                
+                <div class="prop-row" style="margin-top:10px;"><label>حذف</label><button class="btn" id="btn-delete" style="width:100%; background:#3a1a1a; color:#ff5577;">حذف العنصر</button></div>
             </div>
         </div>
     </div>
@@ -155,10 +160,10 @@
         const canvas = document.getElementById('viewport');
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x0a0a0f);
-        scene.fog = new THREE.Fog(0x0a0a0f, 15, 60);
+        scene.fog = new THREE.Fog(0x0a0a0f, 20, 80);
 
         const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
-        camera.position.set(6, 5, 8);
+        camera.position.set(8, 6, 10);
 
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -167,22 +172,20 @@
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
-        controls.target.set(0, 1, 0);
+        controls.target.set(0, 2, 0);
         controls.maxPolarAngle = Math.PI / 2.05;
 
-        // إضاءة أساسية (ثابتة)
         scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 0.6));
         const sun = new THREE.DirectionalLight(0xffffff, 1.5);
-        sun.position.set(8, 15, 8);
+        sun.position.set(10, 20, 10);
         sun.castShadow = true;
-        sun.shadow.mapSize.set(1024, 1024);
-        sun.shadow.camera.left = -20; sun.shadow.camera.right = 20;
-        sun.shadow.camera.top = 20; sun.shadow.camera.bottom = -20;
+        sun.shadow.mapSize.set(2048, 2048);
+        sun.shadow.camera.left = -30; sun.shadow.camera.right = 30;
+        sun.shadow.camera.top = 30; sun.shadow.camera.bottom = -30;
         scene.add(sun);
 
         scene.add(new THREE.GridHelper(60, 60, 0x2a2a3a, 0x1a1a2e));
 
-        // حالة المحرر
         let objects = [];
         let selected = null;
         let idCounter = 1;
@@ -215,10 +218,15 @@
                 obj.receiveShadow = true;
             }
             
-            obj.userData = { id: 'obj_' + (idCounter++), type: type, material: 'default' };
+            obj.userData = { 
+                id: 'obj_' + (idCounter++), 
+                type: type, 
+                material: 'default',
+                physics: { enabled: false, vy: 0, bounce: 0.5 }
+            };
             
             if (opts.position) obj.position.fromArray(opts.position);
-            if (opts.rotation) obj.rotation.fromArray(opts.rotation);
+            if (opts.rotation) obj.rotation.set(opts.rotation[0] || 0, opts.rotation[1] || 0, opts.rotation[2] || 0);
             if (opts.scale) obj.scale.fromArray(opts.scale);
             
             if (opts.material && obj.isMesh) {
@@ -230,6 +238,10 @@
             }
             if (opts.color && obj.isLight) obj.color.set(opts.color);
             if (opts.intensity && obj.isLight) obj.intensity = opts.intensity;
+            
+            if (opts.physics) {
+                obj.userData.physics = { ...obj.userData.physics, ...opts.physics };
+            }
             
             scene.add(obj);
             objects.push(obj);
@@ -247,9 +259,17 @@
             if (obj.isMesh) {
                 document.getElementById('prop-color').value = '#' + obj.material.color.getHexString();
                 document.getElementById('prop-material').value = obj.userData.material || 'default';
-            } else if (obj.isLight) {
-                document.getElementById('prop-color').value = '#' + obj.color.getHexString();
+                document.getElementById('prop-physics').disabled = false;
+                document.getElementById('prop-bounce').disabled = false;
+                document.getElementById('prop-physics').checked = obj.userData.physics.enabled;
+                document.getElementById('prop-bounce').value = obj.userData.physics.bounce;
+            } else {
+                document.getElementById('prop-physics').disabled = true;
+                document.getElementById('prop-bounce').disabled = true;
+                document.getElementById('prop-physics').checked = false;
+                if (obj.isLight) document.getElementById('prop-color').value = '#' + obj.color.getHexString();
             }
+            
             document.getElementById('prop-x').value = obj.position.x;
             document.getElementById('prop-y').value = obj.position.y;
             document.getElementById('prop-z').value = obj.position.z;
@@ -285,7 +305,6 @@
             });
         }
 
-        // تحميل الشخصية
         function loadCharacter() {
             const loader = new GLTFLoader();
             loader.load('https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb', (gltf) => {
@@ -299,7 +318,13 @@
                     const action = mixer.clipAction(gltf.animations[0]);
                     action.play();
                 }
-                model.userData = { id: 'char_' + (idCounter++), type: 'character', mixer: mixer, material: 'n/a', characterURL: true };
+                model.userData = { 
+                    id: 'char_' + (idCounter++), 
+                    type: 'character', 
+                    mixer: mixer, 
+                    material: 'n/a', 
+                    physics: { enabled: false, vy: 0, bounce: 0 }
+                };
                 
                 scene.add(model);
                 objects.push(model);
@@ -311,14 +336,12 @@
             });
         }
 
-        // إضافة كائنات
         document.getElementById('btn-cube').onclick = () => addObject('cube');
         document.getElementById('btn-sphere').onclick = () => addObject('sphere');
         document.getElementById('btn-cylinder').onclick = () => addObject('cylinder');
         document.getElementById('btn-light').onclick = () => addObject('light');
         document.getElementById('btn-character').onclick = loadCharacter;
 
-        // خصائص
         document.getElementById('prop-material').onchange = (e) => {
             if (selected && selected.isMesh) {
                 const oldColor = selected.material.color.getHex();
@@ -334,16 +357,31 @@
             else if (selected.isLight) selected.color.set(e.target.value);
         };
         document.getElementById('prop-x').oninput = (e) => { if (selected) selected.position.x = parseFloat(e.target.value); };
-        document.getElementById('prop-y').oninput = (e) => { if (selected) selected.position.y = parseFloat(e.target.value); };
+        document.getElementById('prop-y').oninput = (e) => { 
+            if (selected) {
+                selected.position.y = parseFloat(e.target.value);
+                if (selected.userData.physics) selected.userData.physics.vy = 0; // إعادة ضبط السرعة عند السحب اليدوي
+            }
+        };
         document.getElementById('prop-z').oninput = (e) => { if (selected) selected.position.z = parseFloat(e.target.value); };
         document.getElementById('prop-rot').oninput = (e) => { if (selected) selected.rotation.y = parseFloat(e.target.value); };
         document.getElementById('prop-scale').oninput = (e) => { if (selected) selected.scale.setScalar(parseFloat(e.target.value)); };
+        
+        document.getElementById('prop-physics').onchange = (e) => {
+            if (selected && selected.userData.physics) {
+                selected.userData.physics.enabled = e.target.checked;
+                selected.userData.physics.vy = 0; // تصفير السرعة
+            }
+        };
+        document.getElementById('prop-bounce').oninput = (e) => {
+            if (selected && selected.userData.physics) selected.userData.physics.bounce = parseFloat(e.target.value);
+        };
+        
         document.getElementById('btn-delete').onclick = deleteSelected;
 
-        // الحفظ الحقيقي
         document.getElementById('btn-save').onclick = () => {
             const data = objects
-                .filter(o => o.userData.type !== 'character') // الشخصيات مؤقتاً لا تُحفظ
+                .filter(o => o.userData.type !== 'character')
                 .map(o => ({
                     type: o.userData.type,
                     material: o.userData.material,
@@ -351,14 +389,15 @@
                     intensity: o.isLight ? o.intensity : undefined,
                     position: o.position.toArray(),
                     rotation: [o.rotation.x, o.rotation.y, o.rotation.z],
-                    scale: o.scale.toArray()
+                    scale: o.scale.toArray(),
+                    physics: o.userData.physics
                 }));
-            localStorage.setItem('kgtf_scene_v2', JSON.stringify(data));
+            localStorage.setItem('kgtf_scene_v3', JSON.stringify(data));
             alert('تم حفظ المشهد (' + data.length + ' كائن)');
         };
 
         function loadScene() {
-            const saved = localStorage.getItem('kgtf_scene_v2');
+            const saved = localStorage.getItem('kgtf_scene_v3');
             if (!saved) { addObject('cube'); return; }
             try {
                 const data = JSON.parse(saved);
@@ -369,20 +408,16 @@
                         intensity: d.intensity,
                         position: d.position,
                         rotation: d.rotation,
-                        scale: d.scale
+                        scale: d.scale,
+                        physics: d.physics
                     });
                 });
-            } catch(e) {
-                console.error(e);
-                addObject('cube');
-            }
+            } catch(e) { console.error(e); addObject('cube'); }
         }
 
-        // وضع التشغيل
         document.getElementById('btn-play').onclick = () => { document.body.classList.add('play-mode'); resize(); };
         document.getElementById('exit-play').onclick = () => { document.body.classList.remove('play-mode'); resize(); };
 
-        // المساعد الذكي
         const aiFab = document.getElementById('ai-fab');
         const aiChat = document.getElementById('ai-chat');
         aiFab.onclick = () => { aiChat.style.display = aiChat.style.display === 'flex' ? 'none' : 'flex'; };
@@ -417,9 +452,10 @@
             msgs.scrollTop = msgs.scrollHeight;
         };
 
-        // حلقة الرسم
         const clock = new THREE.Clock();
         let fpsAcc = 0, frames = 0;
+        const box = new THREE.Box3();
+        const size = new THREE.Vector3();
 
         function resize() {
             const c = document.getElementById('viewport-container');
@@ -433,10 +469,39 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            const dt = clock.getDelta();
-            objects.forEach(o => { if (o.userData.mixer) o.userData.mixer.update(dt); });
+            const dt = Math.min(clock.getDelta(), 0.1); // منع القفزات الكبيرة عند انقطاع الإطار
+
+            objects.forEach(o => {
+                // 1. تحديث الأنيميشن
+                if (o.userData.mixer) o.userData.mixer.update(dt);
+                
+                // 2. محرك الفيزياء
+                const p = o.userData.physics;
+                if (p && p.enabled && o.isMesh) {
+                    // تطبيق الجاذبية
+                    p.vy -= 9.8 * dt;
+                    o.position.y += p.vy * dt;
+                    
+                    // حساب حجم الكائن لمعرفة نقطة التوقف
+                    box.setFromObject(o);
+                    box.getSize(size);
+                    const groundLevel = size.y / 2; // نقطة منتصف الجسم
+                    
+                    // تصادم مع الأرض (Y = 0)
+                    if (o.position.y < groundLevel) {
+                        o.position.y = groundLevel;
+                        if (Math.abs(p.vy) > 0.5) {
+                            p.vy = -p.vy * p.bounce; // ارتداد
+                        } else {
+                            p.vy = 0; // سكون
+                        }
+                    }
+                }
+            });
+
             controls.update();
             renderer.render(scene, camera);
+
             fpsAcc += dt; frames++;
             if (fpsAcc >= 0.5) {
                 document.getElementById('fps').innerText = Math.round(frames / fpsAcc);
