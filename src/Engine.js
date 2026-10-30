@@ -55,7 +55,7 @@ export class Engine {
         this.scene.add(ground);
 
         // إضافة الشبكة الأرضية (Grid)
-        const grid = new THREE.GridHelper(100, 100, 0x00e5ff, 0x2a2a3a);
+        const grid = new THREE.GridHelper(100, 100, 0x00ffff, 0x444444);
         grid.position.y = 0.01; // رفعها قليلاً عن الأرض عشان ما تتداخل
         grid.material.opacity = 0.3;
         grid.material.transparent = true;

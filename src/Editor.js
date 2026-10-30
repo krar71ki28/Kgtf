@@ -22,7 +22,13 @@ export class Editor {
         
         engine.onSelect = (obj) => this.updateInspector(obj);
         engine.onSceneChange = () => this.updateList();
+        
         this.updateList();
+        
+        // إجبار المحرر يحدد المكعب الافتراضي أول ما يفتح
+        if (this.engine.selected) {
+            this.updateInspector(this.engine.selected);
+        }
     }
 
     bindButtons() {
