@@ -98,10 +98,16 @@
 
         // --- Gizmo (Transform Controls) ---
         const transformControls = new TransformControls(camera, renderer.domElement);
+        // في إصدار Three.js r160، يجب إضافة الـ Helper الخاص بالأداة وليس الأداة نفسها
+        if (transformControls.getHelper) {
+            scene.add(transformControls.getHelper());
+        } else {
+            scene.add(transformControls);
+        }
+
         transformControls.addEventListener('dragging-changed', function (event) {
             orbitControls.enabled = !event.value;
         });
-        scene.add(transformControls);
 
         // --- Editor State ---
         let objects = [];
@@ -110,7 +116,8 @@
 
         function addObject(type) {
             let mesh;
-            const mat = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff, roughness: 0.5 });
+            const color = Math.floor(Math.random() * 0xffffff);
+            const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.5 });
             
             if (type === 'cube') {
                 mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
@@ -191,7 +198,7 @@
                 color: o.material.color.getHex()
             }));
             localStorage.setItem('kgtf_scene', JSON.stringify(data));
-            alert('تم حفظ المشهد!');
+            alert('تم حفظ المشهد بنجاح!');
         };
 
         function loadScene() {
@@ -235,7 +242,7 @@
             const dt = clock.getDelta();
             
             orbitControls.update();
-            transformControls.update();
+            if(transformControls.update) transformControls.update(); // تحديث الأداة
             renderer.render(scene, camera);
 
             // HUD
