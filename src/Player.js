@@ -6,12 +6,13 @@ export class Player {
         this.isPlaying = false;
         this.keys = {};
         this.direction = new THREE.Vector3();
+        this.targetVelocity = new THREE.Vector3();
+        this.currentVelocity = new THREE.Vector3();
         this.joystickActive = false;
         this.joystickDir = { x: 0, y: 0 };
-        
-        // متغيرات للقفز
         this.velocityY = 0;
         this.isGrounded = true;
+        this.jumpRequested = false;
 
         this.setupControls();
     }
@@ -28,7 +29,7 @@ export class Player {
         const base = document.getElementById('joystick-base');
 
         let touchStart = null;
-        const maxDist = 40; // زيادة مسافة الجويستيك شوي عشان يكون أدق
+        const maxDist = 40;
 
         zone.addEventListener('touchstart', (e) => {
             const touch = e.touches[0];
@@ -50,6 +51,7 @@ export class Player {
             }
             
             knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+            // قيمة من 0 إلى 1 حسب بعد الجويستيك
             this.joystickDir.x = dx / maxDist;
             this.joystickDir.y = dy / maxDist;
         });
@@ -59,12 +61,12 @@ export class Player {
             knob.style.transform = `translate(-50%, -50%)`;
             this.joystickDir = { x: 0, y: 0 };
         });
-        
-        // إضافة زر القفز (عبر النقر على الشاشة في وضع اللعب)
-        this.engine.canvas.addEventListener('touchstart', (e) => {
-            if (this.isPlaying && this.isGrounded && !this.joystickActive) {
-                // إذا ضغط على الشاشة (مو على الجويستيك)، يقفز
-                this.velocityY = 7;
+
+        // زر القفز
+        document.getElementById('btn-jump').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (this.isGrounded) {
+                this.velocityY = 8; // قوة القفز
                 this.isGrounded = false;
             }
         });
@@ -77,12 +79,10 @@ export class Player {
         this.isPlaying = true;
         this.playerModel = playerObj;
         document.body.classList.add('play-mode');
-        
         this.engine.selectObject(null);
         this.engine.controls.enabled = false;
         
-        // ضبط ارتفاع الكاميرا الأولي
-        const camOffset = new THREE.Vector3(0, 4, -8);
+        const camOffset = new THREE.Vector3(0, 4.5, -8);
         camOffset.applyAxisAngle(new THREE.Vector3(0,1,0), this.playerModel.rotation.y);
         this.engine.camera.position.copy(this.playerModel.position).add(camOffset);
         this.engine.camera.lookAt(this.playerModel.position.x, this.playerModel.position.y + 1.5, this.playerModel.position.z);
@@ -93,7 +93,6 @@ export class Player {
         this.isPlaying = false;
         document.body.classList.remove('play-mode');
         this.engine.controls.enabled = true;
-        
         this.engine.camera.position.set(8, 6, 10);
         this.engine.controls.target.set(0, 2, 0);
         this.engine.resize();
@@ -102,51 +101,57 @@ export class Player {
     update(dt) {
         if (!this.isPlaying || !this.playerModel) return;
 
-        const speed = 6; // سرعة اللاعب
+        const maxSpeed = 6;
         this.direction.set(0, 0, 0);
 
-        // الحصول على اتجاه الكاميرا الحالي (عشان نحرك اللاعب بالنسبة للي نشوفه)
         const camForward = new THREE.Vector3();
         this.engine.camera.getWorldDirection(camForward);
-        camForward.y = 0; // نلغي الارتفاع
-        camForward.normalize();
-        
+        camForward.y = 0; camForward.normalize();
         const camRight = new THREE.Vector3().crossVectors(camForward, new THREE.Vector3(0, 1, 0)).normalize();
 
-        // حركة الكيبورد
+        // الكيبورد
         if (this.keys['KeyW'] || this.keys['ArrowUp']) this.direction.add(camForward);
         if (this.keys['KeyS'] || this.keys['ArrowDown']) this.direction.sub(camForward);
         if (this.keys['KeyA'] || this.keys['ArrowLeft']) this.direction.sub(camRight);
         if (this.keys['KeyD'] || this.keys['ArrowRight']) this.direction.add(camRight);
 
-        // حركة الجويستيك (دفع لقدام = تمشي باتجاه نظر الكاميرا)
+        // الجويستيك (نحسب قوة الدفع بناءً على بعد الجويستيك)
+        let joystickMagnitude = 0;
         if (this.joystickActive) {
-            this.direction.add(camForward.clone().multiplyScalar(-this.joystickDir.y));
-            this.direction.add(camRight.clone().multiplyScalar(this.joystickDir.x));
+            joystickMagnitude = Math.min(Math.sqrt(this.joystickDir.x**2 + this.joystickDir.y**2), 1);
+            if (joystickMagnitude > 0.1) {
+                this.direction.add(camForward.clone().multiplyScalar(-this.joystickDir.y));
+                this.direction.add(camRight.clone().multiplyScalar(this.joystickDir.x));
+            }
         }
 
-        let isMoving = false;
-
-        if (this.direction.lengthSq() > 0.01) {
+        // حساب السرعة المستهدفة (تعتمد على قوة دفع الجويستيك)
+        const targetSpeed = maxSpeed * (this.joystickActive ? joystickMagnitude : 1);
+        this.targetVelocity.set(0, 0, 0);
+        if (this.direction.lengthSq() > 0) {
             this.direction.normalize();
-            isMoving = true;
+            this.targetVelocity.copy(this.direction).multiplyScalar(targetSpeed);
+        }
+
+        // تنعيم الحركة (التسارع والتباطؤ)
+        const lerpFactor = 10 * dt;
+        this.currentVelocity.lerp(this.targetVelocity, lerpFactor);
+
+        // تطبيق الحركة
+        if (this.currentVelocity.lengthSq() > 0.1) {
+            this.playerModel.position.x += this.currentVelocity.x * dt;
+            this.playerModel.position.z += this.currentVelocity.z * dt;
             
-            // تدوير اللاعب بسلاسة باتجاه الحركة
-            const targetAngle = Math.atan2(this.direction.x, this.direction.z);
-            
-            // حساب أقصر مسار للدوران لتجنب اللف 360 درجة
+            // تدوير اللاعب بسلاسة
+            const targetAngle = Math.atan2(this.currentVelocity.x, this.currentVelocity.z);
             let diff = targetAngle - this.playerModel.rotation.y;
             while (diff < -Math.PI) diff += Math.PI * 2;
             while (diff > Math.PI) diff -= Math.PI * 2;
-            
-            this.playerModel.rotation.y += diff * 10 * dt; // سرعة الدوران
-
-            // تحريك اللاعب
-            this.playerModel.position.x += this.direction.x * speed * dt;
-            this.playerModel.position.z += this.direction.z * speed * dt;
+            this.playerModel.rotation.y += diff * 10 * dt; // دوران سلس
         }
 
-        // إدارة الأنيميشن (انتقال سلس)
+        // إدارة الأنيميشن بناءً على السرعة الفعلية
+        const isMoving = this.currentVelocity.lengthSq() > 1;
         const actions = this.playerModel.userData.actions;
         if (actions && actions['Walking'] && actions['Idle']) {
             if (isMoving && this.playerModel.userData.currentAction !== 'Walking') {
@@ -160,11 +165,10 @@ export class Player {
             }
         }
 
-        // --- فيزياء القفز ---
+        // فيزياء القفز
         if (!this.isGrounded) {
-            this.velocityY -= 20 * dt; // الجاذبية
+            this.velocityY -= 25 * dt; // الجاذبية
             this.playerModel.position.y += this.velocityY * dt;
-            
             if (this.playerModel.position.y <= 0) {
                 this.playerModel.position.y = 0;
                 this.velocityY = 0;
@@ -172,19 +176,15 @@ export class Player {
             }
         }
 
-        // --- الكاميرا ---
+        // الكاميرا
         const camOffset = new THREE.Vector3(0, 4.5, -8);
         camOffset.applyAxisAngle(new THREE.Vector3(0,1,0), this.playerModel.rotation.y);
-        
         const desiredCamPos = this.playerModel.position.clone().add(camOffset);
         
-        // تحريك الكاميرا بسلاسة
-        this.engine.camera.position.lerp(desiredCamPos, 0.1);
-        
-        // منع الكاميرا من النزول تحت الأرض
+        // تحريك الكاميرا بسلاسة أكثر
+        this.engine.camera.position.lerp(desiredCamPos, 5 * dt);
         if (this.engine.camera.position.y < 0.5) this.engine.camera.position.y = 0.5;
 
-        // جعل الكاميرا تنظر للاعب
         this.engine.camera.lookAt(this.playerModel.position.x, this.playerModel.position.y + 1.5, this.playerModel.position.z);
     }
 }

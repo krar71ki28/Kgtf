@@ -38,25 +38,29 @@ export class Engine {
         this.controls.target.set(0, 2, 0);
         this.controls.maxPolarAngle = Math.PI / 2.05;
 
-        const sun = new THREE.DirectionalLight(0xffeedd, 2.0);
-        sun.position.set(10, 20, 10);
+        // إضاءة محسنة للظلال
+        const sun = new THREE.DirectionalLight(0xffffff, 2.5);
+        sun.position.set(15, 30, 15);
         sun.castShadow = true;
-        sun.shadow.mapSize.set(2048, 2048);
-        sun.shadow.camera.left = -30; sun.shadow.camera.right = 30;
-        sun.shadow.camera.top = 30; sun.shadow.camera.bottom = -30;
+        sun.shadow.mapSize.width = 2048;
+        sun.shadow.mapSize.height = 2048;
+        sun.shadow.camera.near = 0.5;
+        sun.shadow.camera.far = 100;
+        sun.shadow.camera.left = -40; sun.shadow.camera.right = 40;
+        sun.shadow.camera.top = 40; sun.shadow.camera.bottom = -40;
         sun.shadow.bias = -0.0005;
         this.scene.add(sun);
 
-        const groundGeo = new THREE.PlaneGeometry(100, 100);
+        const groundGeo = new THREE.PlaneGeometry(200, 200);
         const groundMat = new THREE.MeshStandardMaterial({ color: 0x1a1a2e, roughness: 0.8, metalness: 0.2 });
         const ground = new THREE.Mesh(groundGeo, groundMat);
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
         this.scene.add(ground);
 
-        const grid = new THREE.GridHelper(100, 100, 0x00e5ff, 0x444455);
+        const grid = new THREE.GridHelper(200, 200, 0x00e5ff, 0x444455);
         grid.position.y = 0.05; 
-        grid.material.opacity = 0.8;
+        grid.material.opacity = 0.6;
         grid.material.transparent = true;
         this.scene.add(grid);
 
@@ -86,14 +90,40 @@ export class Engine {
         else if (type === 'cylinder') { obj = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 1.2, 32), this.makeMaterial('default')); obj.position.y = 0.6; }
         else if (type === 'light') { obj = new THREE.PointLight(0xffaa00, 5, 15); obj.position.set(0, 3, 0); }
         
-        if (obj.isMesh) { obj.castShadow = true; obj.receiveShadow = true; }
-        obj.userData = { id: 'obj_' + (this.idCounter++), type: type, material: 'default', physics: { enabled: false, vy: 0, bounce: 0.5 } };
+        // مجسمات جديدة
+        else if (type === 'tree') {
+            obj = new THREE.Group();
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 1.5), this.makeMaterial('wood', 0x4a2e15));
+            trunk.position.y = 0.75;
+            const leaves = new THREE.Mesh(new THREE.ConeGeometry(0.8, 2, 8), this.makeMaterial('default', 0x2e8b57));
+            leaves.position.y = 2;
+            obj.add(trunk, leaves);
+            obj.position.y = 0;
+        }
+        else if (type === 'rock') {
+            obj = new THREE.Mesh(new THREE.DodecahedronGeometry(0.6, 0), this.makeMaterial('metal', 0x666666));
+            obj.position.y = 0.4;
+        }
+        else if (type === 'building') {
+            obj = new THREE.Mesh(new THREE.BoxGeometry(2, 4, 2), this.makeMaterial('glass', 0x88ccff));
+            obj.position.y = 2;
+        }
+
+        if (obj.isMesh || obj.isGroup) {
+            obj.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+        }
+        
+        if (!obj.userData || Object.keys(obj.userData).length === 0) {
+            obj.userData = { id: 'obj_' + (this.idCounter++), type: type, material: 'default', physics: { enabled: false, vy: 0, bounce: 0.5 } };
+        }
         
         if (opts.position) obj.position.fromArray(opts.position);
         if (opts.rotation) obj.rotation.set(opts.rotation[0] || 0, opts.rotation[1] || 0, opts.rotation[2] || 0);
         if (opts.scale) obj.scale.fromArray(opts.scale);
+        
         if (opts.material && obj.isMesh) { obj.material.dispose(); obj.material = this.makeMaterial(opts.material, opts.color); obj.userData.material = opts.material; }
         else if (opts.color && obj.isMesh) obj.material.color.set(opts.color);
+        
         if (opts.color && obj.isLight) obj.color.set(opts.color);
         if (opts.intensity && obj.isLight) obj.intensity = opts.intensity;
         if (opts.physics) obj.userData.physics = { ...obj.userData.physics, ...opts.physics };
@@ -139,39 +169,25 @@ export class Engine {
 
     clearScene() {
         this.sceneVersion++;
-        
-        // مسح آمن لكل الكائنات (حتى المعقدة مثل الروبوت)
         this.objects.forEach(obj => {
             this.scene.remove(obj);
-            // مسح المواد والأشكال الهندسية لتجنب تسريب الذاكرة
             if (obj.traverse) {
                 obj.traverse(child => {
                     if (child.isMesh) {
                         if (child.geometry) child.geometry.dispose();
-                        if (Array.isArray(child.material)) {
-                            child.material.forEach(m => m.dispose());
-                        } else if (child.material) {
-                            child.material.dispose();
-                        }
+                        if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+                        else if (child.material) child.material.dispose();
                     }
                 });
             } else {
                 if (obj.geometry) obj.geometry.dispose();
-                if (Array.isArray(obj.material)) {
-                    obj.material.forEach(m => m.dispose());
-                } else if (obj.material) {
-                    obj.material.dispose();
-                }
+                if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+                else if (obj.material) obj.material.dispose();
             }
         });
-        
         this.objects = [];
         this.selectObject(null);
-        
-        // مسح البيانات من المتصفح
         localStorage.removeItem('kgtf_scene_final');
-        
-        // إضافة مكعب افتراضي
         this.addObject('cube');
         if (this.onSceneChange) this.onSceneChange();
     }
@@ -181,14 +197,13 @@ export class Engine {
         const loader = new GLTFLoader();
         loader.load('https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb', (gltf) => {
             if (this.sceneVersion !== currentVersion) return;
-
             const model = gltf.scene;
             model.position.y = 0; 
             model.scale.set(0.7, 0.7, 0.7);
             if (opts.position) model.position.fromArray(opts.position);
             if (opts.rotation) model.rotation.set(opts.rotation[0] || 0, opts.rotation[1] || 0, opts.rotation[2] || 0);
             
-            model.traverse(o => { if(o.isMesh) o.castShadow = true; });
+            model.traverse(o => { if(o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
             const mixer = new THREE.AnimationMixer(model);
             const actions = {};
             gltf.animations.forEach(clip => { actions[clip.name] = mixer.clipAction(clip); });
@@ -197,7 +212,6 @@ export class Engine {
             model.userData = { id: 'char_' + (this.idCounter++), type: 'character', mixer, actions, currentAction: 'Idle', material: 'n/a', physics: { enabled: false, vy: 0, bounce: 0 } };
             this.scene.add(model);
             this.objects.push(model);
-            
             if (!opts.isLoading) {
                 this.selectObject(model);
                 if (this.onSceneChange) this.onSceneChange();
@@ -222,11 +236,8 @@ export class Engine {
         try {
             const data = JSON.parse(saved);
             data.forEach(d => { 
-                if (d.type === 'character') {
-                    this.loadCharacter({ position: d.position, rotation: d.rotation, isLoading: true });
-                } else {
-                    this.addObject(d.type, d); 
-                }
+                if (d.type === 'character') this.loadCharacter({ position: d.position, rotation: d.rotation, isLoading: true });
+                else this.addObject(d.type, d); 
             });
         } catch(e) { this.addObject('cube'); }
     }
@@ -246,10 +257,7 @@ export class Engine {
                 }
             }
         });
-        
-        if (!document.body.classList.contains('play-mode')) {
-            this.controls.update();
-        }
+        if (!document.body.classList.contains('play-mode')) this.controls.update();
     }
 
     render() { this.renderer.render(this.scene, this.camera); }

@@ -5,6 +5,8 @@ import { Assistant } from './Assistant.js';
 
 const canvas = document.getElementById('viewport');
 const engine = new Engine(canvas);
+window.engine = engine;
+
 const editor = new Editor(engine);
 const player = new Player(engine);
 const assistant = new Assistant();
@@ -14,12 +16,11 @@ function animate(now) {
     requestAnimationFrame(animate);
     const dt = Math.min((now - lastTime) / 1000, 0.1);
     lastTime = now;
-    
+
     engine.update(dt);
     player.update(dt);
     engine.render();
 
-    // FPS
     const fps = document.getElementById('fps');
     if (!window._fpsAcc) window._fpsAcc = 0;
     if (!window._frames) window._frames = 0;
