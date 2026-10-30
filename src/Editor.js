@@ -6,8 +6,6 @@ export class Editor {
     constructor(engine) {
         this.engine = engine;
         this.inspector = document.getElementById('inspector');
-        this.noSelectionMsg = document.getElementById('no-selection-msg');
-        this.objectActions = document.getElementById('object-actions');
         this.raycaster = new THREE.Raycaster();
         this.pointerDown = { x: 0, y: 0 };
         this.isDraggingGizmo = false;
@@ -26,10 +24,11 @@ export class Editor {
         this.bindInspector();
         this.setupRaycaster();
         this.setupDropdown();
+        this.setupTabs();
         this.populateBehaviorSelect();
         
         engine.onSelect = (obj) => this.updateInspector(obj);
-        engine.onSceneChange = () => this.updateList();
+        engine.onSceneChange = () => { this.updateList(); this.renderAssets(); };
         
         engine.onScoreChanged = (score) => {
             const scoreVal = document.getElementById('score-val');
@@ -37,29 +36,36 @@ export class Editor {
         };
 
         this.updateList();
+        this.renderAssets();
         if (this.engine.selected) this.updateInspector(this.engine.selected);
+    }
+
+    setupTabs() {
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // إزالة التحديد من كل التبويبات والمحتوى
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+                
+                // تفعيل المطلوب
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.target).classList.add('active');
+            });
+        });
     }
 
     setupDropdown() {
         const btn = document.getElementById('btn-add-menu');
         const menu = document.getElementById('add-menu');
-        btn.onclick = (e) => {
-            e.stopPropagation();
-            menu.classList.toggle('show');
-        };
-        document.addEventListener('click', (e) => {
-            if (!menu.contains(e.target) && e.target !== btn) {
-                menu.classList.remove('show');
-            }
-        });
+        btn.onclick = (e) => { e.stopPropagation(); menu.classList.toggle('show'); };
+        document.addEventListener('click', (e) => { if (!menu.contains(e.target) && e.target !== btn) menu.classList.remove('show'); });
         
-        // ربط أزرار القائمة
         const types = ['cube','sphere','cylinder','cone','torus','tree','rock','building','light','character'];
         types.forEach(t => {
             document.getElementById(`btn-${t}`).onclick = () => {
                 if(t === 'character') this.engine.loadCharacter();
                 else this.engine.addObject(t);
-                menu.classList.remove('show'); // إغلاق القائمة بعد الإضافة
+                menu.classList.remove('show');
             };
         });
     }
@@ -78,20 +84,13 @@ export class Editor {
     setupRaycaster() {
         const canvas = this.engine.renderer.domElement;
         canvas.addEventListener('pointerdown', (e) => { this.pointerDown = { x: e.clientX, y: e.clientY }; });
-
         canvas.addEventListener('pointerup', (e) => {
             if (document.body.classList.contains('play-mode') || this.isDraggingGizmo) return;
             if (Math.hypot(e.clientX - this.pointerDown.x, e.clientY - this.pointerDown.y) > 5) return;
-
             const rect = canvas.getBoundingClientRect();
-            const mouse = new THREE.Vector2(
-                ((e.clientX - rect.left) / rect.width) * 2 - 1,
-                -((e.clientY - rect.top) / rect.height) * 2 + 1
-            );
-
+            const mouse = new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
             this.raycaster.setFromCamera(mouse, this.engine.camera);
             const hits = this.raycaster.intersectObjects(this.engine.objects, true);
-            
             if (hits.length > 0) {
                 let root = hits[0].object;
                 while (root && root.parent !== this.engine.scene) root = root.parent;
@@ -116,24 +115,32 @@ export class Editor {
         document.getElementById('btn-import').onclick = () => document.getElementById('file-import').click();
         
         document.getElementById('file-import').onchange = (e) => {
-            if (e.target.files.length > 0) {
-                this.engine.importScene(e.target.files[0]);
-                e.target.value = ''; 
-            }
+            if (e.target.files.length > 0) { this.engine.importScene(e.target.files[0]); e.target.value = ''; }
         };
         
         document.getElementById('btn-clear-scene').onclick = () => {
             if (confirm('هل أنت متأكد من مسح المشهد بالكامل؟')) this.engine.clearScene();
         };
-        
-        document.getElementById('prop-snap').addEventListener('change', (e) => {
-            if (e.target.checked) {
-                this.gizmo.translationSnap = 0.5;
-                this.gizmo.rotationSnap = Math.PI / 12;
-            } else {
-                this.gizmo.translationSnap = null;
-                this.gizmo.rotationSnap = null;
+
+        document.getElementById('btn-clear-assets').onclick = () => {
+            if (confirm('هل أنت متأكد من مسح كل الأصول المحفوظة؟')) {
+                this.engine.assets = [];
+                localStorage.removeItem('kgtf_assets');
+                this.renderAssets();
             }
+        };
+        
+        document.getElementById('btn-save-asset').onclick = () => {
+            if (!this.engine.selected) return;
+            this.engine.saveAsAsset(this.engine.selected);
+            this.renderAssets();
+            // التبديل لتبويب المحتوى عشان يشوف الأصل الجديد
+            document.querySelector('[data-target="tab-content"]').click();
+        };
+
+        document.getElementById('prop-snap').addEventListener('change', (e) => {
+            if (e.target.checked) { this.gizmo.translationSnap = 0.5; this.gizmo.rotationSnap = Math.PI / 12; } 
+            else { this.gizmo.translationSnap = null; this.gizmo.rotationSnap = null; }
         });
 
         document.getElementById('btn-add-behavior').onclick = () => {
@@ -141,10 +148,8 @@ export class Editor {
             const select = document.getElementById('add-behavior-select');
             const bName = select.value;
             if (!bName) return;
-
             if (!this.engine.selected.userData.behaviors) this.engine.selected.userData.behaviors = {};
             if (!this.engine.selected.userData.behaviorStates) this.engine.selected.userData.behaviorStates = {};
-            
             if (!this.engine.selected.userData.behaviors[bName]) {
                 this.engine.selected.userData.behaviors[bName] = { ...BEHAVIORS[bName].defaultParams };
                 this.renderBehaviorsUI();
@@ -157,7 +162,6 @@ export class Editor {
             if (!this.engine.selected || !this.engine.selected.isMesh) return;
             const file = e.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = (event) => {
                 const textureLoader = new THREE.TextureLoader();
@@ -175,6 +179,52 @@ export class Editor {
     setActiveTool(id) {
         document.querySelectorAll('.gizmo-group .icon-btn').forEach(btn => btn.classList.remove('active'));
         document.getElementById(id).classList.add('active');
+    }
+
+    renderAssets() {
+        const grid = document.getElementById('asset-grid');
+        grid.innerHTML = '';
+        if (this.engine.assets.length === 0) {
+            grid.innerHTML = '<div style="color:#666; font-size:12px; grid-column: 1/-1; text-align:center; margin-top:20px;">لا توجد أصول محفوظة.<br>حدد مجسماً واضغط "حفظ كأصل".</div>';
+            return;
+        }
+
+        this.engine.assets.forEach(asset => {
+            const card = document.createElement('div');
+            card.className = 'asset-card';
+            
+            const icon = document.createElement('div');
+            icon.className = 'asset-icon';
+            icon.innerText = asset.type === 'cube' ? '📦' : asset.type === 'tree' ? '🌲' : '🧊'; 
+            
+            const name = document.createElement('div');
+            name.className = 'asset-name';
+            name.innerText = asset.name;
+
+            const delBtn = document.createElement('div');
+            delBtn.innerText = '✕';
+            delBtn.style.color = '#ff5577';
+            delBtn.style.position = 'absolute';
+            delBtn.style.top = '2px';
+            delBtn.style.left = '2px';
+            delBtn.style.fontSize = '10px';
+            delBtn.onclick = (e) => {
+                e.stopPropagation();
+                this.engine.removeAsset(asset.id);
+                this.renderAssets();
+            };
+            card.style.position = 'relative';
+
+            card.appendChild(icon);
+            card.appendChild(name);
+            card.appendChild(delBtn);
+
+            card.onclick = () => {
+                this.engine.spawnAsset(asset.id);
+            };
+
+            grid.appendChild(card);
+        });
     }
 
     bindInspector() {
@@ -196,7 +246,6 @@ export class Editor {
         bindProp('prop-bounce', (obj, v) => { if(obj.userData.physics) obj.userData.physics.bounce = v; });
         bindProp('prop-light-intensity', (obj, v) => { if(obj.isLight) obj.intensity = v; });
         bindProp('prop-light-distance', (obj, v) => { if(obj.isLight) obj.distance = v; });
-
         bindProp('prop-material', (obj, v) => {
             if (obj.isMesh && obj.userData.type !== 'character') {
                 obj.material.dispose();
@@ -226,86 +275,34 @@ export class Editor {
         const container = document.getElementById('active-behaviors-list');
         container.innerHTML = '';
         if (!this.engine.selected) return;
-
         const behaviors = this.engine.selected.userData.behaviors || {};
-
         for (const bName in behaviors) {
             const behaviorDef = BEHAVIORS[bName];
             if (!behaviorDef) continue;
-            
             const currentParams = behaviors[bName];
-
             const card = document.createElement('div');
-            card.style.background = '#25252b';
-            card.style.padding = '6px';
-            card.style.borderRadius = '4px';
-            card.style.border = '1px solid #3c3c45';
-            card.style.marginTop = '5px';
-
-            const header = document.createElement('div');
-            header.style.display = 'flex';
-            header.style.justifyContent = 'space-between';
-            header.style.alignItems = 'center';
-            header.style.marginBottom = '4px';
-
-            const title = document.createElement('span');
-            title.style.fontWeight = 'bold';
-            title.style.color = '#60a5fa';
-            title.style.fontSize = '10px';
-            title.textContent = behaviorDef.name;
-
-            const deleteBtn = document.createElement('button');
-            deleteBtn.textContent = '✕';
-            deleteBtn.style.background = 'transparent';
-            deleteBtn.style.border = 'none';
-            deleteBtn.style.color = '#ef4444';
-            deleteBtn.style.cursor = 'pointer';
+            card.style.background = '#25252b'; card.style.padding = '6px'; card.style.borderRadius = '4px'; card.style.border = '1px solid #3c3c45'; card.style.marginTop = '5px';
+            const header = document.createElement('div'); header.style.display = 'flex'; header.style.justifyContent = 'space-between'; header.style.alignItems = 'center'; header.style.marginBottom = '4px';
+            const title = document.createElement('span'); title.style.fontWeight = 'bold'; title.style.color = '#60a5fa'; title.style.fontSize = '10px'; title.textContent = behaviorDef.name;
+            const deleteBtn = document.createElement('button'); deleteBtn.textContent = '✕'; deleteBtn.style.background = 'transparent'; deleteBtn.style.border = 'none'; deleteBtn.style.color = '#ef4444'; deleteBtn.style.cursor = 'pointer';
             deleteBtn.addEventListener('click', () => {
                 delete this.engine.selected.userData.behaviors[bName];
-                if (this.engine.selected.userData.behaviorStates) {
-                    delete this.engine.selected.userData.behaviorStates[bName];
-                }
+                if (this.engine.selected.userData.behaviorStates) delete this.engine.selected.userData.behaviorStates[bName];
                 this.renderBehaviorsUI();
             });
-
-            header.appendChild(title);
-            header.appendChild(deleteBtn);
-            card.appendChild(header);
-
+            header.appendChild(title); header.appendChild(deleteBtn); card.appendChild(header);
             for (const paramKey in behaviorDef.defaultParams) {
-                const row = document.createElement('div');
-                row.style.display = 'flex';
-                row.style.justifyContent = 'space-between';
-                row.style.alignItems = 'center';
-                row.style.marginTop = '2px';
-
-                const paramLabel = document.createElement('label');
-                paramLabel.style.fontSize = '9px';
-                paramLabel.style.color = '#bbb';
-                paramLabel.textContent = paramKey + ':';
-
-                const input = document.createElement('input');
-                input.type = typeof behaviorDef.defaultParams[paramKey] === 'number' ? 'number' : 'text';
+                const row = document.createElement('div'); row.style.display = 'flex'; row.style.justifyContent = 'space-between'; row.style.alignItems = 'center'; row.style.marginTop = '2px';
+                const paramLabel = document.createElement('label'); paramLabel.style.fontSize = '9px'; paramLabel.style.color = '#bbb'; paramLabel.textContent = paramKey + ':';
+                const input = document.createElement('input'); input.type = typeof behaviorDef.defaultParams[paramKey] === 'number' ? 'number' : 'text';
                 input.value = currentParams[paramKey] !== undefined ? currentParams[paramKey] : behaviorDef.defaultParams[paramKey];
-                input.style.width = '50px';
-                input.style.padding = '2px 4px';
-                input.style.background = '#121215';
-                input.style.border = '1px solid #444';
-                input.style.borderRadius = '3px';
-                input.style.color = '#fff';
-                input.style.fontSize = '9px';
-
+                input.style.width = '50px'; input.style.padding = '2px 4px'; input.style.background = '#121215'; input.style.border = '1px solid #444'; input.style.borderRadius = '3px'; input.style.color = '#fff'; input.style.fontSize = '9px';
                 input.addEventListener('input', (e) => {
                     const val = input.type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value;
                     currentParams[paramKey] = val;
-                    if (this.engine.selected.userData.behaviorStates) {
-                        delete this.engine.selected.userData.behaviorStates[bName];
-                    }
+                    if (this.engine.selected.userData.behaviorStates) delete this.engine.selected.userData.behaviorStates[bName];
                 });
-
-                row.appendChild(paramLabel);
-                row.appendChild(input);
-                card.appendChild(row);
+                row.appendChild(paramLabel); row.appendChild(input); card.appendChild(row);
             }
             container.appendChild(card);
         }
@@ -314,16 +311,15 @@ export class Editor {
     updateInspector(obj) {
         if (!obj) {
             this.inspector.style.display = 'none';
-            this.noSelectionMsg.style.display = 'block';
-            this.objectActions.style.display = 'none';
+            document.getElementById('no-selection-msg').style.display = 'block';
+            document.getElementById('object-actions').style.display = 'none';
             this.gizmo.detach();
-            // تحديث القائمة لإزالة التحديد
             this.updateList();
             return;
         }
         this.inspector.style.display = 'block';
-        this.noSelectionMsg.style.display = 'none';
-        this.objectActions.style.display = 'flex';
+        document.getElementById('no-selection-msg').style.display = 'none';
+        document.getElementById('object-actions').style.display = 'flex';
         this.gizmo.attach(obj);
         this.updateUIValues();
         this.renderBehaviorsUI();
@@ -333,16 +329,14 @@ export class Editor {
             lightProps.style.display = 'block';
             document.getElementById('prop-light-intensity').value = obj.intensity;
             document.getElementById('prop-light-distance').value = obj.distance;
-        } else {
-            lightProps.style.display = 'none';
-        }
+        } else { lightProps.style.display = 'none'; }
 
         if (obj.userData.physics) {
             document.getElementById('prop-physics').checked = obj.userData.physics.enabled;
             document.getElementById('prop-bounce').value = obj.userData.physics.bounce;
         }
         
-        this.updateList(); // تحديث القائمة لإظهار التحديد
+        this.updateList();
     }
 
     updateList() {

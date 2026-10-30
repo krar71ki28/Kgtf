@@ -1,21 +1,16 @@
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; font-family: 'Segoe UI', system-ui, sans-serif; }
 body { background: #121215; color: #d1d1d1; height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 
-/* الشريط العلوي */
+/* Header and Top Bar styling from previous step (kept intact) */
 #header { height: 45px; background: #1e1e24; border-bottom: 1px solid #2d2d35; display: flex; justify-content: space-between; align-items: center; padding: 0 10px; flex-shrink: 0; z-index: 20; }
 .logo { font-weight: 900; color: #00e5ff; font-size: 14px; letter-spacing: 0.5px; }
 .logo span { color: #fff; font-weight: 400; }
 .header-tools { display: flex; align-items: center; gap: 8px; }
-
 .icon-btn { background: #2a2a32; border: 1px solid #3d3d45; color: #aaa; width: 32px; height: 32px; border-radius: 4px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: 0.1s; }
 .icon-btn:hover { background: #3d3d45; color: #fff; }
 .icon-btn.active { background: #00e5ff; color: #000; border-color: #00e5ff; }
-
 .gizmo-group { display: flex; gap: 2px; background: #18181d; padding: 2px; border-radius: 6px; border: 1px solid #2d2d35; }
-
 .play-btn { background: #4ade80; color: #000; border: none; width: 32px; height: 32px; border-radius: 4px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-
-/* القائمة المنسدلة لإضافة مجسمات */
 .dropdown { position: relative; }
 .dropdown-content { display: none; position: absolute; top: 40px; right: 0; background: #25252d; border: 1px solid #3d3d45; border-radius: 6px; min-width: 130px; z-index: 100; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
 .dropdown-content.show { display: flex; flex-direction: column; }
@@ -23,26 +18,32 @@ body { background: #121215; color: #d1d1d1; height: 100vh; height: 100dvh; displ
 .dropdown-content button:last-child { border-bottom: none; }
 .dropdown-content button:hover { background: #3d3d45; color: #fff; }
 
-/* المشهد */
 #viewport-container { flex: 1; position: relative; background: #000; overflow: hidden; touch-action: none; display: flex; flex-direction: column; min-height: 30vh; }
 #viewport { width: 100%; height: 100%; display: block; }
 #status-bar { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); padding: 3px 6px; border-radius: 4px; font-size: 10px; font-family: monospace; color: #4ade80; border: 1px solid #333; z-index: 5; }
 
-/* لوحة التحكم السفلية (Outliner + Details) */
+/* Bottom Panel Tabs */
 #inspector-panel { flex: 0 0 45vh; background: #1e1e24; border-top: 1px solid #2d2d35; display: flex; flex-direction: column; z-index: 10; }
-.panel-section { display: flex; flex-direction: column; border-bottom: 1px solid #2d2d35; }
-#outliner-section { flex: 0 0 30%; }
-#details-section { flex: 1; overflow: hidden; }
+#panel-tabs { display: flex; background: #18181d; border-bottom: 1px solid #2d2d35; }
+.tab-btn { flex: 1; background: transparent; border: none; border-bottom: 2px solid transparent; color: #888; padding: 8px 0; font-size: 11px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+.tab-btn:hover { color: #ccc; }
+.tab-btn.active { color: #00e5ff; border-bottom-color: #00e5ff; background: #1e1e24; }
 
+.panel-content-wrapper { flex: 1; position: relative; overflow: hidden; }
+.tab-pane { display: none; height: 100%; flex-direction: column; position: absolute; top: 0; left: 0; width: 100%; }
+.tab-pane.active { display: flex; }
+.panel-section { display: flex; flex-direction: column; height: 100%; }
 .panel-header { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: #18181d; border-bottom: 1px solid #2d2d35; flex-shrink: 0; }
 .panel-title { font-size: 10px; color: #888; font-weight: bold; letter-spacing: 1px; }
 .btn-small { background: #2a2a32; border: 1px solid #3d3d45; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; cursor: pointer; color: #ddd; }
 
+/* Outliner List */
 #object-list { display: flex; flex-wrap: wrap; gap: 5px; padding: 8px; overflow-y: auto; align-content: flex-start; }
 .obj-item { background: #2a2a32; padding: 4px 10px; border-radius: 4px; font-size: 11px; color: #ccc; cursor: pointer; border: 1px solid transparent; }
 .obj-item:hover { border-color: #555; color: #fff; }
 .obj-item.selected { border-color: #00e5ff; color: #00e5ff; background: rgba(0,229,255,0.1); }
 
+/* Inspector Styles */
 #inspector { padding: 10px; overflow-y: auto; }
 .prop-group { margin-bottom: 12px; border-bottom: 1px solid #2d2d35; padding-bottom: 10px; }
 .prop-group:last-child { border-bottom: none; }
@@ -52,7 +53,13 @@ body { background: #121215; color: #d1d1d1; height: 100vh; height: 100dvh; displ
 .prop-row input[type="range"] { flex: 1; accent-color: #00e5ff; }
 .prop-row select { flex: 1; background: #121215; border: 1px solid #333; color: #fff; padding: 4px; border-radius: 4px; font-size: 11px; }
 
-/* أزرار اللعب */
+/* Asset Grid */
+.asset-card { background: #2a2a32; border: 1px solid #3d3d45; border-radius: 6px; padding: 10px; text-align: center; cursor: pointer; transition: 0.2s; }
+.asset-card:hover { border-color: #ffaa00; background: #33333d; }
+.asset-icon { font-size: 24px; margin-bottom: 5px; }
+.asset-name { font-size: 10px; color: #ccc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Play UI, AI Chat (same as before) */
 #play-ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; pointer-events: none; }
 #play-ui > * { pointer-events: auto; }
 #exit-play { position: absolute; top: 15px; left: 15px; background: #ff5577; color: #fff; border: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; }
@@ -62,7 +69,6 @@ body { background: #121215; color: #d1d1d1; height: 100vh; height: 100dvh; displ
 #btn-jump { position: absolute; bottom: 40px; right: 30px; width: 60px; height: 60px; border-radius: 50%; background: rgba(74,222,128,0.8); border: 2px solid #4ade80; color: #fff; font-weight: bold; font-size: 12px; cursor: pointer; }
 #score-display { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 5px 15px; border-radius: 15px; border: 1px solid #ffaa00; color: #ffaa00; font-weight: bold; font-size: 14px; }
 
-/* المساعد الذكي */
 #ai-fab { position: absolute; bottom: 45vh; right: 15px; z-index: 30; background: #2a2a32; border: 1px solid #444; color: #fff; width: 40px; height: 40px; border-radius: 8px; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
 #ai-chat { position: absolute; bottom: calc(45vh + 60px); right: 15px; width: 300px; max-width: calc(100vw - 30px); height: 350px; background: #1e1e24; border: 1px solid #444; border-radius: 8px; display: none; flex-direction: column; z-index: 30; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
 .ai-header { padding: 8px 10px; border-bottom: 1px solid #333; color: #00e5ff; font-weight: bold; font-size: 12px; display: flex; justify-content: space-between; }
@@ -71,7 +77,6 @@ body { background: #121215; color: #d1d1d1; height: 100vh; height: 100dvh; displ
 .ai-input-row input { flex: 1; background: #121215; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 4px; font-size: 12px; }
 .ai-input-row button { background: #00e5ff; color: #000; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; }
 
-/* تعديلات الموبايل */
 @media (max-width: 768px) {
     #header { height: 40px; padding: 0 5px; }
     .logo { font-size: 12px; }

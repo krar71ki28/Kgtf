@@ -14,73 +14,13 @@ export const MATERIALS = {
     emissive: { color: 0x00e5ff, emissive: 0x00e5ff, emissiveIntensity: 1.0 }
 };
 
-// تعريف السلوكيات مع الإعدادات الافتراضية
 export const BEHAVIORS = {
-    rotate: {
-        name: 'دوران مستمر',
-        defaultParams: { speed: 1.5 },
-        update: (obj, params, state, dt) => { obj.rotation.y += params.speed * dt; }
-    },
-    float: {
-        name: 'طيران/تذبذب',
-        defaultParams: { amplitude: 0.5, speed: 2 },
-        update: (obj, params, state, dt, time) => {
-            if (state.baseY === undefined) state.baseY = obj.position.y;
-            obj.position.y = state.baseY + Math.sin(time * params.speed) * params.amplitude;
-        }
-    },
-    follow: {
-        name: 'مطاردة اللاعب',
-        defaultParams: { speed: 2, stopDistance: 1.5 },
-        update: (obj, params, state, dt, time, engine) => {
-            const player = engine.objects.find(o => o.userData.type === 'character');
-            if (!player) return;
-            const dir = new THREE.Vector3().subVectors(player.position, obj.position);
-            dir.y = 0;
-            if (dir.length() > params.stopDistance) {
-                dir.normalize();
-                obj.position.add(dir.multiplyScalar(params.speed * dt));
-            }
-        }
-    },
-    patrol: {
-        name: 'دورية (يمين/يسار)',
-        defaultParams: { speed: 2, distance: 4, axis: 'x' },
-        init: (obj, state) => { state.startPos = obj.position.clone(); state.direction = 1; },
-        update: (obj, params, state, dt) => {
-            const axis = params.axis;
-            obj.position[axis] += state.direction * params.speed * dt;
-            const currentDist = obj.position[axis] - state.startPos[axis];
-            if (Math.abs(currentDist) >= params.distance / 2) state.direction *= -1;
-        }
-    },
-    shoot: {
-        name: 'إطلاق مقذوفات',
-        defaultParams: { interval: 2, speed: 15 },
-        update: (obj, params, state, dt, time, engine) => {
-            const player = engine.objects.find(o => o.userData.type === 'character');
-            if (!player) return;
-            state.timer = (state.timer || 0) + dt;
-            if (state.timer >= params.interval) {
-                state.timer = 0;
-                const dir = new THREE.Vector3().subVectors(player.position, obj.position).normalize();
-                engine.createProjectile(obj.position.clone().add(new THREE.Vector3(0, 1, 0)), dir, params.speed);
-            }
-        }
-    },
-    collect: {
-        name: 'جمع (اختفاء ونقاط)',
-        defaultParams: { distance: 1.5, points: 10 },
-        update: (obj, params, state, dt, time, engine) => {
-            const player = engine.objects.find(o => o.userData.type === 'character');
-            if (!player) return;
-            if (player.position.distanceTo(obj.position) < params.distance) {
-                engine.score += params.points;
-                if (engine.onScoreChanged) engine.onScoreChanged(engine.score);
-                engine.removeObject(obj);
-            }
-        }
-    }
+    rotate: { name: 'دوران مستمر', defaultParams: { speed: 1.5 }, update: (obj, params, state, dt) => { obj.rotation.y += params.speed * dt; } },
+    float: { name: 'طيران/تذبذب', defaultParams: { amplitude: 0.5, speed: 2 }, update: (obj, params, state, dt, time) => { if (state.baseY === undefined) state.baseY = obj.position.y; obj.position.y = state.baseY + Math.sin(time * params.speed) * params.amplitude; } },
+    follow: { name: 'مطاردة اللاعب', defaultParams: { speed: 2, stopDistance: 1.5 }, update: (obj, params, state, dt, time, engine) => { const player = engine.objects.find(o => o.userData.type === 'character'); if (!player) return; const dir = new THREE.Vector3().subVectors(player.position, obj.position); dir.y = 0; if (dir.length() > params.stopDistance) { dir.normalize(); obj.position.add(dir.multiplyScalar(params.speed * dt)); } } },
+    patrol: { name: 'دورية (يمين/يسار)', defaultParams: { speed: 2, distance: 4, axis: 'x' }, init: (obj, state) => { state.startPos = obj.position.clone(); state.direction = 1; }, update: (obj, params, state, dt) => { const axis = params.axis; obj.position[axis] += state.direction * params.speed * dt; const currentDist = obj.position[axis] - state.startPos[axis]; if (Math.abs(currentDist) >= params.distance / 2) state.direction *= -1; } },
+    shoot: { name: 'إطلاق مقذوفات', defaultParams: { interval: 2, speed: 15 }, update: (obj, params, state, dt, time, engine) => { const player = engine.objects.find(o => o.userData.type === 'character'); if (!player) return; state.timer = (state.timer || 0) + dt; if (state.timer >= params.interval) { state.timer = 0; const dir = new THREE.Vector3().subVectors(player.position, obj.position).normalize(); engine.createProjectile(obj.position.clone().add(new THREE.Vector3(0, 1, 0)), dir, params.speed); } } },
+    collect: { name: 'جمع (اختفاء ونقاط)', defaultParams: { distance: 1.5, points: 10 }, update: (obj, params, state, dt, time, engine) => { const player = engine.objects.find(o => o.userData.type === 'character'); if (!player) return; if (player.position.distanceTo(obj.position) < params.distance) { engine.score += params.points; if (engine.onScoreChanged) engine.onScoreChanged(engine.score); engine.removeObject(obj); } } }
 };
 
 export class Engine {
@@ -139,9 +79,7 @@ export class Engine {
         const starsGeo = new THREE.BufferGeometry();
         const starsCount = 3000;
         const starsPos = new Float32Array(starsCount * 3);
-        for (let i = 0; i < starsCount * 3; i++) {
-            starsPos[i] = (Math.random() - 0.5) * 300;
-        }
+        for (let i = 0; i < starsCount * 3; i++) { starsPos[i] = (Math.random() - 0.5) * 300; }
         starsGeo.setAttribute('position', new THREE.BufferAttribute(starsPos, 3));
         const starsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.6, transparent: true, opacity: 0 });
         this.stars = new THREE.Points(starsGeo, starsMat);
@@ -151,7 +89,8 @@ export class Engine {
         this.scene.add(this.moon);
 
         this.objects = [];
-        this.projectiles = []; // مصفوفة للمقذوفات
+        this.projectiles = []; 
+        this.assets = JSON.parse(localStorage.getItem('kgtf_assets') || '[]'); // تحميل الأصول
         this.score = 0;
         this.onScoreChanged = null;
 
@@ -211,7 +150,10 @@ export class Engine {
         if (opts.position) obj.position.fromArray(opts.position);
         if (opts.rotation) obj.rotation.set(opts.rotation[0] || 0, opts.rotation[1] || 0, opts.rotation[2] || 0);
         if (opts.scale) obj.scale.fromArray(opts.scale);
-        if (opts.behaviors) obj.userData.behaviors = opts.behaviors;
+        if (opts.behaviors) {
+            obj.userData.behaviors = JSON.parse(JSON.stringify(opts.behaviors));
+            obj.userData.behaviorStates = {};
+        }
         
         obj.userData.baseY = obj.position.y;
 
@@ -227,6 +169,44 @@ export class Engine {
         this.selectObject(obj);
         if (this.onSceneChange) this.onSceneChange();
         return obj;
+    }
+
+    saveAsAsset(obj) {
+        if (!obj) return;
+        const assetData = {
+            id: 'asset_' + Date.now(),
+            name: obj.userData.type + '_' + (this.assets.length + 1),
+            type: obj.userData.type,
+            material: obj.userData.material,
+            color: obj.isMesh ? obj.material.color.getHex() : (obj.isLight ? obj.color.getHex() : 0xffffff),
+            intensity: obj.isLight ? obj.intensity : undefined,
+            scale: obj.scale.toArray(),
+            physics: obj.userData.physics,
+            behaviors: JSON.parse(JSON.stringify(obj.userData.behaviors || {}))
+        };
+        this.assets.push(assetData);
+        localStorage.setItem('kgtf_assets', JSON.stringify(this.assets));
+        return assetData;
+    }
+
+    spawnAsset(assetId) {
+        const asset = this.assets.find(a => a.id === assetId);
+        if (!asset) return;
+        
+        this.addObject(asset.type, {
+            position: [0, 1, 0], // مكان افتراضي
+            material: asset.material,
+            color: asset.color,
+            intensity: asset.intensity,
+            scale: asset.scale,
+            physics: asset.physics,
+            behaviors: asset.behaviors
+        });
+    }
+
+    removeAsset(assetId) {
+        this.assets = this.assets.filter(a => a.id !== assetId);
+        localStorage.setItem('kgtf_assets', JSON.stringify(this.assets));
     }
 
     removeObject(obj) {
@@ -402,7 +382,6 @@ export class Engine {
 
     update(dt) {
         this.totalTime += dt;
-
         this.timeOfDay = (this.timeOfDay + dt * this.daySpeed) % 1;
         const angle = this.timeOfDay * Math.PI * 2;
         this.sun.position.x = Math.cos(angle) * 50;
@@ -439,7 +418,6 @@ export class Engine {
         const box = new THREE.Box3(), size = new THREE.Vector3();
         this.objects.forEach(o => {
             if (o.userData.mixer) o.userData.mixer.update(dt);
-            
             const p = o.userData.physics;
             if (p && p.enabled && (o.isMesh || o.isGroup)) {
                 p.vy -= 9.8 * dt; o.position.y += p.vy * dt;
@@ -451,7 +429,6 @@ export class Engine {
                 }
             }
 
-            // تشغيل السلوكيات مع تمرير الإعدادات
             if (o.userData.behaviors) {
                 for (const bName in o.userData.behaviors) {
                     if (BEHAVIORS[bName] && BEHAVIORS[bName].update) {
@@ -467,12 +444,10 @@ export class Engine {
             }
         });
 
-        // تحديث المقذوفات
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
             const p = this.projectiles[i];
             p.mesh.position.addScaledVector(p.direction, p.speed * dt);
             p.life -= dt;
-
             if (p.life <= 0) {
                 this.scene.remove(p.mesh);
                 p.mesh.geometry.dispose();
@@ -485,11 +460,5 @@ export class Engine {
     }
 
     render() { this.renderer.render(this.scene, this.camera); }
-
-    resize() {
-        const c = document.getElementById('viewport-container');
-        const w = c.clientWidth, h = c.clientHeight;
-        this.camera.aspect = w / h; this.camera.updateProjectionMatrix();
-        this.renderer.setSize(w, h, false);
-    }
+    resize() { const c = document.getElementById('viewport-container'); const w = c.clientWidth, h = c.clientHeight; this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); this.renderer.setSize(w, h, false); }
 }
