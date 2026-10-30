@@ -134,7 +134,8 @@ export class Engine {
         const loader = new GLTFLoader();
         loader.load('https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb', (gltf) => {
             const model = gltf.scene;
-            model.position.y = 0; model.scale.set(0.5, 0.5, 0.5);
+            model.position.y = 0; 
+            model.scale.set(1.2, 1.2, 1.2); // <--- تم تكبير الحجم من 0.5 إلى 1.2
             model.traverse(o => { if(o.isMesh) o.castShadow = true; });
             const mixer = new THREE.AnimationMixer(model);
             const actions = {};
