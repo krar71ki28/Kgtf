@@ -22,11 +22,11 @@ export class Editor {
 
         this.bindButtons();
         this.bindInspector();
-        this.bindMaterialProps();
-        this.bindWorldSettings();
         this.setupRaycaster();
         this.setupDropdown();
         this.setupTabs();
+        this.bindMaterialProps();
+        this.bindWorldSettings();
         this.populateBehaviorSelect();
         
         engine.onSelect = (obj) => this.updateInspector(obj);
@@ -45,11 +45,8 @@ export class Editor {
     setupTabs() {
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                // إزالة التحديد من كل التبويبات والمحتوى
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                 document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-                
-                // تفعيل المطلوب
                 btn.classList.add('active');
                 document.getElementById(btn.dataset.target).classList.add('active');
             });
@@ -63,10 +60,6 @@ export class Editor {
         document.addEventListener('click', (e) => { if (!menu.contains(e.target) && e.target !== btn) menu.classList.remove('show'); });
         
         const types = ['cube','sphere','cylinder','cone','torus','tree','rock','building','light','character'];
-        document.getElementById('btn-vfx-fire').onclick = () => { this.engine.createParticleSystem('fire', new THREE.Vector3(0, 0.5, 0)); menu.classList.remove('show'); };
-        document.getElementById('btn-vfx-sparks').onclick = () => { this.engine.createParticleSystem('sparks', new THREE.Vector3(0, 0.5, 0)); menu.classList.remove('show'); };
-        document.getElementById('btn-vfx-smoke').onclick = () => { this.engine.createParticleSystem('smoke', new THREE.Vector3(0, 0.5, 0)); menu.classList.remove('show'); };
-        document.getElementById('btn-audio').onclick = () => { this.engine.createAudioEmitter(new THREE.Vector3(0, 1, 0)); menu.classList.remove('show'); };
         types.forEach(t => {
             document.getElementById(`btn-${t}`).onclick = () => {
                 if(t === 'character') this.engine.loadCharacter();
@@ -74,6 +67,11 @@ export class Editor {
                 menu.classList.remove('show');
             };
         });
+        
+        document.getElementById('btn-vfx-fire').onclick = () => { this.engine.createParticleSystem('fire', new THREE.Vector3(0, 0.5, 0)); menu.classList.remove('show'); };
+        document.getElementById('btn-vfx-sparks').onclick = () => { this.engine.createParticleSystem('sparks', new THREE.Vector3(0, 0.5, 0)); menu.classList.remove('show'); };
+        document.getElementById('btn-vfx-smoke').onclick = () => { this.engine.createParticleSystem('smoke', new THREE.Vector3(0, 0.5, 0)); menu.classList.remove('show'); };
+        document.getElementById('btn-audio').onclick = () => { this.engine.createAudioEmitter(new THREE.Vector3(0, 1, 0)); menu.classList.remove('show'); };
     }
 
     populateBehaviorSelect() {
@@ -140,7 +138,6 @@ export class Editor {
             if (!this.engine.selected) return;
             this.engine.saveAsAsset(this.engine.selected);
             this.renderAssets();
-            // التبديل لتبويب المحتوى عشان يشوف الأصل الجديد
             document.querySelector('[data-target="tab-content"]').click();
         };
 
@@ -182,6 +179,31 @@ export class Editor {
         };
     }
 
+    bindMaterialProps() {
+        const props = ['roughness', 'metalness', 'opacity'];
+        props.forEach(prop => {
+            const el = document.getElementById(`prop-${prop}`);
+            if (!el) return;
+            el.addEventListener('input', (e) => {
+                if (!this.engine.selected || !this.engine.selected.material) return;
+                const val = parseFloat(e.target.value);
+                this.engine.selected.material[prop] = val;
+                if (prop === 'opacity') {
+                    this.engine.selected.material.transparent = val < 1.0;
+                }
+                this.engine.selected.material.needsUpdate = true;
+            });
+        });
+    }
+
+    bindWorldSettings() {
+        document.getElementById('pp-bloom-strength').addEventListener('input', (e) => { this.engine.bloomPass.strength = parseFloat(e.target.value); });
+        document.getElementById('pp-bloom-radius').addEventListener('input', (e) => { this.engine.bloomPass.radius = parseFloat(e.target.value); });
+        document.getElementById('pp-bloom-threshold').addEventListener('input', (e) => { this.engine.bloomPass.threshold = parseFloat(e.target.value); });
+        document.getElementById('pp-vignette-enabled').addEventListener('change', (e) => { this.engine.vignettePass.enabled = e.target.checked; });
+        document.getElementById('pp-vignette-strength').addEventListener('input', (e) => { this.engine.vignettePass.uniforms["darkness"].value = parseFloat(e.target.value); });
+    }
+
     setActiveTool(id) {
         document.querySelectorAll('.gizmo-group .icon-btn').forEach(btn => btn.classList.remove('active'));
         document.getElementById(id).classList.add('active');
@@ -194,10 +216,10 @@ export class Editor {
             grid.innerHTML = '<div style="color:#666; font-size:12px; grid-column: 1/-1; text-align:center; margin-top:20px;">لا توجد أصول محفوظة.<br>حدد مجسماً واضغط "حفظ كأصل".</div>';
             return;
         }
-
         this.engine.assets.forEach(asset => {
             const card = document.createElement('div');
             card.className = 'asset-card';
+            card.style.position = 'relative';
             
             const icon = document.createElement('div');
             icon.className = 'asset-icon';
@@ -214,21 +236,13 @@ export class Editor {
             delBtn.style.top = '2px';
             delBtn.style.left = '2px';
             delBtn.style.fontSize = '10px';
-            delBtn.onclick = (e) => {
-                e.stopPropagation();
-                this.engine.removeAsset(asset.id);
-                this.renderAssets();
-            };
-            card.style.position = 'relative';
+            delBtn.style.cursor = 'pointer';
+            delBtn.onclick = (e) => { e.stopPropagation(); this.engine.removeAsset(asset.id); this.renderAssets(); };
 
             card.appendChild(icon);
             card.appendChild(name);
             card.appendChild(delBtn);
-
-            card.onclick = () => {
-                this.engine.spawnAsset(asset.id);
-            };
-
+            card.onclick = () => { this.engine.spawnAsset(asset.id); };
             grid.appendChild(card);
         });
     }
@@ -362,43 +376,3 @@ export class Editor {
         });
     }
 }
-
-// إضافة دالة لتحديث خصائص المادة
-Editor.prototype.bindMaterialProps = function() {
-    const props = ['roughness', 'metalness', 'opacity'];
-    props.forEach(prop => {
-        const el = document.getElementById(`prop-${prop}`);
-        if (!el) return;
-        el.addEventListener('input', (e) => {
-            if (!this.engine.selected || !this.engine.selected.material) return;
-            const val = parseFloat(e.target.value);
-            this.engine.selected.material[prop] = val;
-            if (prop === 'opacity') {
-                this.engine.selected.material.transparent = val < 1.0;
-            }
-            this.engine.selected.material.needsUpdate = true;
-        });
-    });
-};
-
-// دالة جديدة لربط أزرار Post-Processing
-Editor.prototype.bindWorldSettings = function() {
-    // Bloom
-    document.getElementById('pp-bloom-strength').addEventListener('input', (e) => {
-        this.engine.bloomPass.strength = parseFloat(e.target.value);
-    });
-    document.getElementById('pp-bloom-radius').addEventListener('input', (e) => {
-        this.engine.bloomPass.radius = parseFloat(e.target.value);
-    });
-    document.getElementById('pp-bloom-threshold').addEventListener('input', (e) => {
-        this.engine.bloomPass.threshold = parseFloat(e.target.value);
-    });
-
-    // Vignette
-    document.getElementById('pp-vignette-enabled').addEventListener('change', (e) => {
-        this.engine.vignettePass.enabled = e.target.checked;
-    });
-    document.getElementById('pp-vignette-strength').addEventListener('input', (e) => {
-        this.engine.vignettePass.uniforms["darkness"].value = parseFloat(e.target.value);
-    });
-};
