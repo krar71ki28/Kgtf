@@ -22,6 +22,7 @@ export class Editor {
 
         this.bindButtons();
         this.bindInspector();
+        this.bindMaterialProps();
         this.setupRaycaster();
         this.setupDropdown();
         this.setupTabs();
@@ -263,7 +264,12 @@ export class Editor {
         document.getElementById('prop-z').value = obj.position.z.toFixed(2);
         document.getElementById('prop-rot').value = obj.rotation.y;
         document.getElementById('prop-scale').value = obj.scale.x;
-        if (obj.isMesh && obj.material) document.getElementById('prop-color').value = '#' + obj.material.color.getHexString();
+        if (obj.isMesh && obj.material) {
+            document.getElementById('prop-color').value = '#' + obj.material.color.getHexString();
+            document.getElementById('prop-roughness').value = obj.material.roughness !== undefined ? obj.material.roughness : 0.5;
+            document.getElementById('prop-metalness').value = obj.material.metalness !== undefined ? obj.material.metalness : 0.1;
+            document.getElementById('prop-opacity').value = obj.material.opacity !== undefined ? obj.material.opacity : 1.0;
+        }
         else if (obj.isLight) {
             document.getElementById('prop-color').value = '#' + obj.color.getHexString();
             document.getElementById('prop-light-intensity').value = obj.intensity;
@@ -351,3 +357,21 @@ export class Editor {
         });
     }
 }
+
+// إضافة دالة لتحديث خصائص المادة
+Editor.prototype.bindMaterialProps = function() {
+    const props = ['roughness', 'metalness', 'opacity'];
+    props.forEach(prop => {
+        const el = document.getElementById(`prop-${prop}`);
+        if (!el) return;
+        el.addEventListener('input', (e) => {
+            if (!this.engine.selected || !this.engine.selected.material) return;
+            const val = parseFloat(e.target.value);
+            this.engine.selected.material[prop] = val;
+            if (prop === 'opacity') {
+                this.engine.selected.material.transparent = val < 1.0;
+            }
+            this.engine.selected.material.needsUpdate = true;
+        });
+    });
+};
