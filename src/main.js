@@ -31,3 +31,11 @@ function animate(now) {
     }
 }
 requestAnimationFrame(animate);
+
+// كود إعادة ضبط المصنع (Force Reset)
+if (window.location.search.includes('reset')) {
+    localStorage.removeItem('kgtf_scene_final');
+    localStorage.removeItem('kgtf_assets');
+    alert('تم مسح المشهد القديم بنجاح! سيتم إعادة تشغيل المحرك الآن.');
+    window.location.href = window.location.pathname; // إعادة تحميل الصفحة بدون كلمة reset
+}
