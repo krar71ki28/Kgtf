@@ -37,7 +37,7 @@ export class Engine {
         this.scene.fog = new THREE.Fog(0x87CEEB, 30, 120);
 
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // تحسين الأداء
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); 
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -45,10 +45,9 @@ export class Engine {
         this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
         this.camera.position.set(8, 6, 10);
 
-        // Post-Processing
         this.composer = new EffectComposer(this.renderer);
         this.composer.addPass(new RenderPass(this.scene, this.camera));
-        this.bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0, 0.4, 0.8); // مطفي افتراضياً
+        this.bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0, 0.4, 0.8); 
         this.composer.addPass(this.bloomPass);
         this.vignettePass = new ShaderPass(VignetteShader);
         this.vignettePass.uniforms["offset"].value = 1.0;
@@ -91,13 +90,11 @@ export class Engine {
         grid.material.transparent = true;
         this.scene.add(grid);
 
-        // إعدادات الوقت
-        this.timeOfDay = 6 / 24; // 6 صباحاً
+        this.timeOfDay = 6 / 24; 
         this.autoTime = false;
         this.daySpeed = 0.01;
         this.isManualSun = false;
 
-        // إعدادات المطر
         this.isRaining = false;
         const rainGeo = new THREE.BufferGeometry();
         const rainCount = 3000;
@@ -375,8 +372,6 @@ export class Engine {
         this.projectiles.forEach(p => this.scene.remove(p.mesh));
         this.projectiles = [];
         this.selectObject(null);
-        localStorage.removeItem('kgtf_scene_final');
-        this.addObject('cube');
         if (this.onSceneChange) this.onSceneChange();
     }
 
@@ -404,20 +399,54 @@ export class Engine {
         }, undefined, (err) => { alert('تعذر تحميل الشخصية.'); });
     }
 
-    saveScene() {
-        const data = this.objects.map(o => ({
+    getSceneData() {
+        return this.objects.map(o => ({
             type: o.userData.type, material: o.userData.material, color: o.isMesh ? o.material.color.getHex() : (o.isLight ? o.color.getHex() : 0xffffff),
             intensity: o.isLight ? o.intensity : undefined, position: o.position.toArray(), rotation: [o.rotation.x, o.rotation.y, o.rotation.z], scale: o.scale.toArray(), physics: o.userData.physics, behaviors: o.userData.behaviors
         }));
+    }
+
+    loadSceneData(data) {
+        this.clearScene();
+        this.objects = [];
+        document.getElementById('object-list').innerHTML = '';
+        data.forEach(d => {
+            if (d.type === 'character') this.loadCharacter({ position: d.position, rotation: d.rotation, isLoading: true });
+            else this.addObject(d.type, d);
+        });
+        this.selectObject(null);
+        if (this.onSceneChange) this.onSceneChange();
+    }
+
+    saveSceneAs(name) {
+        if(!name) return alert('الرجاء إدخال اسم للمشهد');
+        const allScenes = JSON.parse(localStorage.getItem('kgtf_all_scenes') || '{}');
+        allScenes[name] = this.getSceneData();
+        localStorage.setItem('kgtf_all_scenes', JSON.stringify(allScenes));
+        alert('تم حفظ المشهد باسم: ' + name);
+    }
+
+    loadSceneByName(name) {
+        const allScenes = JSON.parse(localStorage.getItem('kgtf_all_scenes') || '{}');
+        if (allScenes[name]) {
+            this.loadSceneData(allScenes[name]);
+        }
+    }
+
+    deleteSceneByName(name) {
+        const allScenes = JSON.parse(localStorage.getItem('kgtf_all_scenes') || '{}');
+        delete allScenes[name];
+        localStorage.setItem('kgtf_all_scenes', JSON.stringify(allScenes));
+    }
+
+    saveScene() {
+        const data = this.getSceneData();
         localStorage.setItem('kgtf_scene_final', JSON.stringify(data));
-        alert('تم حفظ المشهد بنجاح!');
+        alert('تم حفظ المشهد الحالي بنجاح!');
     }
 
     exportScene() {
-        const data = this.objects.map(o => ({
-            type: o.userData.type, material: o.userData.material, color: o.isMesh ? o.material.color.getHex() : (o.isLight ? o.color.getHex() : 0xffffff),
-            intensity: o.isLight ? o.intensity : undefined, position: o.position.toArray(), rotation: [o.rotation.x, o.rotation.y, o.rotation.z], scale: o.scale.toArray(), physics: o.userData.physics, behaviors: o.userData.behaviors
-        }));
+        const data = this.getSceneData();
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -429,15 +458,7 @@ export class Engine {
         reader.onload = (e) => {
             try {
                 const data = JSON.parse(e.target.result);
-                this.clearScene(); 
-                this.objects = []; 
-                document.getElementById('object-list').innerHTML = '';
-                data.forEach(d => {
-                    if (d.type === 'character') this.loadCharacter({ position: d.position, rotation: d.rotation, isLoading: true });
-                    else this.addObject(d.type, d);
-                });
-                this.selectObject(null);
-                if (this.onSceneChange) this.onSceneChange();
+                this.loadSceneData(data);
                 alert('تم استيراد المشهد بنجاح!');
             } catch (err) { alert('عذراً، هذا الملف غير صالح أو تالف.'); }
         };
@@ -449,17 +470,13 @@ export class Engine {
         if (!saved) { this.addObject('cube'); return; }
         try {
             const data = JSON.parse(saved);
-            data.forEach(d => { 
-                if (d.type === 'character') this.loadCharacter({ position: d.position, rotation: d.rotation, isLoading: true });
-                else this.addObject(d.type, d);
-            });
+            this.loadSceneData(data);
         } catch(e) { this.addObject('cube'); }
     }
 
     update(dt) {
         this.totalTime += dt;
         
-        // نظام الوقت
         if (this.autoTime) {
             this.timeOfDay = (this.timeOfDay + dt * this.daySpeed) % 1;
         }
@@ -496,7 +513,6 @@ export class Engine {
         this.moon.position.z = Math.sin(angle + Math.PI) * 20;
         this.stars.rotation.y += 0.01 * dt;
 
-        // نظام المطر
         if (this.isRaining && this.rain) {
             const positions = this.rain.geometry.attributes.position.array;
             for (let i = 1; i < positions.length; i += 3) {

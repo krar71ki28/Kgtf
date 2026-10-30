@@ -406,3 +406,85 @@ export class Editor {
         });
     }
 }
+
+// دالة ربط إدارة المشاهد
+Editor.prototype.bindSceneManager = function() {
+    const renderSceneList = () => {
+        const list = document.getElementById('scene-list');
+        list.innerHTML = '';
+        const allScenes = JSON.parse(localStorage.getItem('kgtf_all_scenes') || '{}');
+        
+        if (Object.keys(allScenes).length === 0) {
+            list.innerHTML = '<div style="color:#666; font-size:11px; text-align:center;">لا توجد مشاهد محفوظة.</div>';
+            return;
+        }
+
+        for (const name in allScenes) {
+            const div = document.createElement('div');
+            div.style.display = 'flex';
+            div.style.justifyContent = 'space-between';
+            div.style.alignItems = 'center';
+            div.style.background = '#25252b';
+            div.style.padding = '6px 10px';
+            div.style.borderRadius = '4px';
+            div.style.border = '1px solid #3c3c45';
+            
+            const title = document.createElement('span');
+            title.innerText = name;
+            title.style.fontSize = '12px';
+            title.style.cursor = 'pointer';
+            title.style.color = '#4ade80';
+            title.onclick = () => {
+                if(confirm('هل تريد فتح هذا المشهد؟ (سيتم استبدال المشهد الحالي)')) {
+                    this.engine.loadSceneByName(name);
+                }
+            };
+
+            const delBtn = document.createElement('span');
+            delBtn.innerText = '✕';
+            delBtn.style.color = '#ff5577';
+            delBtn.style.cursor = 'pointer';
+            delBtn.onclick = () => {
+                if(confirm('هل أنت متأكد من حذف هذا المشهد؟')) {
+                    this.engine.deleteSceneByName(name);
+                    renderSceneList();
+                }
+            };
+
+            div.appendChild(title);
+            div.appendChild(delBtn);
+            list.appendChild(div);
+        }
+    };
+
+    // حفظ مشهد باسم جديد
+    document.getElementById('btn-save-scene-as').onclick = () => {
+        const name = document.getElementById('new-scene-name').value.trim();
+        if (name) {
+            this.engine.saveSceneAs(name);
+            document.getElementById('new-scene-name').value = '';
+            renderSceneList();
+        }
+    };
+
+    // مشهد جديد (تفريغ الشاشة)
+    document.getElementById('btn-new-scene').onclick = () => {
+        if (confirm('هل تريد إنشاء مشهد جديد فارغ؟ (سيتم مسح المشهد الحالي إذا لم يتم حفظه)')) {
+            this.engine.clearScene();
+            this.engine.addObject('cube'); // نضع مكعب افتراضي
+            renderSceneList();
+            document.querySelector('[data-target="tab-outliner"]').click();
+        }
+    };
+
+    renderSceneList();
+    // تحديث القائمة كل ما رجعنا للتبويب
+    document.querySelector('[data-target="tab-scenes"]').addEventListener('click', renderSceneList);
+};
+
+// استدعاء الدالة الجديدة في الـ constructor
+const originalBindPhase5 = Editor.prototype.bindPhase5Settings;
+Editor.prototype.bindPhase5Settings = function() {
+    originalBindPhase5.call(this);
+    this.bindSceneManager();
+};
