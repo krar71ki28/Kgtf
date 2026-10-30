@@ -19,14 +19,12 @@ export const BEHAVIORS = {
     rotate: {
         name: 'دوران مستمر',
         defaultParams: { speed: 1.5 },
-        update: (obj, params, state, dt, time, engine) => { 
-            obj.rotation.y += params.speed * dt; 
-        }
+        update: (obj, params, state, dt) => { obj.rotation.y += params.speed * dt; }
     },
     float: {
         name: 'طيران/تذبذب',
         defaultParams: { amplitude: 0.5, speed: 2 },
-        update: (obj, params, state, dt, time, engine) => {
+        update: (obj, params, state, dt, time) => {
             if (state.baseY === undefined) state.baseY = obj.position.y;
             obj.position.y = state.baseY + Math.sin(time * params.speed) * params.amplitude;
         }
@@ -42,6 +40,44 @@ export const BEHAVIORS = {
             if (dir.length() > params.stopDistance) {
                 dir.normalize();
                 obj.position.add(dir.multiplyScalar(params.speed * dt));
+            }
+        }
+    },
+    patrol: {
+        name: 'دورية (يمين/يسار)',
+        defaultParams: { speed: 2, distance: 4, axis: 'x' },
+        init: (obj, state) => { state.startPos = obj.position.clone(); state.direction = 1; },
+        update: (obj, params, state, dt) => {
+            const axis = params.axis;
+            obj.position[axis] += state.direction * params.speed * dt;
+            const currentDist = obj.position[axis] - state.startPos[axis];
+            if (Math.abs(currentDist) >= params.distance / 2) state.direction *= -1;
+        }
+    },
+    shoot: {
+        name: 'إطلاق مقذوفات',
+        defaultParams: { interval: 2, speed: 15 },
+        update: (obj, params, state, dt, time, engine) => {
+            const player = engine.objects.find(o => o.userData.type === 'character');
+            if (!player) return;
+            state.timer = (state.timer || 0) + dt;
+            if (state.timer >= params.interval) {
+                state.timer = 0;
+                const dir = new THREE.Vector3().subVectors(player.position, obj.position).normalize();
+                engine.createProjectile(obj.position.clone().add(new THREE.Vector3(0, 1, 0)), dir, params.speed);
+            }
+        }
+    },
+    collect: {
+        name: 'جمع (اختفاء ونقاط)',
+        defaultParams: { distance: 1.5, points: 10 },
+        update: (obj, params, state, dt, time, engine) => {
+            const player = engine.objects.find(o => o.userData.type === 'character');
+            if (!player) return;
+            if (player.position.distanceTo(obj.position) < params.distance) {
+                engine.score += params.points;
+                if (engine.onScoreChanged) engine.onScoreChanged(engine.score);
+                engine.removeObject(obj);
             }
         }
     }
@@ -115,6 +151,10 @@ export class Engine {
         this.scene.add(this.moon);
 
         this.objects = [];
+        this.projectiles = []; // مصفوفة للمقذوفات
+        this.score = 0;
+        this.onScoreChanged = null;
+
         this.selected = null;
         this.idCounter = 1;
         this.onSelect = null;
@@ -189,6 +229,26 @@ export class Engine {
         return obj;
     }
 
+    removeObject(obj) {
+        const idx = this.objects.indexOf(obj);
+        if (idx !== -1) {
+            this.scene.remove(obj);
+            if (obj.material) obj.material.dispose();
+            this.objects.splice(idx, 1);
+            if (this.onSceneChange) this.onSceneChange();
+            if (this.selected === obj) this.selectObject(null);
+        }
+    }
+
+    createProjectile(pos, dir, speed) {
+        const geo = new THREE.SphereGeometry(0.2, 8, 8);
+        const mat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.copy(pos);
+        this.scene.add(mesh);
+        this.projectiles.push({ mesh, direction: dir, speed: speed, life: 3.0 });
+    }
+
     checkCollision(box1, excludeObj) {
         for (let obj of this.objects) {
             if (obj === excludeObj || obj.userData.type === 'character' || obj.userData.type === 'light') continue;
@@ -209,7 +269,7 @@ export class Engine {
             material: obj.userData.material,
             color: obj.isMesh ? obj.material.color.getHex() : (obj.isLight ? obj.color.getHex() : null),
             physics: { ...obj.userData.physics },
-            behaviors: JSON.parse(JSON.stringify(obj.userData.behaviors)) // Deep copy
+            behaviors: JSON.parse(JSON.stringify(obj.userData.behaviors))
         };
         if (obj.isLight) opts.intensity = obj.intensity;
         return this.addObject(obj.userData.type, opts);
@@ -222,14 +282,7 @@ export class Engine {
 
     deleteSelected() {
         if (!this.selected || this.selected.userData.type === 'character') return;
-        const idx = this.objects.indexOf(this.selected);
-        if (idx !== -1) {
-            this.scene.remove(this.selected);
-            if (this.selected.material) this.selected.material.dispose();
-            this.objects.splice(idx, 1);
-            this.selectObject(null);
-            if (this.onSceneChange) this.onSceneChange();
-        }
+        this.removeObject(this.selected);
     }
 
     clearScene() {
@@ -251,6 +304,8 @@ export class Engine {
             }
         });
         this.objects = [];
+        this.projectiles.forEach(p => this.scene.remove(p.mesh));
+        this.projectiles = [];
         this.selectObject(null);
         localStorage.removeItem('kgtf_scene_final');
         this.addObject('cube');
@@ -400,11 +455,31 @@ export class Engine {
             if (o.userData.behaviors) {
                 for (const bName in o.userData.behaviors) {
                     if (BEHAVIORS[bName] && BEHAVIORS[bName].update) {
-                        BEHAVIORS[bName].update(o, o.userData.behaviors[bName], o.userData.behaviorStates, dt, this.totalTime, this);
+                        if (!o.userData.behaviorStates) o.userData.behaviorStates = {};
+                        if (!o.userData.behaviorStates[bName]) o.userData.behaviorStates[bName] = {};
+                        if (BEHAVIORS[bName].init && !o.userData.behaviorStates[bName]._inited) {
+                            BEHAVIORS[bName].init(o, o.userData.behaviorStates[bName], this);
+                            o.userData.behaviorStates[bName]._inited = true;
+                        }
+                        BEHAVIORS[bName].update(o, o.userData.behaviors[bName], o.userData.behaviorStates[bName], dt, this.totalTime, this);
                     }
                 }
             }
         });
+
+        // تحديث المقذوفات
+        for (let i = this.projectiles.length - 1; i >= 0; i--) {
+            const p = this.projectiles[i];
+            p.mesh.position.addScaledVector(p.direction, p.speed * dt);
+            p.life -= dt;
+
+            if (p.life <= 0) {
+                this.scene.remove(p.mesh);
+                p.mesh.geometry.dispose();
+                p.mesh.material.dispose();
+                this.projectiles.splice(i, 1);
+            }
+        }
         
         if (!document.body.classList.contains('play-mode')) this.controls.update();
     }

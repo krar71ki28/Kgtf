@@ -37,6 +37,10 @@
 
         <div id="viewport-container">
             <canvas id="viewport"></canvas>
+            
+            <!-- شاشة النقاط -->
+            <div id="score-display" style="position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); padding: 8px 20px; border-radius: 20px; border: 1px solid #ffaa00; color: #ffaa00; font-weight: bold; font-size: 18px; z-index: 20; display: none;">النقاط: <span id="score-val">0</span></div>
+
             <div id="viewport-toolbar">
                 <button class="fab-btn" id="btn-gizmo-translate" style="background:#00e5ff; padding: 6px 10px;">✥</button>
                 <button class="fab-btn" id="btn-gizmo-rotate" style="background:#ffaa00; padding: 6px 10px;">↻</button>
@@ -70,10 +74,7 @@
                 <div class="panel-title" style="color:#60a5fa; margin-top:10px;">BEHAVIORS</div>
                 <div class="prop-row" style="display: flex; gap: 5px; margin-bottom: 5px;">
                     <select id="add-behavior-select" style="flex: 1;">
-                        <option value="">-- اختر سلوك --</option>
-                        <option value="rotate">دوران مستمر</option>
-                        <option value="float">طيران/تذبذب</option>
-                        <option value="follow">مطاردة اللاعب</option>
+                        <!-- سيتم تعبئتها ديناميكياً -->
                     </select>
                     <button class="btn" id="btn-add-behavior" style="background:#60a5fa; color:#fff;">إضافة</button>
                 </div>
@@ -82,7 +83,6 @@
                 <div class="panel-title" style="color:#888;">TRANSFORM</div>
                 <div class="prop-row"><label>المادة</label><select id="prop-material"><option value="default">عادي</option><option value="wood">خشب</option><option value="metal">معدن</option><option value="gold">ذهب</option><option value="glass">زجاج</option><option value="rubber">مطاط</option><option value="marble">رخام</option><option value="emissive">مضيء</option></select></div>
                 
-                <!-- زر رفع الخامة -->
                 <div class="prop-row" style="margin-bottom: 5px;">
                     <button class="btn" id="btn-upload-texture" style="width:100%; background:#3b82f6; color:#fff; font-size:11px; padding:5px;">🖼️ رفع خامة (Texture)</button>
                     <input type="file" id="texture-input" accept="image/*" style="display:none;">
@@ -95,7 +95,6 @@
                 <div class="prop-row"><label>دوران</label><input type="range" id="prop-rot" min="0" max="6.28" step="0.1" value="0"></div>
                 <div class="prop-row"><label>حجم</label><input type="range" id="prop-scale" min="0.1" max="4" step="0.1" value="1"></div>
 
-                <!-- خصائص الإضاءة (تظهر فقط إذا كان المجسم ضوء) -->
                 <div id="light-properties" style="display:none; margin-top:10px; border-top:1px solid #333; padding-top:10px;">
                     <div class="panel-title" style="color:#ffaa00;">LIGHT SETTINGS</div>
                     <div class="prop-row"><label>قوة الإضاءة</label><input type="range" id="prop-light-intensity" min="0" max="20" step="0.5" value="5"></div>
@@ -124,6 +123,6 @@
     <script type="importmap">
     { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
-    <script type="module" src="src/main.js?v=36"></script>
+    <script type="module" src="src/main.js?v=37"></script>
 </body>
 </html>

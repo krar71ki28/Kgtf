@@ -28,6 +28,12 @@ export class Editor {
         engine.onSelect = (obj) => this.updateInspector(obj);
         engine.onSceneChange = () => this.updateList();
         
+        // ربط شاشة النقاط
+        engine.onScoreChanged = (score) => {
+            const scoreVal = document.getElementById('score-val');
+            if(scoreVal) scoreVal.innerText = score;
+        };
+
         this.updateList();
         if (this.engine.selected) this.updateInspector(this.engine.selected);
     }
@@ -131,7 +137,6 @@ export class Editor {
             select.value = '';
         };
 
-        // رفع الخامات (Texture)
         document.getElementById('btn-upload-texture').onclick = () => document.getElementById('texture-input').click();
         document.getElementById('texture-input').onchange = (e) => {
             if (!this.engine.selected || !this.engine.selected.isMesh) return;
@@ -296,7 +301,6 @@ export class Editor {
         this.updateUIValues();
         this.renderBehaviorsUI();
         
-        // إظهار خصائص الإضاءة فقط إذا كان ضوء
         const lightProps = document.getElementById('light-properties');
         if (obj.isLight) {
             lightProps.style.display = 'block';
