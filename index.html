@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>KGTF ENGINE</title>
+<title>KGTF ENGINE - Verified</title>
 <style>
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body { font-family: system-ui, sans-serif; background: #0a0a0f; color: #fff; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
@@ -18,15 +18,17 @@
     
     #workspace { flex: 1; display: flex; overflow: hidden; position: relative; }
     
+    /* القائمة اليسرى */
     #left-panel { width: 70px; background: #141420; border-left: 1px solid #2a2a3a; display: flex; flex-direction: column; align-items: center; padding: 10px 0; gap: 8px; z-index: 10; overflow-y: auto; flex-shrink: 0; }
     .icon-btn { width: 52px; height: 52px; background: #1e1e30; border: 1px solid #2a2a3a; border-radius: 8px; color: #fff; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 9px; gap: 2px; padding: 4px; }
     .icon-btn span { font-size: 18px; }
     .icon-btn:hover { border-color: #00e5ff; color: #00e5ff; }
 
-    #viewport-container { flex: 1; position: relative; background: #000; overflow: hidden; display: flex; flex-direction: column; }
+    /* منطقة العرض 3D */
+    #viewport-container { flex: 1; position: relative; background: #000; overflow: hidden; display: flex; flex-direction: column; touch-action: none; }
     #viewport { width: 100%; height: 100%; display: block; flex: 1; }
 
-    /* لوحة الخصائص */
+    /* لوحة الخصائص اليمنى */
     #right-panel { width: 250px; background: #141420; border-right: 1px solid #2a2a3a; display: flex; flex-direction: column; z-index: 10; overflow-y: auto; flex-shrink: 0; }
     .panel-section { border-bottom: 1px solid #2a2a3a; padding: 10px; }
     .panel-title { font-size: 11px; color: #888; font-weight: bold; margin-bottom: 8px; letter-spacing: 1px; }
@@ -37,7 +39,7 @@
     .prop-row input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; }
     .prop-row select { flex: 1; background: #0a0a0f; border: 1px solid #2a2a3a; color: #fff; padding: 4px; border-radius: 4px; font-size: 11px; }
 
-    #status-bar { position: absolute; bottom: 10px; left: 10px; background: rgba(20,20,30,0.8); padding: 5px 10px; border-radius: 4px; font-size: 10px; font-family: monospace; color: #0f0; z-index: 5; border: 1px solid #2a2a3a; }
+    #status-bar { position: absolute; top: 10px; left: 10px; background: rgba(20,20,30,0.8); padding: 5px 10px; border-radius: 4px; font-size: 10px; font-family: monospace; color: #0f0; z-index: 5; border: 1px solid #2a2a3a; }
 
     /* المساعد الذكي */
     #ai-fab { position: absolute; bottom: 20px; right: 20px; width: 50px; height: 50px; background: #ff5577; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; box-shadow: 0 4px 15px rgba(255,85,119,0.5); z-index: 20; }
@@ -68,13 +70,12 @@
 
     /* تصميم الموبايل */
     @media (max-width: 768px) {
-        #header { display: none; } /* إخفاء الشريط العلوي نهائياً في الموبايل */
+        #header { display: none; }
         #workspace { flex-direction: column; height: 100vh; }
         #left-panel { width: 100%; height: 64px; flex-direction: row; justify-content: space-around; border-left: none; border-bottom: 1px solid #2a2a3a; padding: 5px; overflow-x: auto; flex-shrink: 0; }
         .icon-btn { width: 55px; height: 55px; flex-shrink: 0; }
         #right-panel { width: 100%; height: 35vh; border-right: none; border-top: 1px solid #2a2a3a; flex-shrink: 0; }
         #viewport-container { flex: 1; min-height: 40vh; }
-        #status-bar { top: 10px; left: 10px; bottom: auto; }
     }
 </style>
 </head>
@@ -95,7 +96,7 @@
         <div id="viewport-container">
             <canvas id="viewport"></canvas>
             
-            <!-- الأزرار العائمة (تظهر دائماً) -->
+            <!-- أزرار التحكم العائمة (مضمونة) -->
             <div id="floating-controls">
                 <button class="fab-btn green" id="btn-play">▶ تشغيل</button>
                 <button class="fab-btn" id="btn-save">💾 حفظ</button>
@@ -432,12 +433,12 @@
                     scale: o.scale.toArray(),
                     physics: o.userData.physics
                 }));
-            localStorage.setItem('kgtf_scene_v6', JSON.stringify(data));
+            localStorage.setItem('kgtf_scene_final', JSON.stringify(data));
             alert('تم حفظ المشهد بنجاح!');
         };
 
         function loadScene() {
-            const saved = localStorage.getItem('kgtf_scene_v6');
+            const saved = localStorage.getItem('kgtf_scene_final');
             if (!saved) { addObject('cube'); return; }
             try {
                 const data = JSON.parse(saved);
