@@ -13,9 +13,9 @@ body { font-family: system-ui, sans-serif; background: #0a0a0f; color: #fff; hei
 #viewport-container { flex: 1; position: relative; background: #000; overflow: hidden; display: flex; flex-direction: column; touch-action: none; }
 #viewport { width: 100%; height: 100%; display: block; flex: 1; }
 #right-panel { width: 280px; background: #141420; border-right: 1px solid #2a2a3a; display: flex; flex-direction: column; z-index: 10; overflow-y: auto; flex-shrink: 0; }
-.panel-section { border-bottom: 1px solid #2a2a3a; padding: 10px; }
+.panel-section { border-bottom: 1px solid #2a2a3a; padding: 6px 10px; }
 .panel-title { font-size: 11px; color: #888; font-weight: bold; margin-bottom: 8px; letter-spacing: 1px; }
-.prop-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 5px; }
+.prop-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; gap: 5px; }
 .prop-row label { font-size: 11px; color: #aaa; width: 60px; flex-shrink: 0; }
 .prop-row input[type="range"] { flex: 1; }
 .prop-row input[type="color"] { width: 32px; height: 32px; border: none; background: none; cursor: pointer; }
