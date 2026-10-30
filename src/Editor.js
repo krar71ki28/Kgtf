@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
+import { BEHAVIORS } from './Engine.js';
 
 export class Editor {
     constructor(engine) {
@@ -32,9 +33,7 @@ export class Editor {
 
     setupRaycaster() {
         const canvas = this.engine.renderer.domElement;
-        canvas.addEventListener('pointerdown', (e) => {
-            this.pointerDown = { x: e.clientX, y: e.clientY };
-        });
+        canvas.addEventListener('pointerdown', (e) => { this.pointerDown = { x: e.clientX, y: e.clientY }; });
 
         canvas.addEventListener('pointerup', (e) => {
             if (document.body.classList.contains('play-mode') || this.isDraggingGizmo) return;
@@ -67,8 +66,6 @@ export class Editor {
         document.getElementById('btn-tree').onclick = () => this.engine.addObject('tree');
         document.getElementById('btn-rock').onclick = () => this.engine.addObject('rock');
         document.getElementById('btn-building').onclick = () => this.engine.addObject('building');
-        document.getElementById('btn-jumppad').onclick = () => this.engine.addObject('jumppad');
-        document.getElementById('btn-enemy').onclick = () => this.engine.addObject('enemy');
         document.getElementById('btn-light').onclick = () => this.engine.addObject('light');
         document.getElementById('btn-character').onclick = () => this.engine.loadCharacter();
         
@@ -82,14 +79,13 @@ export class Editor {
         };
         document.getElementById('btn-delete').onclick = () => this.engine.deleteSelected();
         document.getElementById('btn-save').onclick = () => this.engine.saveScene();
-        
-        // أزرار التصدير والاستيراد
         document.getElementById('btn-export').onclick = () => this.engine.exportScene();
         document.getElementById('btn-import').onclick = () => document.getElementById('file-import').click();
+        
         document.getElementById('file-import').onchange = (e) => {
             if (e.target.files.length > 0) {
                 this.engine.importScene(e.target.files[0]);
-                e.target.value = ''; // إعادة تعيين الحقل عشان تقدر تختار ملف ثاني
+                e.target.value = ''; 
             }
         };
         
@@ -106,6 +102,21 @@ export class Editor {
                 this.gizmo.rotationSnap = null;
             }
         });
+
+        // زر إضافة سلوك
+        document.getElementById('btn-add-behavior').onclick = () => {
+            if (!this.engine.selected) return;
+            const select = document.getElementById('add-behavior-select');
+            const bName = select.value;
+            if (!bName) return;
+
+            if (!this.engine.selected.userData.behaviors) this.engine.selected.userData.behaviors = [];
+            if (!this.engine.selected.userData.behaviors.includes(bName)) {
+                this.engine.selected.userData.behaviors.push(bName);
+                this.updateActiveBehaviorsList();
+            }
+            select.value = '';
+        };
     }
 
     bindInspector() {
@@ -146,6 +157,40 @@ export class Editor {
         else if (obj.isLight) document.getElementById('prop-color').value = '#' + obj.color.getHexString();
     }
 
+    updateActiveBehaviorsList() {
+        const list = document.getElementById('active-behaviors-list');
+        list.innerHTML = '';
+        const behaviors = this.engine.selected.userData.behaviors || [];
+        
+        if (behaviors.length === 0) {
+            list.innerHTML = '<span style="color:#666;">لا توجد سلوكيات مضافة</span>';
+            return;
+        }
+
+        behaviors.forEach((b, index) => {
+            const div = document.createElement('div');
+            div.style.display = 'flex';
+            div.style.justifyContent = 'space-between';
+            div.style.background = '#2a2a3a';
+            div.style.padding = '4px';
+            div.style.borderRadius = '4px';
+            div.style.marginBottom = '4px';
+            
+            div.innerHTML = `<span>⚙️ ${BEHAVIORS[b]?.name || b}</span>`;
+            
+            const delBtn = document.createElement('span');
+            delBtn.innerText = '✕';
+            delBtn.style.color = '#ff5577';
+            delBtn.style.cursor = 'pointer';
+            delBtn.onclick = () => {
+                behaviors.splice(index, 1);
+                this.updateActiveBehaviorsList();
+            };
+            div.appendChild(delBtn);
+            list.appendChild(div);
+        });
+    }
+
     updateInspector(obj) {
         if (!obj) {
             this.inspector.style.display = 'none';
@@ -155,6 +200,8 @@ export class Editor {
         this.inspector.style.display = 'block';
         this.gizmo.attach(obj);
         this.updateUIValues();
+        this.updateActiveBehaviorsList();
+        
         if (obj.userData.physics) {
             document.getElementById('prop-physics').checked = obj.userData.physics.enabled;
             document.getElementById('prop-bounce').value = obj.userData.physics.bounce;

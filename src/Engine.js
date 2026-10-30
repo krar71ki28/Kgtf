@@ -14,6 +14,31 @@ export const MATERIALS = {
     emissive: { color: 0x00e5ff, emissive: 0x00e5ff, emissiveIntensity: 1.0 }
 };
 
+// تعريف السلوكيات
+export const BEHAVIORS = {
+    rotate: {
+        name: 'دوران مستمر',
+        update: (obj, dt) => { obj.rotation.y += 1.5 * dt; }
+    },
+    float: {
+        name: 'طيران/تذبذب',
+        update: (obj, dt, time) => { obj.position.y = (obj.userData.baseY || obj.position.y) + Math.sin(time * 2) * 0.5; }
+    },
+    follow: {
+        name: 'مطاردة اللاعب',
+        update: (obj, dt, time, engine) => {
+            const player = engine.objects.find(o => o.userData.type === 'character');
+            if (!player) return;
+            const dir = new THREE.Vector3().subVectors(player.position, obj.position);
+            dir.y = 0;
+            if (dir.length() > 1.5) {
+                dir.normalize();
+                obj.position.add(dir.multiplyScalar(2 * dt));
+            }
+        }
+    }
+};
+
 export class Engine {
     constructor(canvas) {
         this.canvas = canvas;
@@ -89,34 +114,13 @@ export class Engine {
         );
         this.scene.add(this.moon);
 
-        // === المطر (Rain System) ===
-        this.isRaining = false;
-        this.rainCount = 4000;
-        this.rainSpeed = 25;
-        this.rainRange = 60;
-        this.rainGeometry = new THREE.BufferGeometry();
-        const rainPositions = new Float32Array(this.rainCount * 3);
-        for (let i = 0; i < this.rainCount * 3; i += 3) {
-            rainPositions[i] = (Math.random() - 0.5) * this.rainRange;
-            rainPositions[i + 1] = Math.random() * 30;
-            rainPositions[i + 2] = (Math.random() - 0.5) * this.rainRange;
-        }
-        this.rainGeometry.setAttribute('position', new THREE.BufferAttribute(rainPositions, 3));
-        this.rainMaterial = new THREE.PointsMaterial({ color: 0x88bbff, size: 0.15, transparent: true, opacity: 0.7 });
-        this.rain = new THREE.Points(this.rainGeometry, this.rainMaterial);
-        this.rain.visible = false;
-        this.scene.add(this.rain);
-
-        // === الأعداء (Enemies) ===
-        this.enemies = [];
-        this.obstacles = [];
-
         this.objects = [];
         this.selected = null;
         this.idCounter = 1;
         this.onSelect = null;
         this.onSceneChange = null;
         this.sceneVersion = 0;
+        this.totalTime = 0; // لاستخدامه في السلوكيات
 
         this.loadScene();
         this.resize();
@@ -138,10 +142,6 @@ export class Engine {
         else if (type === 'cone') { obj = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.2, 32), this.makeMaterial('default')); obj.position.y = 0.6; }
         else if (type === 'torus') { obj = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.2, 16, 100), this.makeMaterial('default')); obj.position.y = 0.7; }
         else if (type === 'light') { obj = new THREE.PointLight(0xffaa00, 5, 15); obj.position.set(0, 3, 0); }
-        else if (type === 'jumppad') {
-            obj = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.2, 32), this.makeMaterial('emissive', 0x00ff00));
-            obj.position.y = 0.1;
-        }
         else if (type === 'tree') {
             obj = new THREE.Group();
             const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 1.5), this.makeMaterial('wood', 0x4a2e15));
@@ -159,27 +159,23 @@ export class Engine {
             obj = new THREE.Mesh(new THREE.BoxGeometry(2, 4, 2), this.makeMaterial('glass', 0x88ccff));
             obj.position.y = 2;
         }
-        else if (type === 'enemy') {
-            obj = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0xff0000 }));
-            obj.position.y = 0.5;
-            obj.userData = { id: 'enemy_' + (this.idCounter++), type: 'enemy', speed: 2 };
-            this.scene.add(obj);
-            this.enemies.push(obj);
-            return obj;
-        }
 
         if (obj.isMesh || obj.isGroup) {
             obj.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
         }
         
         if (!obj.userData || Object.keys(obj.userData).length === 0) {
-            obj.userData = { id: 'obj_' + (this.idCounter++), type: type, material: 'default', physics: { enabled: false, vy: 0, bounce: 0.5 } };
+            obj.userData = { id: 'obj_' + (this.idCounter++), type: type, material: 'default', physics: { enabled: false, vy: 0, bounce: 0.5 }, behaviors: [] };
         }
         
         if (opts.position) obj.position.fromArray(opts.position);
         if (opts.rotation) obj.rotation.set(opts.rotation[0] || 0, opts.rotation[1] || 0, opts.rotation[2] || 0);
         if (opts.scale) obj.scale.fromArray(opts.scale);
+        if (opts.behaviors) obj.userData.behaviors = opts.behaviors;
         
+        // حفظ الارتفاع الأساسي لسلوك الطيران
+        obj.userData.baseY = obj.position.y;
+
         if (opts.material && obj.isMesh) { obj.material.dispose(); obj.material = this.makeMaterial(opts.material, opts.color); obj.userData.material = opts.material; }
         else if (opts.color && obj.isMesh) obj.material.color.set(opts.color);
         
@@ -213,7 +209,8 @@ export class Engine {
             scale: [obj.scale.x, obj.scale.y, obj.scale.z],
             material: obj.userData.material,
             color: obj.isMesh ? obj.material.color.getHex() : (obj.isLight ? obj.color.getHex() : null),
-            physics: { ...obj.userData.physics }
+            physics: { ...obj.userData.physics },
+            behaviors: [...(obj.userData.behaviors || [])]
         };
         if (obj.isLight) opts.intensity = obj.intensity;
         return this.addObject(obj.userData.type, opts);
@@ -231,13 +228,6 @@ export class Engine {
             this.scene.remove(this.selected);
             if (this.selected.material) this.selected.material.dispose();
             this.objects.splice(idx, 1);
-            
-            // إذا كان عدو، نمسحه من مصفوفة الأعداء
-            if (this.selected.userData.type === 'enemy') {
-                const eIdx = this.enemies.indexOf(this.selected);
-                if (eIdx !== -1) this.enemies.splice(eIdx, 1);
-            }
-
             this.selectObject(null);
             if (this.onSceneChange) this.onSceneChange();
         }
@@ -245,7 +235,6 @@ export class Engine {
 
     clearScene() {
         this.sceneVersion++;
-        this.enemies = [];
         this.objects.forEach(obj => {
             this.scene.remove(obj);
             if (obj.traverse) {
@@ -286,7 +275,7 @@ export class Engine {
             gltf.animations.forEach(clip => { actions[clip.name] = mixer.clipAction(clip); });
             if (actions['Idle']) actions['Idle'].play();
             
-            model.userData = { id: 'char_' + (this.idCounter++), type: 'character', mixer, actions, currentAction: 'Idle', material: 'n/a', physics: { enabled: false, vy: 0, bounce: 0 } };
+            model.userData = { id: 'char_' + (this.idCounter++), type: 'character', mixer, actions, currentAction: 'Idle', material: 'n/a', physics: { enabled: false, vy: 0, bounce: 0 }, behaviors: [] };
             this.scene.add(model);
             this.objects.push(model);
             if (!opts.isLoading) {
@@ -301,7 +290,7 @@ export class Engine {
             type: o.userData.type, material: o.userData.material,
             color: o.isMesh ? o.material.color.getHex() : (o.isLight ? o.color.getHex() : 0xffffff),
             intensity: o.isLight ? o.intensity : undefined,
-            position: o.position.toArray(), rotation: [o.rotation.x, o.rotation.y, o.rotation.z], scale: o.scale.toArray(), physics: o.userData.physics
+            position: o.position.toArray(), rotation: [o.rotation.x, o.rotation.y, o.rotation.z], scale: o.scale.toArray(), physics: o.userData.physics, behaviors: o.userData.behaviors
         }));
         localStorage.setItem('kgtf_scene_final', JSON.stringify(data));
         alert('تم حفظ المشهد بنجاح!');
@@ -312,7 +301,7 @@ export class Engine {
             type: o.userData.type, material: o.userData.material,
             color: o.isMesh ? o.material.color.getHex() : (o.isLight ? o.color.getHex() : 0xffffff),
             intensity: o.isLight ? o.intensity : undefined,
-            position: o.position.toArray(), rotation: [o.rotation.x, o.rotation.y, o.rotation.z], scale: o.scale.toArray(), physics: o.userData.physics
+            position: o.position.toArray(), rotation: [o.rotation.x, o.rotation.y, o.rotation.z], scale: o.scale.toArray(), physics: o.userData.physics, behaviors: o.userData.behaviors
         }));
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
         const url = URL.createObjectURL(blob);
@@ -358,19 +347,19 @@ export class Engine {
     }
 
     update(dt) {
+        this.totalTime = (this.totalTime || 0) + dt;
+
+        // 1. تحديث دورة الليل والنهار
         this.timeOfDay = (this.timeOfDay + dt * this.daySpeed) % 1;
         const angle = this.timeOfDay * Math.PI * 2;
-
         this.sun.position.x = Math.cos(angle) * 50;
         this.sun.position.y = Math.sin(angle) * 50;
         this.sun.position.z = Math.sin(angle) * 20;
         
         const sunHeight = this.sun.position.y;
-
         const dayColor = new THREE.Color(0x87CEEB);
         const nightColor = new THREE.Color(0x050510);
         const sunsetColor = new THREE.Color(0xff5500);
-
         let currentSkyColor = new THREE.Color();
 
         if (sunHeight > 0) {
@@ -389,47 +378,17 @@ export class Engine {
 
         this.scene.background.copy(currentSkyColor);
         this.scene.fog.color.copy(currentSkyColor);
-
         this.moon.position.x = Math.cos(angle + Math.PI) * 50;
         this.moon.position.y = Math.sin(angle + Math.PI) * 50;
         this.moon.position.z = Math.sin(angle + Math.PI) * 20;
-
         this.stars.rotation.y += 0.01 * dt;
 
-        // === تحديث المطر ===
-        if (this.isRaining) {
-            const positions = this.rainGeometry.attributes.position.array;
-            for (let i = 1; i < positions.length; i += 3) {
-                positions[i] -= this.rainSpeed * dt; // تحريك للأسفل
-                if (positions[i] < 0) {
-                    positions[i] = 30; // إعادة للأعلى
-                }
-            }
-            this.rainGeometry.attributes.position.needsUpdate = true;
-        }
-
-        // === تحديث الأعداء ===
-        if (document.body.classList.contains('play-mode') && window.playerInstance && window.playerInstance.playerModel) {
-            for (let i = this.enemies.length - 1; i >= 0; i--) {
-                const enemy = this.enemies[i];
-                const direction = new THREE.Vector3().subVectors(window.playerInstance.playerModel.position, enemy.position);
-                direction.y = 0;
-                const distance = direction.length();
-
-                if (distance < 1.0) {
-                    window.playerInstance.takeDamage(10);
-                    // ننقل العدو بعيد شوي عشان ما يضرب بسرعة
-                    enemy.position.add(direction.clone().normalize().multiplyScalar(-5));
-                } else {
-                    direction.normalize();
-                    enemy.position.add(direction.multiplyScalar(enemy.userData.speed * dt));
-                }
-            }
-        }
-
+        // 2. تحديث الفيزياء والسلوكيات (Scripts)
         const box = new THREE.Box3(), size = new THREE.Vector3();
         this.objects.forEach(o => {
             if (o.userData.mixer) o.userData.mixer.update(dt);
+            
+            // الفيزياء
             const p = o.userData.physics;
             if (p && p.enabled && (o.isMesh || o.isGroup)) {
                 p.vy -= 9.8 * dt; o.position.y += p.vy * dt;
@@ -440,7 +399,17 @@ export class Engine {
                     if (Math.abs(p.vy) > 0.5) p.vy = -p.vy * p.bounce; else p.vy = 0;
                 }
             }
+
+            // تشغيل السلوكيات المضافة للمجسم
+            if (o.userData.behaviors) {
+                o.userData.behaviors.forEach(bName => {
+                    if (BEHAVIORS[bName]) {
+                        BEHAVIORS[bName].update(o, dt, this.totalTime, this);
+                    }
+                });
+            }
         });
+        
         if (!document.body.classList.contains('play-mode')) this.controls.update();
     }
 

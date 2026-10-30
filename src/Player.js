@@ -18,16 +18,12 @@ export class Player {
         this.lastTouch = { x: 0, y: 0 };
         this.playerBoxSize = new THREE.Vector3(0.6, 1.5, 0.6);
 
-        // إعدادات الصحة والنقاط
-        this.health = 100;
-        this.score = 0;
-
         this.bgm = document.getElementById('bgm');
         this.jumpSfx = document.getElementById('jump-sfx');
         this.bgm.volume = 0.3;
         this.jumpSfx.volume = 0.5;
 
-        window.playerInstance = this; // ربط اللاعب بالمحرك عشان الأعداء يوصلونه
+        window.playerInstance = this;
 
         this.setupControls();
     }
@@ -90,30 +86,6 @@ export class Player {
         this.jumpSfx.play().catch(e => console.log("Audio error:", e));
     }
 
-    takeDamage(amount) {
-        if (!this.isPlaying) return;
-        this.health -= amount;
-        if (this.health < 0) this.health = 0;
-        document.getElementById('health-val').innerText = this.health;
-        
-        // تأثير وميض أحمر (اختياري)
-        const canvas = document.getElementById('viewport');
-        canvas.style.boxShadow = "inset 0 0 50px red";
-        setTimeout(() => canvas.style.boxShadow = "none", 200);
-
-        if (this.health === 0) {
-            alert('Game Over! 💀');
-            this.stopPlay();
-            this.health = 100;
-            document.getElementById('health-val').innerText = this.health;
-        }
-    }
-
-    addScore(amount) {
-        this.score += amount;
-        document.getElementById('score-val').innerText = this.score;
-    }
-
     startPlay() {
         const playerObj = this.engine.objects.find(o => o.userData.type === 'character');
         if (!playerObj) { alert('أضف شخصية أولاً لتتمكن من اللعب!'); return; }
@@ -124,17 +96,10 @@ export class Player {
         this.engine.selectObject(null);
         this.engine.controls.enabled = false;
         
-        this.health = 100;
-        document.getElementById('health-val').innerText = this.health;
-        
         this.cameraYaw = this.playerModel.rotation.y;
         this.cameraPitch = 0.4;
         
         this.bgm.play().catch(e => console.log("Audio error:", e));
-
-        // تفعيل المطر
-        this.engine.isRaining = true;
-        this.engine.rain.visible = true;
 
         this.updateCamera(1); 
         this.engine.resize();
@@ -149,8 +114,6 @@ export class Player {
         this.engine.resize();
         
         this.bgm.pause();
-        this.engine.isRaining = false;
-        this.engine.rain.visible = false;
     }
 
     updateCamera(dt) {
@@ -244,7 +207,7 @@ export class Player {
         let supportY = 0;
         let hitJumpPad = false;
 
-        const colliders = this.engine.objects.filter(o => o !== this.playerModel && o.userData.type !== 'character' && o.userData.type !== 'light' && o.userData.type !== 'enemy');
+        const colliders = this.engine.objects.filter(o => o !== this.playerModel && o.userData.type !== 'character' && o.userData.type !== 'light');
 
         for (const obj of colliders) {
             const box = new THREE.Box3().setFromObject(obj);
