@@ -10,36 +10,30 @@
     #viewport { width: 100%; height: 100%; display: block; position: absolute; top: 0; left: 0; z-index: 1; }
     
     /* الواجهة العلوية */
-    #topbar { position: absolute; top: 0; left: 0; right: 0; height: 50px; background: rgba(20,20,30,0.9); border-bottom: 1px solid #2a2a3a; display: flex; align-items: center; padding: 0 10px; gap: 10px; z-index: 10; backdrop-filter: blur(5px); overflow-x: auto; }
-    .btn { background: #2a2a3a; color: #ccc; border: 1px solid #3a3a4a; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; white-space: nowrap; }
-    .btn:hover, .btn.active { background: #00e5ff; color: #000; border-color: #00e5ff; }
-    .btn.danger { background: #3a1a1a; color: #ff5577; border-color: #5a2a2a; }
+    #topbar { position: absolute; top: 0; left: 0; right: 0; height: 50px; background: rgba(20,20,30,0.95); border-bottom: 1px solid #2a2a3a; display: flex; align-items: center; padding: 0 10px; gap: 8px; z-index: 10; overflow-x: auto; white-space: nowrap; }
+    .btn { background: #2a2a3a; color: #ccc; border: 1px solid #3a3a4a; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
+    .btn.active { background: #00e5ff; color: #000; border-color: #00e5ff; }
+    .btn.danger { background: #3a1a1a; color: #ff5577; }
     
     /* القائمة الجانبية */
-    #sidebar { position: absolute; top: 50px; right: 0; width: 200px; height: calc(100% - 50px); background: rgba(20,20,30,0.9); border-left: 1px solid #2a2a3a; padding: 10px; z-index: 10; overflow-y: auto; backdrop-filter: blur(5px); }
-    .obj-item { padding: 8px; margin-bottom: 5px; background: #141420; border: 1px solid #2a2a3a; border-radius: 4px; font-size: 12px; cursor: pointer; display: flex; justify-content: space-between; }
+    #sidebar { position: absolute; top: 50px; right: 0; width: 160px; height: calc(100% - 50px); background: rgba(20,20,30,0.95); border-left: 1px solid #2a2a3a; padding: 10px; z-index: 10; overflow-y: auto; }
+    .obj-item { padding: 8px; margin-bottom: 5px; background: #141420; border: 1px solid #2a2a3a; border-radius: 4px; font-size: 11px; display: flex; justify-content: space-between; cursor: pointer; }
     .obj-item.selected { border-color: #00e5ff; background: #1a2a3a; color: #00e5ff; }
     
     /* شريط الحالة */
-    #hud { position: absolute; bottom: 10px; left: 10px; background: rgba(20,20,30,0.8); padding: 6px 10px; border-radius: 6px; font-size: 10px; font-family: monospace; color: #0f0; z-index: 10; border: 1px solid #2a2a3a; }
-    
-    @media (max-width: 600px) {
-        #sidebar { width: 140px; }
-    }
+    #hud { position: absolute; bottom: 10px; left: 10px; background: rgba(20,20,30,0.9); padding: 6px 10px; border-radius: 6px; font-size: 11px; font-family: monospace; color: #0f0; z-index: 10; border: 1px solid #2a2a3a; }
 </style>
 </head>
 <body>
     <canvas id="viewport"></canvas>
     
     <div id="topbar">
-        <button class="btn" id="btn-translate">تحريك</button>
+        <button class="btn active" id="btn-translate">تحريك</button>
         <button class="btn" id="btn-rotate">تدوير</button>
         <button class="btn" id="btn-scale">تكبير</button>
-        <div style="width:1px; height:20px; background:#444;"></div>
-        <button class="btn" id="btn-add-cube">+ مكعب</button>
+        <button class="btn" id="btn-add-cube" style="margin-right:10px;">+ مكعب</button>
         <button class="btn" id="btn-add-sphere">+ كرة</button>
         <button class="btn danger" id="btn-delete">حذف</button>
-        <div style="flex:1"></div>
         <button class="btn" id="btn-save" style="background:#00e5ff; color:#000;">حفظ</button>
     </div>
 
@@ -64,11 +58,11 @@
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { TransformControls } from 'three/addons/controls/TransformControls.js';
 
-        // --- Core Engine Setup ---
+        // 1. إعداد المشهد والكاميرا
         const canvas = document.getElementById('viewport');
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x0a0a0f);
-        scene.fog = new THREE.Fog(0x0a0a0f, 10, 50);
+        scene.fog = new THREE.Fog(0x0a0a0f, 15, 50);
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.set(5, 5, 5);
@@ -77,66 +71,57 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
+        // 2. أداة التحكم بالكاميرا
         const orbitControls = new OrbitControls(camera, renderer.domElement);
         orbitControls.enableDamping = true;
         orbitControls.target.set(0, 1, 0);
 
-        // --- Lighting ---
-        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
-        scene.add(hemiLight);
+        // 3. الإضاءة
+        scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 0.6));
         const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
         dirLight.position.set(5, 10, 5);
         dirLight.castShadow = true;
-        dirLight.shadow.mapSize.set(1024, 1024);
         scene.add(dirLight);
 
-        // --- Ground ---
-        const grid = new THREE.GridHelper(50, 50, 0x2a2a3a, 0x1a1a2e);
-        scene.add(grid);
+        // 4. الشبكة الأرضية
+        scene.add(new THREE.GridHelper(50, 50, 0x2a2a3a, 0x1a1a2e));
 
-        // --- Gizmo (Transform Controls) ---
+        // 5. أداة تحريك الكائنات (TransformControls)
         const transformControls = new TransformControls(camera, renderer.domElement);
-        // في إصدار Three.js r160، يجب إضافة الـ Helper الخاص بالأداة وليس الأداة نفسها
-        if (transformControls.getHelper) {
-            scene.add(transformControls.getHelper());
-        } else {
-            scene.add(transformControls);
-        }
-
+        // في هذا الإصدار نستخدم getHelper() لإضافتها للمشهد
+        scene.add(transformControls.getHelper());
+        
+        // إيقاف الكاميرا عند سحب الكائن
         transformControls.addEventListener('dragging-changed', function (event) {
             orbitControls.enabled = !event.value;
         });
 
-        // --- Editor State ---
+        // 6. حالة المحرر
         let objects = [];
         let selectedId = null;
         let idCounter = 1;
 
-        function addObject(type) {
-            let mesh;
+        function createObject(type) {
             const color = Math.floor(Math.random() * 0xffffff);
-            const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.5 });
-            
+            const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.4, metalness: 0.1 });
+            let mesh;
+
             if (type === 'cube') {
                 mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
-                mesh.position.y = 0.5;
-            } else if (type === 'sphere') {
+            } else {
                 mesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), mat);
-                mesh.position.y = 0.5;
             }
             
+            mesh.position.y = 0.5;
             mesh.castShadow = true;
             mesh.receiveShadow = true;
-            
-            const id = 'obj_' + idCounter++;
-            mesh.userData = { id, type };
+            mesh.userData = { id: 'obj_' + idCounter++, type: type };
             
             scene.add(mesh);
             objects.push(mesh);
             updateUI();
-            selectObject(id);
+            selectObject(mesh.userData.id);
         }
 
         function selectObject(id) {
@@ -174,21 +159,21 @@
             });
         }
 
-        // --- UI Event Listeners ---
-        document.getElementById('btn-add-cube').onclick = () => addObject('cube');
-        document.getElementById('btn-add-sphere').onclick = () => addObject('sphere');
+        // 7. ربط الأزرار
+        document.getElementById('btn-add-cube').onclick = () => createObject('cube');
+        document.getElementById('btn-add-sphere').onclick = () => createObject('sphere');
         document.getElementById('btn-delete').onclick = deleteObject;
 
-        document.getElementById('btn-translate').onclick = (e) => { transformControls.setMode('translate'); setActiveBtn(e.target); };
-        document.getElementById('btn-rotate').onclick = (e) => { transformControls.setMode('rotate'); setActiveBtn(e.target); };
-        document.getElementById('btn-scale').onclick = (e) => { transformControls.setMode('scale'); setActiveBtn(e.target); };
+        document.getElementById('btn-translate').onclick = (e) => { transformControls.setMode('translate'); setActive(e.target); };
+        document.getElementById('btn-rotate').onclick = (e) => { transformControls.setMode('rotate'); setActive(e.target); };
+        document.getElementById('btn-scale').onclick = (e) => { transformControls.setMode('scale'); setActive(e.target); };
 
-        function setActiveBtn(btn) {
-            document.querySelectorAll('#topbar .btn').forEach(b => b.classList.remove('active'));
+        function setActive(btn) {
+            document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
         }
 
-        // --- Save / Load ---
+        // 8. الحفظ والتحميل
         document.getElementById('btn-save').onclick = () => {
             const data = objects.map(o => ({
                 type: o.userData.type,
@@ -198,25 +183,24 @@
                 color: o.material.color.getHex()
             }));
             localStorage.setItem('kgtf_scene', JSON.stringify(data));
-            alert('تم حفظ المشهد بنجاح!');
+            alert('تم الحفظ!');
         };
 
         function loadScene() {
             const saved = localStorage.getItem('kgtf_scene');
-            if (!saved) return;
+            if (!saved) {
+                // إذا كان فارغاً، نضيف مكعباً افتراضياً ليظهر للمستخدم
+                createObject('cube'); 
+                return;
+            }
             const data = JSON.parse(saved);
             data.forEach(d => {
-                let mesh;
-                const mat = new THREE.MeshStandardMaterial({ color: d.color, roughness: 0.5 });
-                if (d.type === 'cube') mesh = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mat);
-                if (d.type === 'sphere') mesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), mat);
-                
+                const mat = new THREE.MeshStandardMaterial({ color: d.color });
+                let mesh = d.type === 'cube' ? new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mat) : new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), mat);
                 mesh.position.fromArray(d.pos);
                 mesh.rotation.fromArray(d.rot);
                 mesh.scale.fromArray(d.scale);
                 mesh.castShadow = true;
-                mesh.receiveShadow = true;
-                
                 mesh.userData = { id: 'obj_' + idCounter++, type: d.type };
                 scene.add(mesh);
                 objects.push(mesh);
@@ -224,16 +208,9 @@
             updateUI();
         }
         
-        // تحميل عند البدء
         loadScene();
 
-        // --- Resize & Loop ---
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
+        // 9. حلقة الرسم
         const clock = new THREE.Clock();
         let fpsAcc = 0, frames = 0;
 
@@ -242,10 +219,8 @@
             const dt = clock.getDelta();
             
             orbitControls.update();
-            if(transformControls.update) transformControls.update(); // تحديث الأداة
             renderer.render(scene, camera);
 
-            // HUD
             fpsAcc += dt; frames++;
             if (fpsAcc >= 0.5) {
                 document.getElementById('fps').textContent = Math.round(frames / fpsAcc);
@@ -253,9 +228,15 @@
                 fpsAcc = 0; frames = 0;
             }
         }
+        
+        // التعامل مع تغير حجم الشاشة
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
 
         animate();
-        setActiveBtn(document.getElementById('btn-translate'));
     </script>
 </body>
 </html>
