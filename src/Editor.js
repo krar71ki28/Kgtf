@@ -6,6 +6,8 @@ export class Editor {
     constructor(engine) {
         this.engine = engine;
         this.inspector = document.getElementById('inspector');
+        this.noSelectionMsg = document.getElementById('no-selection-msg');
+        this.objectActions = document.getElementById('object-actions');
         this.raycaster = new THREE.Raycaster();
         this.pointerDown = { x: 0, y: 0 };
         this.isDraggingGizmo = false;
@@ -23,6 +25,7 @@ export class Editor {
         this.bindButtons();
         this.bindInspector();
         this.setupRaycaster();
+        this.setupDropdown();
         this.populateBehaviorSelect();
         
         engine.onSelect = (obj) => this.updateInspector(obj);
@@ -35,6 +38,30 @@ export class Editor {
 
         this.updateList();
         if (this.engine.selected) this.updateInspector(this.engine.selected);
+    }
+
+    setupDropdown() {
+        const btn = document.getElementById('btn-add-menu');
+        const menu = document.getElementById('add-menu');
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            menu.classList.toggle('show');
+        };
+        document.addEventListener('click', (e) => {
+            if (!menu.contains(e.target) && e.target !== btn) {
+                menu.classList.remove('show');
+            }
+        });
+        
+        // ربط أزرار القائمة
+        const types = ['cube','sphere','cylinder','cone','torus','tree','rock','building','light','character'];
+        types.forEach(t => {
+            document.getElementById(`btn-${t}`).onclick = () => {
+                if(t === 'character') this.engine.loadCharacter();
+                else this.engine.addObject(t);
+                menu.classList.remove('show'); // إغلاق القائمة بعد الإضافة
+            };
+        });
     }
 
     populateBehaviorSelect() {
@@ -75,17 +102,6 @@ export class Editor {
     }
 
     bindButtons() {
-        document.getElementById('btn-cube').onclick = () => this.engine.addObject('cube');
-        document.getElementById('btn-sphere').onclick = () => this.engine.addObject('sphere');
-        document.getElementById('btn-cylinder').onclick = () => this.engine.addObject('cylinder');
-        document.getElementById('btn-cone').onclick = () => this.engine.addObject('cone');
-        document.getElementById('btn-torus').onclick = () => this.engine.addObject('torus');
-        document.getElementById('btn-tree').onclick = () => this.engine.addObject('tree');
-        document.getElementById('btn-rock').onclick = () => this.engine.addObject('rock');
-        document.getElementById('btn-building').onclick = () => this.engine.addObject('building');
-        document.getElementById('btn-light').onclick = () => this.engine.addObject('light');
-        document.getElementById('btn-character').onclick = () => this.engine.loadCharacter();
-        
         document.getElementById('btn-gizmo-translate').onclick = () => { this.gizmo.setMode('translate'); this.setActiveTool('btn-gizmo-translate'); };
         document.getElementById('btn-gizmo-rotate').onclick = () => { this.gizmo.setMode('rotate'); this.setActiveTool('btn-gizmo-rotate'); };
         document.getElementById('btn-gizmo-scale').onclick = () => { this.gizmo.setMode('scale'); this.setActiveTool('btn-gizmo-scale'); };
@@ -157,7 +173,7 @@ export class Editor {
     }
 
     setActiveTool(id) {
-        document.querySelectorAll('.gizmo-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.gizmo-group .icon-btn').forEach(btn => btn.classList.remove('active'));
         document.getElementById(id).classList.add('active');
     }
 
@@ -273,7 +289,7 @@ export class Editor {
                 input.value = currentParams[paramKey] !== undefined ? currentParams[paramKey] : behaviorDef.defaultParams[paramKey];
                 input.style.width = '50px';
                 input.style.padding = '2px 4px';
-                input.style.background = '#0f0f13';
+                input.style.background = '#121215';
                 input.style.border = '1px solid #444';
                 input.style.borderRadius = '3px';
                 input.style.color = '#fff';
@@ -298,11 +314,16 @@ export class Editor {
     updateInspector(obj) {
         if (!obj) {
             this.inspector.style.display = 'none';
+            this.noSelectionMsg.style.display = 'block';
+            this.objectActions.style.display = 'none';
             this.gizmo.detach();
+            // تحديث القائمة لإزالة التحديد
+            this.updateList();
             return;
         }
-        this.inspector.style.display = 'flex';
-        this.inspector.style.flexDirection = 'column';
+        this.inspector.style.display = 'block';
+        this.noSelectionMsg.style.display = 'none';
+        this.objectActions.style.display = 'flex';
         this.gizmo.attach(obj);
         this.updateUIValues();
         this.renderBehaviorsUI();
@@ -320,6 +341,8 @@ export class Editor {
             document.getElementById('prop-physics').checked = obj.userData.physics.enabled;
             document.getElementById('prop-bounce').value = obj.userData.physics.bounce;
         }
+        
+        this.updateList(); // تحديث القائمة لإظهار التحديد
     }
 
     updateList() {
@@ -327,7 +350,7 @@ export class Editor {
         list.innerHTML = '';
         this.engine.objects.forEach(obj => {
             const div = document.createElement('div');
-            div.className = 'obj-item';
+            div.className = 'obj-item' + (obj === this.engine.selected ? ' selected' : '');
             div.innerText = obj.userData.type;
             div.onclick = () => this.engine.selectObject(obj);
             list.appendChild(div);

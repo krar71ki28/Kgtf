@@ -7,120 +7,134 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- الشريط العلوي (Header) -->
+    <!-- الشريط العلوي (محرك) -->
     <header id="header">
-        <div class="logo">KGTF ENGINE</div>
-        <div class="header-actions">
-            <button class="btn-icon" id="btn-save" title="حفظ">💾</button>
-            <button class="btn-icon" id="btn-export" title="تصدير">📤</button>
-            <button class="btn-icon" id="btn-import" title="استيراد">📥</button>
+        <div class="logo">KGTF <span>ENGINE</span></div>
+        
+        <div class="header-tools">
+            <!-- أدوات التحكم بالمجسم (Gizmo) -->
+            <div class="gizmo-group">
+                <button class="icon-btn active" id="btn-gizmo-translate" title="تحريك">✥</button>
+                <button class="icon-btn" id="btn-gizmo-rotate" title="تدوير">↻</button>
+                <button class="icon-btn" id="btn-gizmo-scale" title="تكبير">⤢</button>
+            </div>
+
+            <!-- إضافة مجسمات -->
+            <div class="dropdown">
+                <button class="icon-btn" id="btn-add-menu" style="color:#4ade80;">➕</button>
+                <div class="dropdown-content" id="add-menu">
+                    <button id="btn-cube">📦 مكعب</button>
+                    <button id="btn-sphere">🔴 كرة</button>
+                    <button id="btn-cylinder">🛢️ أسطوانة</button>
+                    <button id="btn-cone">🔺 مخروط</button>
+                    <button id="btn-torus">🍩 حلقة</button>
+                    <button id="btn-tree">🌲 شجرة</button>
+                    <button id="btn-rock">🪨 صخرة</button>
+                    <button id="btn-building">🏢 مبنى</button>
+                    <button id="btn-light">💡 ضوء</button>
+                    <button id="btn-character">🏃 شخصية</button>
+                </div>
+            </div>
+
+            <!-- أزرار الحفظ والتصدير -->
+            <button class="icon-btn" id="btn-save" title="حفظ">💾</button>
+            <button class="icon-btn" id="btn-export" title="تصدير">📤</button>
+            <button class="icon-btn" id="btn-import" title="استيراد">📥</button>
             <input type="file" id="file-import" accept=".json" style="display:none;">
-            <button class="btn-play" id="btn-play">▶ تشغيل</button>
+            
+            <div style="width:1px; height:20px; background:#444; margin:0 5px;"></div>
+            <button class="play-btn" id="btn-play">▶</button>
         </div>
     </header>
 
-    <!-- شريط أدوات إضافة المجسمات (Toolbar) -->
-    <div id="toolbar">
-        <button class="tool-btn" id="btn-cube"><span>📦</span>مكعب</button>
-        <button class="tool-btn" id="btn-sphere"><span>🔴</span>كرة</button>
-        <button class="tool-btn" id="btn-cylinder"><span>🛢️</span>أسطوانة</button>
-        <button class="tool-btn" id="btn-cone"><span>🔺</span>مخروط</button>
-        <button class="tool-btn" id="btn-torus"><span>🍩</span>حلقة</button>
-        <button class="tool-btn" id="btn-tree"><span>🌲</span>شجرة</button>
-        <button class="tool-btn" id="btn-rock"><span>🪨</span>صخرة</button>
-        <button class="tool-btn" id="btn-building"><span>🏢</span>مبنى</button>
-        <button class="tool-btn" id="btn-light"><span>💡</span>ضوء</button>
-        <button class="tool-btn" id="btn-character"><span>🏃</span>شخصية</button>
-    </div>
-
-    <!-- المشهد ثلاثي الأبعاد (Viewport) -->
+    <!-- المشهد (Viewport) -->
     <main id="viewport-container">
         <canvas id="viewport"></canvas>
-        
-        <!-- أدوات التحكم بالمجسم (تطفو فوق المشهد) -->
-        <div id="gizmo-controls">
-            <button class="gizmo-btn active" id="btn-gizmo-translate">✥</button>
-            <button class="gizmo-btn" id="btn-gizmo-rotate">↻</button>
-            <button class="gizmo-btn" id="btn-gizmo-scale">⤢</button>
-        </div>
-
         <div id="status-bar">FPS: <span id="fps">--</span></div>
         
         <!-- واجهة اللعب -->
         <div id="play-ui" style="display:none;">
             <div id="score-display" style="display:none;">النقاط: <span id="score-val">0</span></div>
-            <button id="exit-play">✕ خروج</button>
+            <button id="exit-play">✕ إيقاف</button>
             <div id="joystick-zone"><div id="joystick-base"><div id="joystick-knob"></div></div></div>
             <button id="btn-jump">⬆️ قفز</button>
         </div>
     </main>
 
-    <!-- لوحة الخصائص (Inspector) -->
+    <!-- لوحة التحكم السفلية (Outliner + Details) -->
     <aside id="inspector-panel">
         <!-- شجرة المجسمات -->
-        <div class="panel-section" style="flex: 0 0 30%;">
+        <div class="panel-section" id="outliner-section">
             <div class="panel-header">
-                <span class="panel-title">OUTLINER</span>
-                <button class="btn-small" id="btn-clear-scene" style="color:#ff5577;">مسح</button>
+                <span class="panel-title">SCENE OUTLINER</span>
+                <button class="btn-small" id="btn-clear-scene" style="color:#ff5577;">مسح الكل</button>
             </div>
             <div id="object-list"></div>
         </div>
 
         <!-- خصائص المجسم -->
-        <div class="panel-section" id="inspector" style="display:none; flex: 1; overflow-y: auto;">
+        <div class="panel-section" id="details-section">
             <div class="panel-header">
                 <span class="panel-title" style="color:#00e5ff;">DETAILS</span>
-                <div style="display:flex; gap:5px;">
+                <div id="object-actions" style="display:none; gap:5px;">
                     <button class="btn-small" id="btn-duplicate" style="color:#4ade80;">تكرار</button>
                     <button class="btn-small" id="btn-delete" style="color:#ff5577;">حذف</button>
                 </div>
             </div>
-
-            <div class="prop-row" style="background:#1a1a24; padding:5px; border-radius:4px; margin-bottom:5px;">
-                <label>محاذاة</label>
-                <input type="checkbox" id="prop-snap">
+            
+            <!-- رسالة عدم التحديد -->
+            <div id="no-selection-msg" style="text-align:center; color:#666; font-size:12px; margin-top:20px;">
+                لم يتم تحديد أي مجسم.<br>اضغط على مجسم في المشهد أو من القائمة.
             </div>
 
-            <div class="prop-group">
-                <div class="prop-title">BEHAVIORS</div>
-                <div class="prop-row">
-                    <select id="add-behavior-select" style="flex:1;"></select>
-                    <button class="btn-small" id="btn-add-behavior" style="background:#3b82f6; color:#fff;">إضافة</button>
+            <div id="inspector" style="display:none; overflow-y: auto; flex: 1; padding-bottom: 20px;">
+                
+                <div class="prop-row" style="background:#1a1a24; padding:6px; border-radius:4px; margin-bottom:8px;">
+                    <label style="color:#aaa;">محاذاة الشبكة</label>
+                    <input type="checkbox" id="prop-snap">
                 </div>
-                <div id="active-behaviors-list"></div>
-            </div>
 
-            <div class="prop-group">
-                <div class="prop-title">TRANSFORM</div>
-                <div class="prop-row"><label>المادة</label><select id="prop-material"><option value="default">عادي</option><option value="wood">خشب</option><option value="metal">معدن</option><option value="gold">ذهب</option><option value="glass">زجاج</option><option value="rubber">مطاط</option><option value="marble">رخام</option><option value="emissive">مضيء</option></select></div>
-                <div class="prop-row" style="margin-bottom:5px;"><button class="btn-small" id="btn-upload-texture" style="width:100%; background:#3b82f6; color:#fff;">🖼️ رفع خامة</button><input type="file" id="texture-input" accept="image/*" style="display:none;"></div>
-                <div class="prop-row"><label>اللون</label><input type="color" id="prop-color" value="#00e5ff"></div>
-                <div class="prop-row"><label>X</label><input type="range" id="prop-x" min="-20" max="20" step="0.1" value="0"></div>
-                <div class="prop-row"><label>Y</label><input type="range" id="prop-y" min="-5" max="15" step="0.1" value="0.5"></div>
-                <div class="prop-row"><label>Z</label><input type="range" id="prop-z" min="-20" max="20" step="0.1" value="0"></div>
-                <div class="prop-row"><label>دوران</label><input type="range" id="prop-rot" min="0" max="6.28" step="0.1" value="0"></div>
-                <div class="prop-row"><label>حجم</label><input type="range" id="prop-scale" min="0.1" max="4" step="0.1" value="1"></div>
-            </div>
+                <div class="prop-group">
+                    <div class="prop-title">BEHAVIORS</div>
+                    <div class="prop-row" style="display:flex; gap:5px; margin-bottom:5px;">
+                        <select id="add-behavior-select" style="flex:1;"></select>
+                        <button class="btn-small" id="btn-add-behavior" style="background:#3b82f6; color:#fff;">إضافة</button>
+                    </div>
+                    <div id="active-behaviors-list"></div>
+                </div>
 
-            <div class="prop-group" id="light-properties" style="display:none;">
-                <div class="prop-title" style="color:#ffaa00;">LIGHT SETTINGS</div>
-                <div class="prop-row"><label>القوة</label><input type="range" id="prop-light-intensity" min="0" max="20" step="0.5" value="5"></div>
-                <div class="prop-row"><label>المدى</label><input type="range" id="prop-light-distance" min="1" max="100" step="1" value="15"></div>
-            </div>
+                <div class="prop-group">
+                    <div class="prop-title">TRANSFORM</div>
+                    <div class="prop-row"><label>المادة</label><select id="prop-material"><option value="default">عادي</option><option value="wood">خشب</option><option value="metal">معدن</option><option value="gold">ذهب</option><option value="glass">زجاج</option><option value="rubber">مطاط</option><option value="marble">رخام</option><option value="emissive">مضيء</option></select></div>
+                    <div class="prop-row" style="margin-bottom:5px;"><button class="btn-small" id="btn-upload-texture" style="width:100%; background:#333; color:#fff;">🖼️ رفع خامة (Texture)</button><input type="file" id="texture-input" accept="image/*" style="display:none;"></div>
+                    <div class="prop-row"><label>اللون</label><input type="color" id="prop-color" value="#00e5ff"></div>
+                    <div class="prop-row"><label>X</label><input type="range" id="prop-x" min="-20" max="20" step="0.1" value="0"></div>
+                    <div class="prop-row"><label>Y</label><input type="range" id="prop-y" min="-5" max="15" step="0.1" value="0.5"></div>
+                    <div class="prop-row"><label>Z</label><input type="range" id="prop-z" min="-20" max="20" step="0.1" value="0"></div>
+                    <div class="prop-row"><label>دوران</label><input type="range" id="prop-rot" min="0" max="6.28" step="0.1" value="0"></div>
+                    <div class="prop-row"><label>حجم</label><input type="range" id="prop-scale" min="0.1" max="4" step="0.1" value="1"></div>
+                </div>
 
-            <div class="prop-group">
-                <div class="prop-title" style="color:#ffaa00;">PHYSICS</div>
-                <div class="prop-row"><label>جاذبية</label><input type="checkbox" id="prop-physics"></div>
-                <div class="prop-row"><label>ارتداد</label><input type="range" id="prop-bounce" min="0" max="1" step="0.1" value="0.5"></div>
+                <div class="prop-group" id="light-properties" style="display:none;">
+                    <div class="prop-title" style="color:#ffaa00;">LIGHT SETTINGS</div>
+                    <div class="prop-row"><label>القوة</label><input type="range" id="prop-light-intensity" min="0" max="20" step="0.5" value="5"></div>
+                    <div class="prop-row"><label>المدى</label><input type="range" id="prop-light-distance" min="1" max="100" step="1" value="15"></div>
+                </div>
+
+                <div class="prop-group">
+                    <div class="prop-title" style="color:#ffaa00;">PHYSICS</div>
+                    <div class="prop-row"><label>جاذبية</label><input type="checkbox" id="prop-physics"></div>
+                    <div class="prop-row"><label>ارتداد</label><input type="range" id="prop-bounce" min="0" max="1" step="0.1" value="0.5"></div>
+                </div>
             </div>
         </div>
     </aside>
 
     <!-- المساعد الذكي -->
-    <button id="ai-fab">🤖</button>
+    <button id="ai-fab" title="مساعد KGTF">🤖</button>
     <div id="ai-chat">
         <div class="ai-header"><span>KGTF AI</span><span id="close-ai" style="cursor:pointer;">✕</span></div>
-        <div class="ai-messages" id="ai-messages">مرحباً!</div>
+        <div class="ai-messages" id="ai-messages">مرحباً! أنا مساعدك الذكي.</div>
         <div class="ai-input-row"><input type="text" id="ai-input" placeholder="اطلب شي..." /><button id="ai-send">إرسال</button></div>
     </div>
     
@@ -130,6 +144,6 @@
     <script type="importmap">
     { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
-    <script type="module" src="src/main.js?v=39"></script>
+    <script type="module" src="src/main.js?v=40"></script>
 </body>
 </html>

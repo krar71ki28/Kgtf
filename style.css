@@ -1,76 +1,81 @@
-* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-body { font-family: system-ui, -apple-system, sans-serif; background: #0f0f13; color: #fff; height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; font-family: 'Segoe UI', system-ui, sans-serif; }
+body { background: #121215; color: #d1d1d1; height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 
 /* الشريط العلوي */
-#header { height: 48px; background: #1a1a24; border-bottom: 1px solid #2a2a35; display: flex; justify-content: space-between; align-items: center; padding: 0 15px; flex-shrink: 0; z-index: 10; }
-.logo { font-weight: 900; color: #00e5ff; font-size: 14px; letter-spacing: 1px; }
-.header-actions { display: flex; gap: 8px; align-items: center; }
-.btn-icon { background: #2a2a35; border: none; color: #fff; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; font-size: 14px; }
-.btn-play { background: #4ade80; color: #000; border: none; padding: 6px 15px; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; }
+#header { height: 45px; background: #1e1e24; border-bottom: 1px solid #2d2d35; display: flex; justify-content: space-between; align-items: center; padding: 0 10px; flex-shrink: 0; z-index: 20; }
+.logo { font-weight: 900; color: #00e5ff; font-size: 14px; letter-spacing: 0.5px; }
+.logo span { color: #fff; font-weight: 400; }
+.header-tools { display: flex; align-items: center; gap: 8px; }
 
-/* شريط الأدوات الأفقي */
-#toolbar { height: 60px; background: #15151e; border-bottom: 1px solid #2a2a35; display: flex; align-items: center; padding: 0 10px; gap: 8px; overflow-x: auto; flex-shrink: 0; z-index: 10; }
-#toolbar::-webkit-scrollbar { display: none; }
-.tool-btn { background: #1e1e2b; border: 1px solid #2a2a35; border-radius: 8px; color: #ccc; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; gap: 4px; padding: 8px 12px; min-width: 60px; flex-shrink: 0; cursor: pointer; transition: 0.2s; }
-.tool-btn span { font-size: 18px; }
-.tool-btn:hover { background: #2a2a35; color: #fff; border-color: #00e5ff; }
+.icon-btn { background: #2a2a32; border: 1px solid #3d3d45; color: #aaa; width: 32px; height: 32px; border-radius: 4px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: 0.1s; }
+.icon-btn:hover { background: #3d3d45; color: #fff; }
+.icon-btn.active { background: #00e5ff; color: #000; border-color: #00e5ff; }
+
+.gizmo-group { display: flex; gap: 2px; background: #18181d; padding: 2px; border-radius: 6px; border: 1px solid #2d2d35; }
+
+.play-btn { background: #4ade80; color: #000; border: none; width: 32px; height: 32px; border-radius: 4px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+/* القائمة المنسدلة لإضافة مجسمات */
+.dropdown { position: relative; }
+.dropdown-content { display: none; position: absolute; top: 40px; right: 0; background: #25252d; border: 1px solid #3d3d45; border-radius: 6px; min-width: 130px; z-index: 100; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+.dropdown-content.show { display: flex; flex-direction: column; }
+.dropdown-content button { background: transparent; border: none; color: #ccc; padding: 8px 12px; text-align: right; font-size: 12px; cursor: pointer; border-bottom: 1px solid #333; }
+.dropdown-content button:last-child { border-bottom: none; }
+.dropdown-content button:hover { background: #3d3d45; color: #fff; }
 
 /* المشهد */
-#viewport-container { flex: 1; position: relative; background: #000; overflow: hidden; touch-action: none; }
+#viewport-container { flex: 1; position: relative; background: #000; overflow: hidden; touch-action: none; display: flex; flex-direction: column; min-height: 30vh; }
 #viewport { width: 100%; height: 100%; display: block; }
+#status-bar { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); padding: 3px 6px; border-radius: 4px; font-size: 10px; font-family: monospace; color: #4ade80; border: 1px solid #333; z-index: 5; }
 
-/* أدوات التحكم العائمة */
-#gizmo-controls { position: absolute; top: 15px; left: 15px; display: flex; flex-direction: column; gap: 5px; z-index: 5; background: rgba(20,20,30,0.8); padding: 5px; border-radius: 8px; border: 1px solid #333; backdrop-filter: blur(5px); }
-.gizmo-btn { background: transparent; border: none; color: #aaa; width: 36px; height: 36px; border-radius: 6px; font-size: 16px; cursor: pointer; }
-.gizmo-btn.active { background: #00e5ff; color: #000; }
-#status-bar { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-family: monospace; color: #0f0; border: 1px solid #333; z-index: 5; }
+/* لوحة التحكم السفلية (Outliner + Details) */
+#inspector-panel { flex: 0 0 45vh; background: #1e1e24; border-top: 1px solid #2d2d35; display: flex; flex-direction: column; z-index: 10; }
+.panel-section { display: flex; flex-direction: column; border-bottom: 1px solid #2d2d35; }
+#outliner-section { flex: 0 0 30%; }
+#details-section { flex: 1; overflow: hidden; }
 
-/* لوحة الخصائص (أسفل) */
-#inspector-panel { height: 40vh; background: #1a1a24; border-top: 1px solid #2a2a35; display: flex; flex-direction: column; flex-shrink: 0; z-index: 10; }
-.panel-section { display: flex; flex-direction: column; border-bottom: 1px solid #2a2a35; }
-.panel-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 15px; background: #15151e; }
-.panel-title { font-size: 11px; color: #888; font-weight: bold; letter-spacing: 1px; }
-.btn-small { background: #2a2a35; border: none; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; cursor: pointer; }
+.panel-header { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: #18181d; border-bottom: 1px solid #2d2d35; flex-shrink: 0; }
+.panel-title { font-size: 10px; color: #888; font-weight: bold; letter-spacing: 1px; }
+.btn-small { background: #2a2a32; border: 1px solid #3d3d45; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; cursor: pointer; color: #ddd; }
 
-#object-list { display: flex; flex-wrap: wrap; gap: 5px; padding: 10px; overflow-y: auto; }
-.obj-item { background: #2a2a35; padding: 5px 10px; border-radius: 4px; font-size: 11px; color: #ccc; cursor: pointer; border: 1px solid transparent; }
-.obj-item:hover { border-color: #00e5ff; color: #fff; }
+#object-list { display: flex; flex-wrap: wrap; gap: 5px; padding: 8px; overflow-y: auto; align-content: flex-start; }
+.obj-item { background: #2a2a32; padding: 4px 10px; border-radius: 4px; font-size: 11px; color: #ccc; cursor: pointer; border: 1px solid transparent; }
+.obj-item:hover { border-color: #555; color: #fff; }
+.obj-item.selected { border-color: #00e5ff; color: #00e5ff; background: rgba(0,229,255,0.1); }
 
-#inspector { padding: 10px 15px; }
-.prop-group { margin-bottom: 15px; }
-.prop-title { font-size: 10px; color: #888; font-weight: bold; margin-bottom: 5px; }
+#inspector { padding: 10px; overflow-y: auto; }
+.prop-group { margin-bottom: 12px; border-bottom: 1px solid #2d2d35; padding-bottom: 10px; }
+.prop-group:last-child { border-bottom: none; }
+.prop-title { font-size: 10px; color: #888; font-weight: bold; margin-bottom: 6px; }
 .prop-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; gap: 10px; }
 .prop-row label { font-size: 11px; color: #aaa; width: 60px; flex-shrink: 0; }
 .prop-row input[type="range"] { flex: 1; accent-color: #00e5ff; }
-.prop-row select { flex: 1; background: #0f0f13; border: 1px solid #333; color: #fff; padding: 4px; border-radius: 4px; font-size: 11px; }
+.prop-row select { flex: 1; background: #121215; border: 1px solid #333; color: #fff; padding: 4px; border-radius: 4px; font-size: 11px; }
 
 /* أزرار اللعب */
 #play-ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; pointer-events: none; }
 #play-ui > * { pointer-events: auto; }
-#exit-play { position: absolute; top: 20px; left: 20px; background: #ff5577; color: #fff; border: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-#joystick-zone { position: absolute; bottom: 30px; left: 30px; width: 120px; height: 120px; touch-action: none; }
+#exit-play { position: absolute; top: 15px; left: 15px; background: #ff5577; color: #fff; border: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; }
+#joystick-zone { position: absolute; bottom: 30px; left: 30px; width: 100px; height: 100px; touch-action: none; }
 #joystick-base { width: 100%; height: 100%; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; position: relative; }
-#joystick-knob { width: 50px; height: 50px; background: #00e5ff; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px rgba(0,229,255,0.6); }
-#btn-jump { position: absolute; bottom: 50px; right: 30px; width: 70px; height: 70px; border-radius: 50%; background: rgba(74,222,128,0.8); border: 2px solid #4ade80; color: #fff; font-weight: bold; font-size: 12px; cursor: pointer; }
-#score-display { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); padding: 5px 15px; border-radius: 15px; border: 1px solid #ffaa00; color: #ffaa00; font-weight: bold; font-size: 16px; }
+#joystick-knob { width: 40px; height: 40px; background: #00e5ff; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px rgba(0,229,255,0.6); }
+#btn-jump { position: absolute; bottom: 40px; right: 30px; width: 60px; height: 60px; border-radius: 50%; background: rgba(74,222,128,0.8); border: 2px solid #4ade80; color: #fff; font-weight: bold; font-size: 12px; cursor: pointer; }
+#score-display { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 5px 15px; border-radius: 15px; border: 1px solid #ffaa00; color: #ffaa00; font-weight: bold; font-size: 14px; }
 
 /* المساعد الذكي */
-#ai-fab { position: absolute; bottom: 20px; right: 20px; z-index: 30; background: #ff5577; color: #fff; border: none; width: 45px; height: 45px; border-radius: 50%; font-size: 20px; cursor: pointer; box-shadow: 0 4px 15px rgba(255,85,119,0.5); display: flex; align-items: center; justify-content: center; }
-#ai-chat { position: absolute; bottom: 75px; right: 20px; width: 300px; max-width: calc(100vw - 40px); height: 350px; background: #1a1a24; border: 1px solid #ff5577; border-radius: 12px; display: none; flex-direction: column; z-index: 30; }
-.ai-header { padding: 10px; border-bottom: 1px solid #333; color: #ff5577; font-weight: bold; font-size: 12px; display: flex; justify-content: space-between; }
+#ai-fab { position: absolute; bottom: 45vh; right: 15px; z-index: 30; background: #2a2a32; border: 1px solid #444; color: #fff; width: 40px; height: 40px; border-radius: 8px; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+#ai-chat { position: absolute; bottom: calc(45vh + 60px); right: 15px; width: 300px; max-width: calc(100vw - 30px); height: 350px; background: #1e1e24; border: 1px solid #444; border-radius: 8px; display: none; flex-direction: column; z-index: 30; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+.ai-header { padding: 8px 10px; border-bottom: 1px solid #333; color: #00e5ff; font-weight: bold; font-size: 12px; display: flex; justify-content: space-between; }
 .ai-messages { flex: 1; padding: 10px; overflow-y: auto; font-size: 12px; color: #ddd; }
-.ai-input-row { padding: 10px; border-top: 1px solid #333; display: flex; gap: 5px; }
-.ai-input-row input { flex: 1; background: #0f0f13; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 4px; }
-.ai-input-row button { background: #ff5577; color: #fff; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+.ai-input-row { padding: 8px; border-top: 1px solid #333; display: flex; gap: 5px; }
+.ai-input-row input { flex: 1; background: #121215; border: 1px solid #444; color: #fff; padding: 6px; border-radius: 4px; font-size: 12px; }
+.ai-input-row button { background: #00e5ff; color: #000; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; }
 
 /* تعديلات الموبايل */
 @media (max-width: 768px) {
-    #header { height: 45px; padding: 0 10px; }
+    #header { height: 40px; padding: 0 5px; }
     .logo { font-size: 12px; }
-    .btn-play { padding: 5px 10px; font-size: 12px; }
-    #toolbar { height: 55px; }
-    .tool-btn { padding: 5px 10px; min-width: 55px; font-size: 9px; }
-    .tool-btn span { font-size: 16px; }
-    #inspector-panel { height: 45vh; }
-    #inspector { padding: 10px; }
+    .icon-btn { width: 28px; height: 28px; font-size: 12px; }
+    .play-btn { width: 28px; height: 28px; font-size: 14px; }
+    #inspector-panel { flex: 0 0 48vh; }
 }
