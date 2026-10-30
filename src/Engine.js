@@ -601,3 +601,20 @@ export class Engine {
         this.composer.setSize(w, h); 
     }
 }
+
+// إضافة ميزة التركيز على المجسم (Focus)
+Engine.prototype.focusOnObject = function(obj) {
+    if (!obj) return;
+    const box = new THREE.Box3().setFromObject(obj);
+    const size = box.getSize(new THREE.Vector3()).length();
+    const center = box.getCenter(new THREE.Vector3());
+    
+    this.controls.target.copy(center);
+    
+    const direction = new THREE.Vector3().subVectors(this.camera.position, center).normalize();
+    const distance = size * 2.5; // مسافة الكاميرا حسب حجم المجسم
+    
+    this.camera.position.copy(center).add(direction.multiplyScalar(distance));
+    this.camera.updateProjectionMatrix();
+    this.controls.update();
+};

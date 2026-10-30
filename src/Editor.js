@@ -27,6 +27,7 @@ export class Editor {
         this.setupTabs();
         this.bindMaterialProps();
         this.bindWorldSettings();
+        this.bindPhase5Settings();
         this.populateBehaviorSelect();
         
         engine.onSelect = (obj) => this.updateInspector(obj);
@@ -281,7 +282,9 @@ export class Editor {
         document.getElementById('prop-x').value = obj.position.x.toFixed(2);
         document.getElementById('prop-y').value = obj.position.y.toFixed(2);
         document.getElementById('prop-z').value = obj.position.z.toFixed(2);
-        document.getElementById('prop-rot').value = obj.rotation.y;
+        document.getElementById('prop-rot-x').value = obj.rotation.x;
+        document.getElementById('prop-rot-y').value = obj.rotation.y;
+        document.getElementById('prop-rot-z').value = obj.rotation.z;
         document.getElementById('prop-scale').value = obj.scale.x;
         if (obj.isMesh && obj.material) {
             document.getElementById('prop-color').value = '#' + obj.material.color.getHexString();
@@ -376,3 +379,35 @@ export class Editor {
         });
     }
 }
+
+// دالة لربط الإعدادات الجديدة
+Editor.prototype.bindPhase5Settings = function() {
+    // زر التركيز
+    document.getElementById('btn-focus').onclick = () => {
+        if (this.engine.selected) {
+            this.engine.focusOnObject(this.engine.selected);
+        } else {
+            alert('الرجاء تحديد مجسم أولاً للتركيز عليه.');
+        }
+    };
+
+    // إعدادات البيئة (Environment)
+    document.getElementById('env-sun-intensity').addEventListener('input', (e) => {
+        this.engine.sun.intensity = parseFloat(e.target.value);
+    });
+    document.getElementById('env-fog-distance').addEventListener('input', (e) => {
+        this.engine.scene.fog.far = parseFloat(e.target.value);
+    });
+
+    // الدوران 3D
+    const bindRot = (id, axis) => {
+        document.getElementById(id).addEventListener('input', (e) => {
+            if (!this.engine.selected) return;
+            this.engine.selected.rotation[axis] = parseFloat(e.target.value);
+            this.gizmo.attach(this.engine.selected);
+        });
+    };
+    bindRot('prop-rot-x', 'x');
+    bindRot('prop-rot-y', 'y');
+    bindRot('prop-rot-z', 'z');
+};
