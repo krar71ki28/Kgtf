@@ -2,29 +2,47 @@
 body { font-family: system-ui, sans-serif; background: #1a1a2e; color: #fff; height: 100vh; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
 
 /* الشريط العلوي */
-#header { height: 50px; background: #141420; border-bottom: 1px solid #2a2a3a; display: flex; align-items: center; padding: 0 15px; gap: 15px; z-index: 10; flex-shrink: 0; }
-.logo { color: #00e5ff; font-weight: 900; font-size: 16px; }
-.toolbar-actions { display: flex; gap: 8px; margin-right: auto; }
-.fab-btn { background: #00e5ff; color: #000; border: none; padding: 8px 15px; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; }
+#header { height: 50px; background: #141420; border-bottom: 1px solid #2a2a3a; display: flex; align-items: center; padding: 0 10px; gap: 10px; z-index: 10; flex-shrink: 0; }
+.logo { color: #00e5ff; font-weight: 900; font-size: 14px; display: none; } /* نخفي اللوجو في الموبايل */
+.toolbar-actions { display: flex; gap: 5px; margin-right: auto; overflow-x: auto; }
+.fab-btn { background: #00e5ff; color: #000; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; white-space: nowrap; }
 .fab-btn.green { background: #4ade80; }
 
-#workspace { flex: 1; display: flex; overflow: hidden; }
+#workspace { flex: 1; display: flex; overflow: hidden; position: relative; }
 
-/* اللوحة اليسرى */
-#left-panel { width: 85px; background: #141420; border-left: 1px solid #2a2a3a; display: flex; flex-direction: column; padding: 10px; gap: 10px; z-index: 10; overflow-y: auto; flex-shrink: 0; }
+/* اللوحة اليسرى (المجسمات) */
+#left-panel { width: 80px; background: #141420; border-left: 1px solid #2a2a3a; display: flex; flex-direction: column; padding: 10px 5px; gap: 5px; z-index: 10; overflow-y: auto; flex-shrink: 0; }
 .panel-title { font-size: 10px; color: #888; font-weight: bold; letter-spacing: 1px; margin-bottom: 5px; text-align: center; }
 .object-buttons { display: flex; flex-direction: column; gap: 5px; }
-.icon-btn { background: #1e1e30; border: 1px solid #2a2a3a; border-radius: 6px; color: #fff; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 9px; gap: 2px; padding: 6px; transition: 0.2s; }
-.icon-btn span { font-size: 18px; }
-.icon-btn:hover { border-color: #00e5ff; color: #00e5ff; }
+.icon-btn { background: #1e1e30; border: 1px solid #2a2a3a; border-radius: 6px; color: #fff; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 9px; gap: 2px; padding: 6px 2px; }
+.icon-btn span { font-size: 16px; }
+.icon-btn:hover { border-color: #00e5ff; }
 
 /* المنطقة الوسطى */
 #viewport-container { flex: 1; position: relative; background: #000; overflow: hidden; touch-action: none; }
 #viewport { width: 100%; height: 100%; display: block; }
-#viewport-toolbar { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; z-index: 5; background: rgba(0,0,0,0.6); padding: 5px; border-radius: 8px; border: 1px solid #444; }
+#viewport-toolbar { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; z-index: 5; background: rgba(0,0,0,0.6); padding: 4px; border-radius: 8px; border: 1px solid #444; }
 #status-bar { position: absolute; top: 10px; right: 10px; background: rgba(20,20,30,0.8); padding: 4px 8px; border-radius: 4px; font-size: 10px; font-family: monospace; color: #0f0; z-index: 5; border: 1px solid #2a2a3a; }
 
-/* أزرار اللعب (Joystick & Jump) */
+/* اللوحة اليمنى */
+#right-panel { width: 250px; background: #141420; border-right: 1px solid #2a2a3a; display: flex; flex-direction: column; z-index: 10; overflow-y: auto; flex-shrink: 0; }
+.panel-section { border-bottom: 1px solid #2a2a3a; padding: 10px; }
+.prop-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; gap: 5px; }
+.prop-row label { font-size: 11px; color: #aaa; width: 60px; flex-shrink: 0; }
+.prop-row input[type="range"] { flex: 1; }
+.prop-row select { flex: 1; background: #0a0a0f; border: 1px solid #2a2a3a; color: #fff; padding: 4px; border-radius: 4px; font-size: 11px; }
+
+/* الشريط السفلي (AI) */
+#bottom-panel { height: 40px; background: #141420; border-top: 1px solid #2a2a3a; display: flex; align-items: center; justify-content: flex-end; padding: 0 10px; z-index: 10; }
+#ai-fab { background: #ff5577; color: #fff; padding: 5px 15px; border-radius: 15px; cursor: pointer; font-size: 12px; font-weight: bold; }
+#ai-chat { display: none; position: absolute; bottom: 50px; left: 10px; right: 10px; width: auto; height: 50vh; background: #1a1a2e; border: 1px solid #ff5577; border-radius: 12px; flex-direction: column; z-index: 50; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+.ai-header { padding: 10px; background: #2a1a22; color: #ff5577; font-weight: bold; font-size: 12px; display: flex; justify-content: space-between; }
+.ai-messages { flex: 1; padding: 10px; overflow-y: auto; font-size: 12px; color: #ddd; }
+.ai-input-row { padding: 10px; border-top: 1px solid #2a2a3a; display: flex; gap: 5px; }
+.ai-input-row input { flex: 1; background: #0a0a0f; border: 1px solid #2a2a3a; color: #fff; padding: 8px; border-radius: 4px; }
+.ai-input-row button { background: #ff5577; color: #fff; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+
+/* أزرار اللعب */
 #joystick-zone { position: absolute; bottom: 30px; left: 30px; width: 120px; height: 120px; display: none; z-index: 100; touch-action: none; }
 #joystick-base { width: 100%; height: 100%; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; position: relative; }
 #joystick-knob { width: 50px; height: 50px; background: #00e5ff; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px rgba(0,229,255,0.6); }
@@ -35,20 +53,20 @@ body.play-mode #joystick-zone { display: block; }
 body.play-mode #btn-jump { display: block; }
 body.play-mode #header, body.play-mode #left-panel, body.play-mode #right-panel, body.play-mode #bottom-panel { display: none !important; }
 
-/* اللوحة اليمنى */
-#right-panel { width: 260px; background: #141420; border-right: 1px solid #2a2a3a; display: flex; flex-direction: column; z-index: 10; overflow-y: auto; flex-shrink: 0; }
-.panel-section { border-bottom: 1px solid #2a2a3a; padding: 10px; }
-.prop-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; gap: 5px; }
-.prop-row label { font-size: 11px; color: #aaa; width: 60px; flex-shrink: 0; }
-.prop-row input[type="range"] { flex: 1; }
-.prop-row select { flex: 1; background: #0a0a0f; border: 1px solid #2a2a3a; color: #fff; padding: 4px; border-radius: 4px; font-size: 11px; }
-
-/* الشريط السفلي */
-#bottom-panel { height: 60px; background: #141420; border-top: 1px solid #2a2a3a; display: flex; align-items: center; padding: 0 15px; z-index: 10; }
-#ai-fab { background: #ff5577; color: #fff; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: bold; }
-#ai-chat { display: none; position: absolute; bottom: 70px; left: 20px; width: 320px; height: 400px; background: #1a1a2e; border: 1px solid #ff5577; border-radius: 12px; flex-direction: column; z-index: 50; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
-.ai-header { padding: 10px; background: #2a1a22; color: #ff5577; font-weight: bold; font-size: 12px; display: flex; justify-content: space-between; }
-.ai-messages { flex: 1; padding: 10px; overflow-y: auto; font-size: 12px; color: #ddd; }
-.ai-input-row { padding: 10px; border-top: 1px solid #2a2a3a; display: flex; gap: 5px; }
-.ai-input-row input { flex: 1; background: #0a0a0f; border: 1px solid #2a2a3a; color: #fff; padding: 8px; border-radius: 4px; }
-.ai-input-row button { background: #ff5577; color: #fff; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+/* التجاوب مع الموبايل (تغيير جذري) */
+@media (max-width: 768px) {
+    #header { height: 40px; }
+    #workspace { flex-direction: column; }
+    
+    /* اللوحة اليسرى تصير فوق وتكون أفقية */
+    #left-panel { width: 100%; height: 60px; flex-direction: row; border-left: none; border-bottom: 1px solid #2a2a3a; padding: 5px; overflow-x: auto; flex-shrink: 0; }
+    .panel-title { display: none; } /* نخفي العنوان عشان نوفر مساحة */
+    .object-buttons { flex-direction: row; }
+    .icon-btn { width: 50px; height: 50px; flex-shrink: 0; }
+    
+    /* اللوحة اليمنى تصير تحت وتكون بعرض الشاشة */
+    #right-panel { width: 100%; height: 40vh; max-height: 40vh; border-right: none; border-top: 1px solid #2a2a3a; flex-shrink: 0; }
+    
+    #bottom-panel { display: none; } /* نخفي الشريط السفلي ونخلي زر الـ AI عائم */
+    #ai-fab { position: absolute; bottom: 20px; right: 20px; z-index: 20; }
+}

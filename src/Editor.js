@@ -124,12 +124,31 @@ export class Editor {
             if (!this.engine.selected.userData.behaviors) this.engine.selected.userData.behaviors = {};
             if (!this.engine.selected.userData.behaviorStates) this.engine.selected.userData.behaviorStates = {};
             
-            // نضيف السلوك مع نسخ الإعدادات الافتراضية
             if (!this.engine.selected.userData.behaviors[bName]) {
                 this.engine.selected.userData.behaviors[bName] = { ...BEHAVIORS[bName].defaultParams };
                 this.renderBehaviorsUI();
             }
             select.value = '';
+        };
+
+        // رفع الخامات (Texture)
+        document.getElementById('btn-upload-texture').onclick = () => document.getElementById('texture-input').click();
+        document.getElementById('texture-input').onchange = (e) => {
+            if (!this.engine.selected || !this.engine.selected.isMesh) return;
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const textureLoader = new THREE.TextureLoader();
+                textureLoader.load(event.target.result, (texture) => {
+                    texture.colorSpace = THREE.SRGBColorSpace;
+                    this.engine.selected.material.map = texture;
+                    this.engine.selected.material.needsUpdate = true;
+                });
+            };
+            reader.readAsDataURL(file);
+            e.target.value = '';
         };
     }
 
@@ -150,6 +169,9 @@ export class Editor {
         bindProp('prop-color', (obj, v) => { if (obj.isMesh) obj.material.color.set(v); else if (obj.isLight) obj.color.set(v); });
         bindProp('prop-physics', (obj, v) => { if(obj.userData.physics) obj.userData.physics.enabled = v; });
         bindProp('prop-bounce', (obj, v) => { if(obj.userData.physics) obj.userData.physics.bounce = v; });
+        bindProp('prop-light-intensity', (obj, v) => { if(obj.isLight) obj.intensity = v; });
+        bindProp('prop-light-distance', (obj, v) => { if(obj.isLight) obj.distance = v; });
+
         bindProp('prop-material', (obj, v) => {
             if (obj.isMesh && obj.userData.type !== 'character') {
                 obj.material.dispose();
@@ -168,7 +190,11 @@ export class Editor {
         document.getElementById('prop-rot').value = obj.rotation.y;
         document.getElementById('prop-scale').value = obj.scale.x;
         if (obj.isMesh && obj.material) document.getElementById('prop-color').value = '#' + obj.material.color.getHexString();
-        else if (obj.isLight) document.getElementById('prop-color').value = '#' + obj.color.getHexString();
+        else if (obj.isLight) {
+            document.getElementById('prop-color').value = '#' + obj.color.getHexString();
+            document.getElementById('prop-light-intensity').value = obj.intensity;
+            document.getElementById('prop-light-distance').value = obj.distance;
+        }
     }
 
     renderBehaviorsUI() {
@@ -186,19 +212,20 @@ export class Editor {
 
             const card = document.createElement('div');
             card.style.background = '#25252b';
-            card.style.padding = '10px';
-            card.style.borderRadius = '6px';
+            card.style.padding = '6px';
+            card.style.borderRadius = '4px';
             card.style.border = '1px solid #3c3c45';
 
             const header = document.createElement('div');
             header.style.display = 'flex';
             header.style.justifyContent = 'space-between';
             header.style.alignItems = 'center';
-            header.style.marginBottom = '8px';
+            header.style.marginBottom = '4px';
 
             const title = document.createElement('span');
             title.style.fontWeight = 'bold';
             title.style.color = '#60a5fa';
+            title.style.fontSize = '11px';
             title.textContent = behaviorDef.name;
 
             const deleteBtn = document.createElement('button');
@@ -207,7 +234,6 @@ export class Editor {
             deleteBtn.style.border = 'none';
             deleteBtn.style.color = '#ef4444';
             deleteBtn.style.cursor = 'pointer';
-            deleteBtn.style.fontSize = '14px';
             deleteBtn.addEventListener('click', () => {
                 delete this.engine.selected.userData.behaviors[bName];
                 if (this.engine.selected.userData.behaviorStates) {
@@ -225,28 +251,27 @@ export class Editor {
                 row.style.display = 'flex';
                 row.style.justifyContent = 'space-between';
                 row.style.alignItems = 'center';
-                row.style.marginTop = '6px';
+                row.style.marginTop = '2px';
 
                 const paramLabel = document.createElement('label');
-                paramLabel.style.fontSize = '12px';
+                paramLabel.style.fontSize = '10px';
                 paramLabel.style.color = '#bbb';
                 paramLabel.textContent = paramKey + ':';
 
                 const input = document.createElement('input');
                 input.type = typeof behaviorDef.defaultParams[paramKey] === 'number' ? 'number' : 'text';
                 input.value = currentParams[paramKey] !== undefined ? currentParams[paramKey] : behaviorDef.defaultParams[paramKey];
-                input.style.width = '90px';
-                input.style.padding = '3px 6px';
+                input.style.width = '60px';
+                input.style.padding = '2px 4px';
                 input.style.background = '#18181b';
                 input.style.border = '1px solid #444';
                 input.style.borderRadius = '3px';
                 input.style.color = '#fff';
-                input.style.fontSize = '12px';
+                input.style.fontSize = '10px';
 
                 input.addEventListener('input', (e) => {
                     const val = input.type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value;
                     currentParams[paramKey] = val;
-                    // إعادة ضبط الحالة الداخلية عشان تتحدث القيم
                     if (this.engine.selected.userData.behaviorStates) {
                         delete this.engine.selected.userData.behaviorStates[bName];
                     }
@@ -271,6 +296,16 @@ export class Editor {
         this.updateUIValues();
         this.renderBehaviorsUI();
         
+        // إظهار خصائص الإضاءة فقط إذا كان ضوء
+        const lightProps = document.getElementById('light-properties');
+        if (obj.isLight) {
+            lightProps.style.display = 'block';
+            document.getElementById('prop-light-intensity').value = obj.intensity;
+            document.getElementById('prop-light-distance').value = obj.distance;
+        } else {
+            lightProps.style.display = 'none';
+        }
+
         if (obj.userData.physics) {
             document.getElementById('prop-physics').checked = obj.userData.physics.enabled;
             document.getElementById('prop-bounce').value = obj.userData.physics.bounce;
