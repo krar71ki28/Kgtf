@@ -2,8 +2,14 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { VignetteShader } from 'three/addons/shaders/VignetteShader.js';
 
-export const MATERIALS = {
+export const MATERIALS = { /* نفس الإعدادات السابقة */ 
     default:  { color: 0x00e5ff, roughness: 0.4, metalness: 0.1 },
     wood:     { color: 0x8b5a2b, roughness: 0.95, metalness: 0.0 },
     metal:    { color: 0xaaaaaa, roughness: 0.2,  metalness: 0.9 },
@@ -14,7 +20,7 @@ export const MATERIALS = {
     emissive: { color: 0x00e5ff, emissive: 0x00e5ff, emissiveIntensity: 1.0 }
 };
 
-export const BEHAVIORS = {
+export const BEHAVIORS = { /* نفس الإعدادات السابقة */
     rotate: { name: 'دوران مستمر', defaultParams: { speed: 1.5 }, update: (obj, params, state, dt) => { obj.rotation.y += params.speed * dt; } },
     float: { name: 'طيران/تذبذب', defaultParams: { amplitude: 0.5, speed: 2 }, update: (obj, params, state, dt, time) => { if (state.baseY === undefined) state.baseY = obj.position.y; obj.position.y = state.baseY + Math.sin(time * params.speed) * params.amplitude; } },
     follow: { name: 'مطاردة اللاعب', defaultParams: { speed: 2, stopDistance: 1.5 }, update: (obj, params, state, dt, time, engine) => { const player = engine.objects.find(o => o.userData.type === 'character'); if (!player) return; const dir = new THREE.Vector3().subVectors(player.position, obj.position); dir.y = 0; if (dir.length() > params.stopDistance) { dir.normalize(); obj.position.add(dir.multiplyScalar(params.speed * dt)); } } },
@@ -36,6 +42,23 @@ export class Engine {
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         
+        // إعداد Post-Processing
+        this.composer = new EffectComposer(this.renderer);
+        const renderPass = new RenderPass(this.scene, this.camera);
+        this.composer.addPass(renderPass);
+
+        this.bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.5, 0.4, 0.8);
+        this.composer.addPass(this.bloomPass);
+
+        this.vignettePass = new ShaderPass(VignetteShader);
+        this.vignettePass.uniforms["offset"].value = 1.0;
+        this.vignettePass.uniforms["darkness"].value = 1.0;
+        this.vignettePass.enabled = false; // معطل افتراضياً
+        this.composer.addPass(this.vignettePass);
+
+        const outputPass = new OutputPass();
+        this.composer.addPass(outputPass);
+
         const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
         const envMap = pmremGenerator.fromScene(new RoomEnvironment()).texture;
         this.scene.environment = envMap;
@@ -90,7 +113,7 @@ export class Engine {
 
         this.objects = [];
         this.projectiles = []; 
-        this.assets = JSON.parse(localStorage.getItem('kgtf_assets') || '[]'); // تحميل الأصول
+        this.assets = JSON.parse(localStorage.getItem('kgtf_assets') || '[]'); 
         this.score = 0;
         this.onScoreChanged = null;
 
@@ -192,9 +215,8 @@ export class Engine {
     spawnAsset(assetId) {
         const asset = this.assets.find(a => a.id === assetId);
         if (!asset) return;
-        
         this.addObject(asset.type, {
-            position: [0, 1, 0], // مكان افتراضي
+            position: [0, 1, 0],
             material: asset.material,
             color: asset.color,
             intensity: asset.intensity,
@@ -459,6 +481,16 @@ export class Engine {
         if (!document.body.classList.contains('play-mode')) this.controls.update();
     }
 
-    render() { this.renderer.render(this.scene, this.camera); }
-    resize() { const c = document.getElementById('viewport-container'); const w = c.clientWidth, h = c.clientHeight; this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); this.renderer.setSize(w, h, false); }
+    render() { 
+        this.composer.render(); // استخدام composer بدلاً من renderer
+    }
+    
+    resize() { 
+        const c = document.getElementById('viewport-container'); 
+        const w = c.clientWidth, h = c.clientHeight; 
+        this.camera.aspect = w / h; 
+        this.camera.updateProjectionMatrix(); 
+        this.renderer.setSize(w, h, false);
+        this.composer.setSize(w, h); // تحديث حجم composer
+    }
 }

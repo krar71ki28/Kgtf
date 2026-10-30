@@ -23,6 +23,7 @@ export class Editor {
         this.bindButtons();
         this.bindInspector();
         this.bindMaterialProps();
+        this.bindWorldSettings();
         this.setupRaycaster();
         this.setupDropdown();
         this.setupTabs();
@@ -373,5 +374,27 @@ Editor.prototype.bindMaterialProps = function() {
             }
             this.engine.selected.material.needsUpdate = true;
         });
+    });
+};
+
+// دالة جديدة لربط أزرار Post-Processing
+Editor.prototype.bindWorldSettings = function() {
+    // Bloom
+    document.getElementById('pp-bloom-strength').addEventListener('input', (e) => {
+        this.engine.bloomPass.strength = parseFloat(e.target.value);
+    });
+    document.getElementById('pp-bloom-radius').addEventListener('input', (e) => {
+        this.engine.bloomPass.radius = parseFloat(e.target.value);
+    });
+    document.getElementById('pp-bloom-threshold').addEventListener('input', (e) => {
+        this.engine.bloomPass.threshold = parseFloat(e.target.value);
+    });
+
+    // Vignette
+    document.getElementById('pp-vignette-enabled').addEventListener('change', (e) => {
+        this.engine.vignettePass.enabled = e.target.checked;
+    });
+    document.getElementById('pp-vignette-strength').addEventListener('input', (e) => {
+        this.engine.vignettePass.uniforms["darkness"].value = parseFloat(e.target.value);
     });
 };
