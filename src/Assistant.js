@@ -7,10 +7,15 @@ export class Assistant {
         this.input = document.getElementById('ai-input');
         this.messages = document.getElementById('ai-messages');
 
-        // المفتاح الجديد
-        this.apiKey = '';
+        // هنا يقرأ المفتاح من المتصفح، إذا مو موجود يطلبه
+        this.apiKey = localStorage.getItem('gemini_api_key');
 
         this.fab.onclick = () => {
+            if (!this.apiKey) {
+                this.apiKey = prompt("مرحباً! لإ activación المساعد الذكي، يرجى إدخال مفتاح Gemini API (مرة واحدة فقط):");
+                if (this.apiKey) localStorage.setItem('gemini_api_key', this.apiKey);
+                else return;
+            }
             this.chat.style.display = this.chat.style.display === 'flex' ? 'none' : 'flex';
         };
         this.closeBtn.onclick = () => this.chat.style.display = 'none';
