@@ -65,8 +65,6 @@ export class Engine {
         this.idCounter = 1;
         this.onSelect = null;
         this.onSceneChange = null;
-        
-        // رقم النسخة لمنع الشخصيات القديمة من الظهور بعد المسح
         this.sceneVersion = 0;
 
         this.loadScene();
@@ -140,14 +138,33 @@ export class Engine {
     }
 
     clearScene() {
-        // زيادة رقم النسخة عشان نلغي أي تحميلات سابقة
         this.sceneVersion++;
         
-        // مسح الكائنات
+        // مسح آمن لكل الكائنات (حتى المعقدة مثل الروبوت)
         this.objects.forEach(obj => {
             this.scene.remove(obj);
-            if (obj.material) obj.material.dispose();
+            // مسح المواد والأشكال الهندسية لتجنب تسريب الذاكرة
+            if (obj.traverse) {
+                obj.traverse(child => {
+                    if (child.isMesh) {
+                        if (child.geometry) child.geometry.dispose();
+                        if (Array.isArray(child.material)) {
+                            child.material.forEach(m => m.dispose());
+                        } else if (child.material) {
+                            child.material.dispose();
+                        }
+                    }
+                });
+            } else {
+                if (obj.geometry) obj.geometry.dispose();
+                if (Array.isArray(obj.material)) {
+                    obj.material.forEach(m => m.dispose());
+                } else if (obj.material) {
+                    obj.material.dispose();
+                }
+            }
         });
+        
         this.objects = [];
         this.selectObject(null);
         
@@ -163,7 +180,6 @@ export class Engine {
         const currentVersion = this.sceneVersion;
         const loader = new GLTFLoader();
         loader.load('https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb', (gltf) => {
-            // إذا تم مسح المشهد أثناء التحميل، نتجاهل هذه الشخصية
             if (this.sceneVersion !== currentVersion) return;
 
             const model = gltf.scene;
