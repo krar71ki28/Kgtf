@@ -8,56 +8,58 @@
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body { font-family: system-ui, sans-serif; background: #0a0a0f; color: #fff; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
     
-    /* التصميم العلوي */
     #header { height: 50px; background: #141420; border-bottom: 1px solid #2a2a3a; display: flex; align-items: center; padding: 0 10px; gap: 10px; z-index: 10; flex-shrink: 0; }
     .logo { color: #00e5ff; font-weight: 900; letter-spacing: 1px; font-size: 14px; }
     .btn { background: #2a2a3a; color: #ccc; border: none; padding: 8px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
     .btn:hover { background: #3a3a4a; color: #fff; }
     .btn.primary { background: #00e5ff; color: #000; }
+    .btn.green { background: #4ade80; color: #000; }
     
-    /* تقسيم الشاشة */
     #workspace { flex: 1; display: flex; overflow: hidden; }
     
-    /* القائمة الجانبية (الملفات) */
-    #left-panel { width: 70px; background: #141420; border-left: 1px solid #2a2a3a; display: flex; flex-direction: column; align-items: center; padding: 10px 0; gap: 10px; z-index: 10; }
-    .icon-btn { width: 50px; height: 50px; background: #1e1e30; border: 1px solid #2a2a3a; border-radius: 8px; color: #fff; font-size: 20px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; gap: 4px; }
+    #left-panel { width: 70px; background: #141420; border-left: 1px solid #2a2a3a; display: flex; flex-direction: column; align-items: center; padding: 10px 0; gap: 8px; z-index: 10; overflow-y: auto; }
+    .icon-btn { width: 52px; height: 52px; background: #1e1e30; border: 1px solid #2a2a3a; border-radius: 8px; color: #fff; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 9px; gap: 2px; padding: 4px; }
     .icon-btn span { font-size: 18px; }
     .icon-btn:hover { border-color: #00e5ff; color: #00e5ff; }
 
-    /* منطقة العرض 3D */
-    #viewport-container { flex: 1; position: relative; background: #000; }
+    #viewport-container { flex: 1; position: relative; background: #000; overflow: hidden; }
     #viewport { width: 100%; height: 100%; display: block; }
 
-    /* لوحة الخصائص (Inspector) */
     #right-panel { width: 250px; background: #141420; border-right: 1px solid #2a2a3a; display: flex; flex-direction: column; z-index: 10; overflow-y: auto; }
     .panel-section { border-bottom: 1px solid #2a2a3a; padding: 10px; }
     .panel-title { font-size: 11px; color: #888; font-weight: bold; margin-bottom: 8px; letter-spacing: 1px; }
-    .prop-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-    .prop-row label { font-size: 12px; color: #aaa; width: 40px; }
-    .prop-row input[type="range"] { flex: 1; margin: 0 10px; }
-    .prop-row input[type="color"] { width: 30px; height: 30px; border: none; background: none; cursor: pointer; }
-    
-    /* شريط الحالة */
+    .prop-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 5px; }
+    .prop-row label { font-size: 11px; color: #aaa; width: 45px; flex-shrink: 0; }
+    .prop-row input[type="range"] { flex: 1; }
+    .prop-row input[type="color"] { width: 32px; height: 32px; border: none; background: none; cursor: pointer; }
+    .prop-row select { flex: 1; background: #0a0a0f; border: 1px solid #2a2a3a; color: #fff; padding: 4px; border-radius: 4px; font-size: 11px; }
+
     #status-bar { position: absolute; bottom: 10px; left: 10px; background: rgba(20,20,30,0.8); padding: 5px 10px; border-radius: 4px; font-size: 10px; font-family: monospace; color: #0f0; z-index: 5; border: 1px solid #2a2a3a; }
 
-    /* المساعد الذكي */
-    #ai-fab { position: absolute; bottom: 20px; right: 270px; width: 50px; height: 50px; background: #ff5577; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; box-shadow: 0 4px 15px rgba(255,85,119,0.5); z-index: 20; transition: transform 0.2s; }
-    #ai-fab:hover { transform: scale(1.1); }
-    #ai-chat { position: absolute; bottom: 80px; right: 270px; width: 300px; height: 400px; background: #141420; border: 1px solid #ff5577; border-radius: 12px; display: none; flex-direction: column; z-index: 20; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+    #ai-fab { position: absolute; bottom: 20px; right: 20px; width: 50px; height: 50px; background: #ff5577; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; box-shadow: 0 4px 15px rgba(255,85,119,0.5); z-index: 20; }
+    #ai-chat { position: absolute; bottom: 80px; right: 20px; width: 300px; max-width: calc(100vw - 40px); height: 400px; background: #141420; border: 1px solid #ff5577; border-radius: 12px; display: none; flex-direction: column; z-index: 20; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
     .ai-header { padding: 10px; background: #1e1e30; color: #ff5577; font-weight: bold; font-size: 12px; display: flex; justify-content: space-between; align-items: center; }
     .ai-messages { flex: 1; padding: 10px; overflow-y: auto; font-size: 12px; line-height: 1.5; color: #ddd; }
     .ai-input-row { padding: 10px; border-top: 1px solid #2a2a3a; display: flex; gap: 5px; }
     .ai-input-row input { flex: 1; background: #0a0a0f; border: 1px solid #2a2a3a; color: #fff; padding: 8px; border-radius: 4px; outline: none; }
     .ai-input-row button { background: #ff5577; color: #fff; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; }
 
-    /* تجاوب مع الموبايل */
+    /* وضع التشغيل */
+    body.play-mode #header,
+    body.play-mode #left-panel,
+    body.play-mode #right-panel,
+    body.play-mode #ai-fab { display: none !important; }
+    body.play-mode #workspace { flex-direction: column; }
+    #exit-play { position: absolute; top: 15px; left: 15px; z-index: 30; display: none; }
+    body.play-mode #exit-play { display: block; }
+
     @media (max-width: 768px) {
         #workspace { flex-direction: column; }
-        #left-panel { width: 100%; height: 60px; flex-direction: row; justify-content: space-around; border-left: none; border-bottom: 1px solid #2a2a3a; }
-        #right-panel { width: 100%; height: 250px; border-right: none; border-top: 1px solid #2a2a3a; }
-        #viewport-container { flex: 1; }
-        #ai-fab { right: 20px; bottom: 270px; }
-        #ai-chat { right: 20px; bottom: 330px; width: calc(100% - 40px); height: 300px; }
+        #left-panel { width: 100%; height: 62px; flex-direction: row; justify-content: space-around; border-left: none; border-bottom: 1px solid #2a2a3a; padding: 4px; gap: 4px; }
+        .icon-btn { width: 48px; height: 48px; }
+        #right-panel { width: 100%; height: 240px; border-right: none; border-top: 1px solid #2a2a3a; }
+        #ai-chat { right: 10px; bottom: 70px; width: calc(100% - 20px); height: 60vh; }
+        #status-bar { bottom: 250px; left: 10px; }
     }
 </style>
 </head>
@@ -65,29 +67,28 @@
     <div id="header">
         <div class="logo">KGTF ENGINE</div>
         <div style="flex:1"></div>
-        <button class="btn" id="btn-save">حفظ</button>
-        <button class="btn primary" id="btn-play">▶ تشغيل</button>
+        <button class="btn" id="btn-save">💾 حفظ</button>
+        <button class="btn green" id="btn-play">▶ تشغيل</button>
     </div>
 
     <div id="workspace">
-        <!-- أدوات جانبية -->
         <div id="left-panel">
             <button class="icon-btn" id="btn-cube"><span>📦</span>مكعب</button>
             <button class="icon-btn" id="btn-sphere"><span>🔴</span>كرة</button>
+            <button class="icon-btn" id="btn-cylinder"><span>🛢️</span>أسطوانة</button>
             <button class="icon-btn" id="btn-light"><span>💡</span>ضوء</button>
             <button class="icon-btn" id="btn-character"><span>🏃</span>شخصية</button>
         </div>
 
-        <!-- شاشة العرض -->
         <div id="viewport-container">
             <canvas id="viewport"></canvas>
+            <button class="btn primary" id="exit-play">✕ خروج</button>
             <div id="status-bar">FPS: <span id="fps">--</span></div>
             
-            <!-- المساعد الذكي -->
             <div id="ai-fab">🤖</div>
             <div id="ai-chat">
                 <div class="ai-header"><span>KGTF AI Assistant</span><span id="close-ai" style="cursor:pointer;">✕</span></div>
-                <div class="ai-messages" id="ai-messages">مرحباً! أنا مساعدك. اطلب مني كود Three.js (مثلاً: "اكتب لي كود مكعب يدور ويتغير لونه").</div>
+                <div class="ai-messages" id="ai-messages">مرحباً! أنا مساعدك. اطلب مني كود Three.js.</div>
                 <div class="ai-input-row">
                     <input type="text" id="ai-input" placeholder="اطلب كود..." />
                     <button id="ai-send">إرسال</button>
@@ -95,24 +96,33 @@
             </div>
         </div>
 
-        <!-- لوحة الخصائص -->
         <div id="right-panel">
             <div class="panel-section">
                 <div class="panel-title">HIERARCHY</div>
-                <div id="object-list" style="font-size:12px; color:#aaa; max-height:100px; overflow-y:auto;"></div>
+                <div id="object-list" style="font-size:12px; color:#aaa; max-height:110px; overflow-y:auto;"></div>
             </div>
             
             <div class="panel-section" id="inspector" style="display:none;">
                 <div class="panel-title">PROPERTIES</div>
-                
+                <div class="prop-row"><label>المادة</label>
+                    <select id="prop-material">
+                        <option value="default">عادي</option>
+                        <option value="wood">خشب</option>
+                        <option value="metal">معدن</option>
+                        <option value="gold">ذهب</option>
+                        <option value="glass">زجاج</option>
+                        <option value="rubber">مطاط</option>
+                        <option value="marble">رخام</option>
+                        <option value="emissive">مضيء</option>
+                    </select>
+                </div>
                 <div class="prop-row"><label>اللون</label><input type="color" id="prop-color" value="#00e5ff"></div>
-                
-                <div class="prop-row"><label>X</label><input type="range" id="prop-x" min="-10" max="10" step="0.1" value="0"></div>
-                <div class="prop-row"><label>Y</label><input type="range" id="prop-y" min="-10" max="10" step="0.1" value="0"></div>
-                <div class="prop-row"><label>Z</label><input type="range" id="prop-z" min="-10" max="10" step="0.1" value="0"></div>
-                
+                <div class="prop-row"><label>X</label><input type="range" id="prop-x" min="-20" max="20" step="0.1" value="0"></div>
+                <div class="prop-row"><label>Y</label><input type="range" id="prop-y" min="-5" max="15" step="0.1" value="0.5"></div>
+                <div class="prop-row"><label>Z</label><input type="range" id="prop-z" min="-20" max="20" step="0.1" value="0"></div>
                 <div class="prop-row"><label>دوران</label><input type="range" id="prop-rot" min="0" max="6.28" step="0.1" value="0"></div>
-                <div class="prop-row"><label>حجم</label><input type="range" id="prop-scale" min="0.1" max="3" step="0.1" value="1"></div>
+                <div class="prop-row"><label>حجم</label><input type="range" id="prop-scale" min="0.1" max="4" step="0.1" value="1"></div>
+                <div class="prop-row"><label>حذف</label><button class="btn" id="btn-delete" style="width:100%; background:#3a1a1a; color:#ff5577;">حذف العنصر</button></div>
             </div>
         </div>
     </div>
@@ -131,71 +141,133 @@
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-        // 1. إعداد المشهد
+        const MATERIALS = {
+            default:  { color: 0x00e5ff, roughness: 0.4, metalness: 0.1 },
+            wood:     { color: 0x8b5a2b, roughness: 0.95, metalness: 0.0 },
+            metal:    { color: 0xaaaaaa, roughness: 0.2,  metalness: 0.9 },
+            gold:     { color: 0xffaa00, roughness: 0.3,  metalness: 0.95 },
+            glass:    { color: 0x88ccff, roughness: 0.05, metalness: 0.0, transparent: true, opacity: 0.4 },
+            rubber:   { color: 0x222222, roughness: 1.0,  metalness: 0.0 },
+            marble:   { color: 0xeeeeee, roughness: 0.4,  metalness: 0.0 },
+            emissive: { color: 0x00e5ff, emissive: 0x00e5ff, emissiveIntensity: 1.0 }
+        };
+
         const canvas = document.getElementById('viewport');
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x0a0a0f);
-        scene.fog = new THREE.Fog(0x0a0a0f, 10, 50);
+        scene.fog = new THREE.Fog(0x0a0a0f, 15, 60);
 
         const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
-        camera.position.set(5, 5, 5);
+        camera.position.set(6, 5, 8);
 
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.target.set(0, 1, 0);
+        controls.maxPolarAngle = Math.PI / 2.05;
 
-        // 2. الإضاءة والشبكة
+        // إضاءة أساسية (ثابتة)
         scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 0.6));
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
-        dirLight.position.set(5, 10, 5);
-        dirLight.castShadow = true;
-        scene.add(dirLight);
-        scene.add(new THREE.GridHelper(50, 50, 0x2a2a3a, 0x1a1a2e));
+        const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+        sun.position.set(8, 15, 8);
+        sun.castShadow = true;
+        sun.shadow.mapSize.set(1024, 1024);
+        sun.shadow.camera.left = -20; sun.shadow.camera.right = 20;
+        sun.shadow.camera.top = 20; sun.shadow.camera.bottom = -20;
+        scene.add(sun);
 
-        // 3. إدارة الكائنات
+        scene.add(new THREE.GridHelper(60, 60, 0x2a2a3a, 0x1a1a2e));
+
+        // حالة المحرر
         let objects = [];
         let selected = null;
         let idCounter = 1;
 
-        function addObject(type) {
-            const mat = new THREE.MeshStandardMaterial({ color: 0x00e5ff, roughness: 0.4 });
-            let mesh;
-            if (type === 'cube') mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
-            else if (type === 'sphere') mesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), mat);
-            else if (type === 'light') {
-                mesh = new THREE.PointLight(0xffaa00, 2, 10);
-                mesh.position.y = 2;
-            }
-            
-            if (mesh.isMesh) {
-                mesh.position.y = 0.5;
-                mesh.castShadow = true;
-            }
-            
-            mesh.userData = { id: 'obj_' + idCounter++, type: type };
-            scene.add(mesh);
-            objects.push(mesh);
-            selectObject(mesh);
-            updateList();
+        function makeMaterial(matName, colorHex) {
+            const base = MATERIALS[matName] || MATERIALS.default;
+            const opts = { ...base };
+            if (colorHex !== undefined) opts.color = colorHex;
+            return new THREE.MeshStandardMaterial(opts);
         }
 
-        function selectObject(mesh) {
-            selected = mesh;
+        function addObject(type, opts = {}) {
+            let obj;
+            if (type === 'cube') {
+                obj = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), makeMaterial('default'));
+                obj.position.y = 0.5;
+            } else if (type === 'sphere') {
+                obj = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), makeMaterial('default'));
+                obj.position.y = 0.5;
+            } else if (type === 'cylinder') {
+                obj = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 1.2, 32), makeMaterial('default'));
+                obj.position.y = 0.6;
+            } else if (type === 'light') {
+                obj = new THREE.PointLight(0xffaa00, 5, 15);
+                obj.position.set(0, 3, 0);
+            }
+            
+            if (obj.isMesh) {
+                obj.castShadow = true;
+                obj.receiveShadow = true;
+            }
+            
+            obj.userData = { id: 'obj_' + (idCounter++), type: type, material: 'default' };
+            
+            if (opts.position) obj.position.fromArray(opts.position);
+            if (opts.rotation) obj.rotation.fromArray(opts.rotation);
+            if (opts.scale) obj.scale.fromArray(opts.scale);
+            
+            if (opts.material && obj.isMesh) {
+                obj.material.dispose();
+                obj.material = makeMaterial(opts.material, opts.color);
+                obj.userData.material = opts.material;
+            } else if (opts.color && obj.isMesh) {
+                obj.material.color.set(opts.color);
+            }
+            if (opts.color && obj.isLight) obj.color.set(opts.color);
+            if (opts.intensity && obj.isLight) obj.intensity = opts.intensity;
+            
+            scene.add(obj);
+            objects.push(obj);
+            updateList();
+            selectObject(obj);
+            return obj;
+        }
+
+        function selectObject(obj) {
+            selected = obj;
             const insp = document.getElementById('inspector');
-            if (!mesh) { insp.style.display = 'none'; return; }
+            if (!obj) { insp.style.display = 'none'; return; }
             insp.style.display = 'block';
 
-            // تحديث القيم
-            if (mesh.isMesh) document.getElementById('prop-color').value = '#' + mesh.material.color.getHexString();
-            document.getElementById('prop-x').value = mesh.position.x;
-            document.getElementById('prop-y').value = mesh.position.y;
-            document.getElementById('prop-z').value = mesh.position.z;
-            document.getElementById('prop-rot').value = mesh.rotation.y;
-            document.getElementById('prop-scale').value = mesh.scale.x;
+            if (obj.isMesh) {
+                document.getElementById('prop-color').value = '#' + obj.material.color.getHexString();
+                document.getElementById('prop-material').value = obj.userData.material || 'default';
+            } else if (obj.isLight) {
+                document.getElementById('prop-color').value = '#' + obj.color.getHexString();
+            }
+            document.getElementById('prop-x').value = obj.position.x;
+            document.getElementById('prop-y').value = obj.position.y;
+            document.getElementById('prop-z').value = obj.position.z;
+            document.getElementById('prop-rot').value = obj.rotation.y;
+            document.getElementById('prop-scale').value = obj.scale.x;
+        }
+
+        function deleteSelected() {
+            if (!selected) return;
+            const idx = objects.indexOf(selected);
+            if (idx !== -1) {
+                scene.remove(selected);
+                if (selected.material) selected.material.dispose();
+                objects.splice(idx, 1);
+                selected = null;
+                document.getElementById('inspector').style.display = 'none';
+                updateList();
+            }
         }
 
         function updateList() {
@@ -203,74 +275,126 @@
             list.innerHTML = '';
             objects.forEach(o => {
                 const div = document.createElement('div');
-                div.innerText = o.userData.type + ' (' + o.userData.id + ')';
+                div.innerText = o.userData.type + ' — ' + o.userData.id;
                 div.style.cursor = 'pointer';
                 div.style.padding = '4px';
+                div.style.borderRadius = '4px';
+                if (o === selected) { div.style.background = '#1a2a3a'; div.style.color = '#00e5ff'; }
                 div.onclick = () => selectObject(o);
                 list.appendChild(div);
             });
         }
 
-        // 4. ربط أزرار الإضافة
-        document.getElementById('btn-cube').onclick = () => addObject('cube');
-        document.getElementById('btn-sphere').onclick = () => addObject('sphere');
-        document.getElementById('btn-light').onclick = () => addObject('light');
-        
-        // 5. تحميل الشخصية (أنيميشن)
-        document.getElementById('btn-character').onclick = () => {
+        // تحميل الشخصية
+        function loadCharacter() {
             const loader = new GLTFLoader();
-            // تحميل نموذج روبوت جاهز من Three.js
             loader.load('https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb', (gltf) => {
                 const model = gltf.scene;
                 model.position.y = 0;
                 model.scale.set(0.5, 0.5, 0.5);
                 model.traverse(o => { if(o.isMesh) o.castShadow = true; });
                 
-                // إضافة أنيميشن
                 const mixer = new THREE.AnimationMixer(model);
                 if (gltf.animations.length > 0) {
-                    const action = mixer.clipAction(gltf.animations[0]); // حركة المشي
+                    const action = mixer.clipAction(gltf.animations[0]);
                     action.play();
                 }
-                model.userData = { id: 'char_' + idCounter++, type: 'character', mixer: mixer };
+                model.userData = { id: 'char_' + (idCounter++), type: 'character', mixer: mixer, material: 'n/a', characterURL: true };
                 
                 scene.add(model);
                 objects.push(model);
-                selectObject(model);
                 updateList();
+                selectObject(model);
+            }, undefined, (err) => {
+                console.error('فشل تحميل الشخصية', err);
+                alert('تعذر تحميل الشخصية. تأكد من الإنترنت.');
             });
+        }
+
+        // إضافة كائنات
+        document.getElementById('btn-cube').onclick = () => addObject('cube');
+        document.getElementById('btn-sphere').onclick = () => addObject('sphere');
+        document.getElementById('btn-cylinder').onclick = () => addObject('cylinder');
+        document.getElementById('btn-light').onclick = () => addObject('light');
+        document.getElementById('btn-character').onclick = loadCharacter;
+
+        // خصائص
+        document.getElementById('prop-material').onchange = (e) => {
+            if (selected && selected.isMesh) {
+                const oldColor = selected.material.color.getHex();
+                selected.material.dispose();
+                selected.material = makeMaterial(e.target.value, oldColor);
+                selected.userData.material = e.target.value;
+                document.getElementById('prop-color').value = '#' + oldColor.toString(16).padStart(6, '0');
+            }
         };
+        document.getElementById('prop-color').oninput = (e) => {
+            if (!selected) return;
+            if (selected.isMesh) selected.material.color.set(e.target.value);
+            else if (selected.isLight) selected.color.set(e.target.value);
+        };
+        document.getElementById('prop-x').oninput = (e) => { if (selected) selected.position.x = parseFloat(e.target.value); };
+        document.getElementById('prop-y').oninput = (e) => { if (selected) selected.position.y = parseFloat(e.target.value); };
+        document.getElementById('prop-z').oninput = (e) => { if (selected) selected.position.z = parseFloat(e.target.value); };
+        document.getElementById('prop-rot').oninput = (e) => { if (selected) selected.rotation.y = parseFloat(e.target.value); };
+        document.getElementById('prop-scale').oninput = (e) => { if (selected) selected.scale.setScalar(parseFloat(e.target.value)); };
+        document.getElementById('btn-delete').onclick = deleteSelected;
 
-        // 6. ربط لوحة الخصائص
-        document.getElementById('prop-color').oninput = (e) => { if(selected && selected.isMesh) selected.material.color.set(e.target.value); };
-        document.getElementById('prop-x').oninput = (e) => { if(selected) selected.position.x = parseFloat(e.target.value); };
-        document.getElementById('prop-y').oninput = (e) => { if(selected) selected.position.y = parseFloat(e.target.value); };
-        document.getElementById('prop-z').oninput = (e) => { if(selected) selected.position.z = parseFloat(e.target.value); };
-        document.getElementById('prop-rot').oninput = (e) => { if(selected) selected.rotation.y = parseFloat(e.target.value); };
-        document.getElementById('prop-scale').oninput = (e) => { if(selected) selected.scale.setScalar(parseFloat(e.target.value)); };
-
-        // 7. الحفظ
+        // الحفظ الحقيقي
         document.getElementById('btn-save').onclick = () => {
-            alert('تم الحفظ (في الذاكرة). إعادة التحميل ستسترجع المشهد.');
+            const data = objects
+                .filter(o => o.userData.type !== 'character') // الشخصيات مؤقتاً لا تُحفظ
+                .map(o => ({
+                    type: o.userData.type,
+                    material: o.userData.material,
+                    color: o.isMesh ? o.material.color.getHex() : (o.isLight ? o.color.getHex() : 0xffffff),
+                    intensity: o.isLight ? o.intensity : undefined,
+                    position: o.position.toArray(),
+                    rotation: [o.rotation.x, o.rotation.y, o.rotation.z],
+                    scale: o.scale.toArray()
+                }));
+            localStorage.setItem('kgtf_scene_v2', JSON.stringify(data));
+            alert('تم حفظ المشهد (' + data.length + ' كائن)');
         };
 
-        // 8. المساعد الذكي (اتصال بـ Pollinations)
+        function loadScene() {
+            const saved = localStorage.getItem('kgtf_scene_v2');
+            if (!saved) { addObject('cube'); return; }
+            try {
+                const data = JSON.parse(saved);
+                data.forEach(d => {
+                    addObject(d.type, {
+                        material: d.material,
+                        color: d.color,
+                        intensity: d.intensity,
+                        position: d.position,
+                        rotation: d.rotation,
+                        scale: d.scale
+                    });
+                });
+            } catch(e) {
+                console.error(e);
+                addObject('cube');
+            }
+        }
+
+        // وضع التشغيل
+        document.getElementById('btn-play').onclick = () => { document.body.classList.add('play-mode'); resize(); };
+        document.getElementById('exit-play').onclick = () => { document.body.classList.remove('play-mode'); resize(); };
+
+        // المساعد الذكي
         const aiFab = document.getElementById('ai-fab');
         const aiChat = document.getElementById('ai-chat');
-        const aiInput = document.getElementById('ai-input');
-        const aiMsgs = document.getElementById('ai-messages');
-
         aiFab.onclick = () => { aiChat.style.display = aiChat.style.display === 'flex' ? 'none' : 'flex'; };
         document.getElementById('close-ai').onclick = () => { aiChat.style.display = 'none'; };
-
         document.getElementById('ai-send').onclick = async () => {
-            const text = aiInput.value.trim();
+            const text = document.getElementById('ai-input').value.trim();
             if (!text) return;
-            aiInput.value = '';
-            aiMsgs.innerHTML += `<div style="color:#ff5577; margin-bottom:5px;">👤 ${text}</div>`;
-            aiMsgs.innerHTML += `<div id="ai-loading" style="color:#888;">جاري التفكير...</div>`;
-            aiMsgs.scrollTop = aiMsgs.scrollHeight;
-
+            const msgs = document.getElementById('ai-messages');
+            document.getElementById('ai-input').value = '';
+            msgs.innerHTML += `<div style="color:#ff5577;margin-bottom:6px;">👤 ${text}</div>`;
+            msgs.innerHTML += `<div id="ai-loading" style="color:#888;">...</div>`;
+            msgs.scrollTop = msgs.scrollHeight;
             try {
                 const res = await fetch('https://text.pollinations.ai/openai', {
                     method: 'POST',
@@ -278,46 +402,41 @@
                     body: JSON.stringify({
                         model: 'openai',
                         messages: [
-                            { role: 'system', content: 'أنت مساعد خبير في Three.js و JavaScript. أجب بكود نظيف فقط عند الطلب. استخدم التعليقات بالعربية.' },
+                            { role: 'system', content: 'أنت خبير Three.js. أجب بكود مختصر عند الطلب.' },
                             { role: 'user', content: text }
                         ]
                     })
                 });
                 const data = await res.json();
                 document.getElementById('ai-loading').remove();
-                aiMsgs.innerHTML += `<div style="color:#00e5ff; margin-bottom:5px;">🤖 ${data.choices[0].message.content}</div>`;
-            } catch (e) {
+                msgs.innerHTML += `<div style="color:#00e5ff;margin-bottom:6px;white-space:pre-wrap;">🤖 ${data.choices[0].message.content}</div>`;
+            } catch(e) {
                 document.getElementById('ai-loading').remove();
-                aiMsgs.innerHTML += `<div style="color:#f00;">خطأ في الاتصال.</div>`;
+                msgs.innerHTML += `<div style="color:#f00;">خطأ في الاتصال</div>`;
             }
-            aiMsgs.scrollTop = aiMsgs.scrollHeight;
+            msgs.scrollTop = msgs.scrollHeight;
         };
 
-        // 9. حلقة الرسم
+        // حلقة الرسم
         const clock = new THREE.Clock();
         let fpsAcc = 0, frames = 0;
 
         function resize() {
-            const w = document.getElementById('viewport-container').clientWidth;
-            const h = document.getElementById('viewport-container').clientHeight;
+            const c = document.getElementById('viewport-container');
+            const w = c.clientWidth, h = c.clientHeight;
             camera.aspect = w / h;
             camera.updateProjectionMatrix();
             renderer.setSize(w, h, false);
         }
-
         window.addEventListener('resize', resize);
-        resize();
+        setTimeout(resize, 50);
 
         function animate() {
             requestAnimationFrame(animate);
             const dt = clock.getDelta();
-            
-            // تحديث الأنيميشن
             objects.forEach(o => { if (o.userData.mixer) o.userData.mixer.update(dt); });
-
             controls.update();
             renderer.render(scene, camera);
-
             fpsAcc += dt; frames++;
             if (fpsAcc >= 0.5) {
                 document.getElementById('fps').innerText = Math.round(frames / fpsAcc);
@@ -325,6 +444,7 @@
             }
         }
 
+        loadScene();
         animate();
     </script>
 </body>
