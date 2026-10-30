@@ -1,7 +1,14 @@
 import { Engine } from './Engine.js';
 import { Editor } from './Editor.js';
 import { Player } from './Player.js';
-import { Assistant } from './Assistant.js';
+
+// كود إعادة ضبط المصنع
+if (window.location.search.includes('reset')) {
+    localStorage.removeItem('kgtf_scene_final');
+    localStorage.removeItem('kgtf_assets');
+    alert('تم مسح المشهد القديم بنجاح! سيتم إعادة تشغيل المحرك الآن.');
+    window.location.href = window.location.pathname; 
+}
 
 const canvas = document.getElementById('viewport');
 const engine = new Engine(canvas);
@@ -9,7 +16,6 @@ window.engine = engine;
 
 const editor = new Editor(engine);
 const player = new Player(engine);
-const assistant = new Assistant();
 
 let lastTime = performance.now();
 function animate(now) {
@@ -31,11 +37,3 @@ function animate(now) {
     }
 }
 requestAnimationFrame(animate);
-
-// كود إعادة ضبط المصنع (Force Reset)
-if (window.location.search.includes('reset')) {
-    localStorage.removeItem('kgtf_scene_final');
-    localStorage.removeItem('kgtf_assets');
-    alert('تم مسح المشهد القديم بنجاح! سيتم إعادة تشغيل المحرك الآن.');
-    window.location.href = window.location.pathname; // إعادة تحميل الصفحة بدون كلمة reset
-}

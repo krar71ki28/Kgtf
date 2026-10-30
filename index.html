@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>KGTF ENGINE</title>
+<link rel="stylesheet" href="style.css?v=6">
 <script>
     if (window.location.search.includes("reset")) {
         localStorage.removeItem("kgtf_scene_final");
@@ -8,11 +13,6 @@
         window.location.href = window.location.pathname;
     }
 </script>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<title>KGTF ENGINE</title>
-<link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
     <header id="header">
@@ -160,7 +160,7 @@
 
                     <div class="prop-group" style="margin-top: 20px;">
                         <div class="prop-title" style="color:#4ade80;">BLOOM (توهج)</div>
-                        <div class="prop-row"><label>القوة</label><input type="range" id="pp-bloom-strength" min="0" max="3" step="0.1" value="0.5"></div>
+                        <div class="prop-row"><label>القوة</label><input type="range" id="pp-bloom-strength" min="0" max="3" step="0.1" value="0"></div>
                         <div class="prop-row"><label>نصف القطر</label><input type="range" id="pp-bloom-radius" min="0" max="1" step="0.1" value="0.4"></div>
                         <div class="prop-row"><label>العتبة</label><input type="range" id="pp-bloom-threshold" min="0" max="1" step="0.1" value="0.8"></div>
                     </div>
@@ -173,13 +173,6 @@
             </div>
         </div>
     </aside>
-
-    <button id="ai-fab" title="مساعد KGTF">🤖</button>
-    <div id="ai-chat">
-        <div class="ai-header"><span>KGTF AI</span><span id="close-ai" style="cursor:pointer;">✕</span></div>
-        <div class="ai-messages" id="ai-messages">مرحباً!</div>
-        <div class="ai-input-row"><input type="text" id="ai-input" placeholder="اطلب شي..." /><button id="ai-send">إرسال</button></div>
-    </div>
     
     <audio id="bgm" loop src="https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3"></audio>
     <audio id="jump-sfx" src="https://assets.mixkit.co/active_storage/sfx/224/224-preview.mp3"></audio>
@@ -190,6 +183,6 @@
         "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" 
     } }
     </script>
-    <script type="module" src="src/main.js?v=51"></script>
+    <script type="module" src="src/main.js?v=52"></script>
 </body>
 </html>
