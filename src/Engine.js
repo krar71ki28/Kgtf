@@ -134,10 +134,13 @@ export class Engine {
         return obj;
     }
 
-    // دالة فحص الاصطدام
     checkCollision(box1, excludeObj) {
         for (let obj of this.objects) {
             if (obj === excludeObj || obj.userData.type === 'character' || obj.userData.type === 'light') continue;
+            
+            // تحديث المصفوفة قبل الفحص (هذا هو الحل السحري للاختراق)
+            obj.updateMatrixWorld(true);
+            
             const box2 = new THREE.Box3().setFromObject(obj);
             if (box1.intersectsBox(box2)) {
                 return true;

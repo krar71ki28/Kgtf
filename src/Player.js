@@ -17,8 +17,8 @@ export class Player {
         this.cameraPitch = 0.4; 
         this.lastTouch = { x: 0, y: 0 };
 
-        // صندوق اصطدام اللاعب (نصغر حجمه شوي عشان يكون عادل)
-        this.playerBoxSize = new THREE.Vector3(0.8, 1.6, 0.8);
+        // تصغير صندوق اللاعب قليلاً عشان يكون عادل
+        this.playerBoxSize = new THREE.Vector3(0.6, 1.5, 0.6);
 
         this.setupControls();
     }
@@ -158,21 +158,18 @@ export class Player {
         const deltaX = this.currentVelocity.x * dt;
         const deltaZ = this.currentVelocity.z * dt;
 
-        // فحص حركة المحور X
         if (Math.abs(deltaX) > 0.001) {
             const nextPos = this.playerModel.position.clone().add(new THREE.Vector3(deltaX, 0, 0));
-            // رفع الصندوق للنص عشان يغطي جسم الشخصية
             const centerPos = nextPos.clone().add(new THREE.Vector3(0, this.playerBoxSize.y / 2, 0));
             const playerBox = new THREE.Box3().setFromCenterAndSize(centerPos, this.playerBoxSize);
             
             if (!this.engine.checkCollision(playerBox, this.playerModel)) {
                 this.playerModel.position.x += deltaX;
             } else {
-                this.currentVelocity.x = 0; // توقف عن الحركة في هذا المحور
+                this.currentVelocity.x = 0;
             }
         }
 
-        // فحص حركة المحور Z
         if (Math.abs(deltaZ) > 0.001) {
             const nextPos = this.playerModel.position.clone().add(new THREE.Vector3(0, 0, deltaZ));
             const centerPos = nextPos.clone().add(new THREE.Vector3(0, this.playerBoxSize.y / 2, 0));
