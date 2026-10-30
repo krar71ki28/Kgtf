@@ -1,24 +1,64 @@
+import * as THREE from 'three';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 
 export class Editor {
     constructor(engine) {
         this.engine = engine;
         this.inspector = document.getElementById('inspector');
+        this.raycaster = new THREE.Raycaster();
+        this.pointerDown = { x: 0, y: 0 };
+        this.isDraggingGizmo = false;
+
         this.gizmo = new TransformControls(this.engine.camera, this.engine.renderer.domElement);
         this.gizmo.setSize(0.8);
         this.engine.scene.add(this.gizmo);
 
-        this.gizmo.addEventListener('dragging-changed', (event) => { this.engine.controls.enabled = !event.value; });
+        this.gizmo.addEventListener('dragging-changed', (event) => { 
+            this.engine.controls.enabled = !event.value; 
+            this.isDraggingGizmo = event.value; // لحماية التحديد أثناء سحب الأسهم
+        });
         this.gizmo.addEventListener('objectChange', () => this.updateUIValues());
 
         this.bindButtons();
         this.bindInspector();
+        this.setupRaycaster(); // تشغيل خاصية النقر
         
         engine.onSelect = (obj) => this.updateInspector(obj);
         engine.onSceneChange = () => this.updateList();
         
         this.updateList();
         if (this.engine.selected) this.updateInspector(this.engine.selected);
+    }
+
+    setupRaycaster() {
+        const canvas = this.engine.renderer.domElement;
+        canvas.addEventListener('pointerdown', (e) => {
+            this.pointerDown = { x: e.clientX, y: e.clientY };
+        });
+
+        canvas.addEventListener('pointerup', (e) => {
+            // إذا كنا في وضع اللعب، أو نسحب الأسهم، أو سحبنا الكاميرا، نتجاهل النقر
+            if (document.body.classList.contains('play-mode') || this.isDraggingGizmo) return;
+            if (Math.hypot(e.clientX - this.pointerDown.x, e.clientY - this.pointerDown.y) > 5) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const mouse = new THREE.Vector2(
+                ((e.clientX - rect.left) / rect.width) * 2 - 1,
+                -((e.clientY - rect.top) / rect.height) * 2 + 1
+            );
+
+            this.raycaster.setFromCamera(mouse, this.engine.camera);
+            const hits = this.raycaster.intersectObjects(this.engine.objects, true);
+            
+            if (hits.length > 0) {
+                let root = hits[0].object;
+                // البحث عن المجسم الأساسي (لأن الروبوت يتكون من أجزاء كثيرة)
+                while (root && root.parent !== this.engine.scene) root = root.parent;
+                if (root) return this.engine.selectObject(root);
+            }
+            // إذا ضغطنا على الفراغ، نلغي التحديد
+            this.engine.selectObject(null);
+        });
     }
 
     bindButtons() {
@@ -48,11 +88,10 @@ export class Editor {
             if (confirm('هل أنت متأكد من مسح المشهد بالكامل؟')) this.engine.clearScene();
         };
         
-        // تفعيل/تعطيل الـ Snap باستخدام الخاصية المدمجة في Three.js
         document.getElementById('prop-snap').addEventListener('change', (e) => {
             if (e.target.checked) {
-                this.gizmo.translationSnap = 0.5; // محاذاة كل نصف متر
-                this.gizmo.rotationSnap = Math.PI / 12; // محاذاة كل 15 درجة
+                this.gizmo.translationSnap = 0.5;
+                this.gizmo.rotationSnap = Math.PI / 12;
             } else {
                 this.gizmo.translationSnap = null;
                 this.gizmo.rotationSnap = null;

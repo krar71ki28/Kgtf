@@ -17,7 +17,6 @@ export class Player {
         this.cameraPitch = 0.4; 
         this.lastTouch = { x: 0, y: 0 };
 
-        // تصغير صندوق اللاعب قليلاً عشان يكون عادل
         this.playerBoxSize = new THREE.Vector3(0.6, 1.5, 0.6);
 
         this.setupControls();
@@ -154,7 +153,6 @@ export class Player {
             this.playerModel.rotation.y += diff * 10 * dt;
         }
 
-        // --- تطبيق حركة الاصطدام ---
         const deltaX = this.currentVelocity.x * dt;
         const deltaZ = this.currentVelocity.z * dt;
 
@@ -162,26 +160,17 @@ export class Player {
             const nextPos = this.playerModel.position.clone().add(new THREE.Vector3(deltaX, 0, 0));
             const centerPos = nextPos.clone().add(new THREE.Vector3(0, this.playerBoxSize.y / 2, 0));
             const playerBox = new THREE.Box3().setFromCenterAndSize(centerPos, this.playerBoxSize);
-            
-            if (!this.engine.checkCollision(playerBox, this.playerModel)) {
-                this.playerModel.position.x += deltaX;
-            } else {
-                this.currentVelocity.x = 0;
-            }
+            if (!this.engine.checkCollision(playerBox, this.playerModel)) this.playerModel.position.x += deltaX;
+            else this.currentVelocity.x = 0;
         }
 
         if (Math.abs(deltaZ) > 0.001) {
             const nextPos = this.playerModel.position.clone().add(new THREE.Vector3(0, 0, deltaZ));
             const centerPos = nextPos.clone().add(new THREE.Vector3(0, this.playerBoxSize.y / 2, 0));
             const playerBox = new THREE.Box3().setFromCenterAndSize(centerPos, this.playerBoxSize);
-            
-            if (!this.engine.checkCollision(playerBox, this.playerModel)) {
-                this.playerModel.position.z += deltaZ;
-            } else {
-                this.currentVelocity.z = 0;
-            }
+            if (!this.engine.checkCollision(playerBox, this.playerModel)) this.playerModel.position.z += deltaZ;
+            else this.currentVelocity.z = 0;
         }
-        // -------------------------
 
         const isMoving = this.currentVelocity.lengthSq() > 1;
         const actions = this.playerModel.userData.actions;
@@ -193,11 +182,39 @@ export class Player {
             }
         }
 
-        if (!this.isGrounded) {
-            this.velocityY -= 25 * dt;
-            this.playerModel.position.y += this.velocityY * dt;
-            if (this.playerModel.position.y <= 0) { this.playerModel.position.y = 0; this.velocityY = 0; this.isGrounded = true; }
+        // --- فيزياء الهبوط فوق المجسمات (كود Argon) ---
+        this.velocityY -= 24 * dt;
+        const prevY = this.playerModel.position.y;
+        let nextY = prevY + this.velocityY * dt;
+        let supportY = 0;
+        let hitJumpPad = false;
+
+        // نجمع كل المجسمات اللي ممكن نقف فوقها (نستثني الشخصية والضوء)
+        const colliders = this.engine.objects.filter(o => o !== this.playerModel && o.userData.type !== 'character' && o.userData.type !== 'light');
+
+        for (const obj of colliders) {
+            const box = new THREE.Box3().setFromObject(obj);
+            const inXZ = 
+                this.playerModel.position.x + 0.25 > box.min.x &&
+                this.playerModel.position.x - 0.25 < box.max.x &&
+                this.playerModel.position.z + 0.25 > box.min.z &&
+                this.playerModel.position.z - 0.25 < box.max.z;
+
+            if (inXZ && prevY >= box.max.y - 0.22 && nextY <= box.max.y) {
+                supportY = Math.max(supportY, box.max.y);
+                if (obj.userData.type === 'jumppad') hitJumpPad = true;
+            }
         }
+
+        if (nextY <= supportY) {
+            nextY = supportY;
+            this.velocityY = hitJumpPad ? 15.5 : 0;
+            this.isGrounded = !hitJumpPad;
+        } else {
+            this.isGrounded = false;
+        }
+        this.playerModel.position.y = nextY;
+        // ---------------------------------------------
 
         this.updateCamera(dt);
     }
