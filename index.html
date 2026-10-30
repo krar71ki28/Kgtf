@@ -7,7 +7,6 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- الشريط العلوي (Toolbar) -->
     <div id="header">
         <div class="logo">KGTF ENGINE</div>
         <div class="toolbar-actions">
@@ -20,7 +19,6 @@
     </div>
 
     <div id="workspace">
-        <!-- اللوحة اليسرى (Modes + Content) -->
         <div id="left-panel">
             <div class="panel-title">ADD OBJECT</div>
             <div class="object-buttons">
@@ -37,25 +35,19 @@
             </div>
         </div>
 
-        <!-- المنطقة الوسطى (Viewport) -->
         <div id="viewport-container">
             <canvas id="viewport"></canvas>
-            
-            <!-- شريط أدوات عائم فوق الـ Viewport -->
             <div id="viewport-toolbar">
-                <button class="fab-btn" id="btn-gizmo-translate" style="background:#00e5ff; padding: 8px 12px;" title="تحريك">✥</button>
-                <button class="fab-btn" id="btn-gizmo-rotate" style="background:#ffaa00; padding: 8px 12px;" title="تدوير">↻</button>
-                <button class="fab-btn" id="btn-gizmo-scale" style="background:#4ade80; padding: 8px 12px;" title="تكبير">⤢</button>
+                <button class="fab-btn" id="btn-gizmo-translate" style="background:#00e5ff; padding: 8px 12px;">✥</button>
+                <button class="fab-btn" id="btn-gizmo-rotate" style="background:#ffaa00; padding: 8px 12px;">↻</button>
+                <button class="fab-btn" id="btn-gizmo-scale" style="background:#4ade80; padding: 8px 12px;">⤢</button>
             </div>
-
             <button id="exit-play">✕ خروج</button>
             <div id="status-bar">FPS: <span id="fps">--</span></div>
-            
             <div id="joystick-zone"><div id="joystick-base"><div id="joystick-knob"></div></div></div>
             <button id="btn-jump">⬆️ قفز</button>
         </div>
 
-        <!-- اللوحة اليمنى (Outliner + Details) -->
         <div id="right-panel">
             <div class="panel-section">
                 <div class="panel-title">OUTLINER</div>
@@ -75,18 +67,16 @@
                     <button class="btn" id="btn-delete" style="flex:1; background:#3a1a1a; color:#ff5577; padding:10px;">🗑️ حذف</button>
                 </div>
                 
-                <!-- قسم السلوكيات (Behaviors) -->
-                <div class="panel-title" style="color:#ff5577; margin-top:15px;">BEHAVIORS</div>
-                <div class="prop-row" style="display: flex; gap: 5px;">
+                <div class="panel-title" style="color:#60a5fa; margin-top:15px;">BEHAVIORS</div>
+                <div class="prop-row" style="display: flex; gap: 5px; margin-bottom: 10px;">
                     <select id="add-behavior-select" style="flex: 1;">
-                        <option value="">-- اختر سلوك --</option>
-                        <option value="rotate">دوران مستمر</option>
-                        <option value="float">طيران/تذبذب</option>
-                        <option value="follow">مطاردة اللاعب</option>
+                        <!-- سيتم تعبئتها ديناميكياً من JS -->
                     </select>
-                    <button class="btn" id="btn-add-behavior" style="background:#ff5577; color:#fff;">إضافة</button>
+                    <button class="btn" id="btn-add-behavior" style="background:#60a5fa; color:#fff;">إضافة</button>
                 </div>
-                <div id="active-behaviors-list" style="font-size: 11px; color: #ccc; margin-bottom: 10px;"></div>
+                
+                <!-- حاوية بطاقات السلوكيات -->
+                <div id="active-behaviors-list" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;"></div>
 
                 <div class="panel-title" style="color:#888;">TRANSFORM</div>
                 <div class="prop-row"><label>المادة</label><select id="prop-material"><option value="default">عادي</option><option value="wood">خشب</option><option value="metal">معدن</option><option value="gold">ذهب</option><option value="glass">زجاج</option><option value="rubber">مطاط</option><option value="marble">رخام</option><option value="emissive">مضيء</option></select></div>
@@ -104,7 +94,6 @@
         </div>
     </div>
 
-    <!-- الشريط السفلي (Content Browser / AI Chat) -->
     <div id="bottom-panel">
         <div id="ai-chat">
             <div class="ai-header"><span>KGTF AI</span><span id="close-ai" style="cursor:pointer;">✕</span></div>
@@ -120,6 +109,6 @@
     <script type="importmap">
     { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
-    <script type="module" src="src/main.js?v=34"></script>
+    <script type="module" src="src/main.js?v=35"></script>
 </body>
 </html>

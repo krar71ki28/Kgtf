@@ -14,26 +14,34 @@ export const MATERIALS = {
     emissive: { color: 0x00e5ff, emissive: 0x00e5ff, emissiveIntensity: 1.0 }
 };
 
-// تعريف السلوكيات
+// تعريف السلوكيات مع الإعدادات الافتراضية
 export const BEHAVIORS = {
     rotate: {
         name: 'دوران مستمر',
-        update: (obj, dt) => { obj.rotation.y += 1.5 * dt; }
+        defaultParams: { speed: 1.5 },
+        update: (obj, params, state, dt, time, engine) => { 
+            obj.rotation.y += params.speed * dt; 
+        }
     },
     float: {
         name: 'طيران/تذبذب',
-        update: (obj, dt, time) => { obj.position.y = (obj.userData.baseY || obj.position.y) + Math.sin(time * 2) * 0.5; }
+        defaultParams: { amplitude: 0.5, speed: 2 },
+        update: (obj, params, state, dt, time, engine) => {
+            if (state.baseY === undefined) state.baseY = obj.position.y;
+            obj.position.y = state.baseY + Math.sin(time * params.speed) * params.amplitude;
+        }
     },
     follow: {
         name: 'مطاردة اللاعب',
-        update: (obj, dt, time, engine) => {
+        defaultParams: { speed: 2, stopDistance: 1.5 },
+        update: (obj, params, state, dt, time, engine) => {
             const player = engine.objects.find(o => o.userData.type === 'character');
             if (!player) return;
             const dir = new THREE.Vector3().subVectors(player.position, obj.position);
             dir.y = 0;
-            if (dir.length() > 1.5) {
+            if (dir.length() > params.stopDistance) {
                 dir.normalize();
-                obj.position.add(dir.multiplyScalar(2 * dt));
+                obj.position.add(dir.multiplyScalar(params.speed * dt));
             }
         }
     }
@@ -43,7 +51,6 @@ export class Engine {
     constructor(canvas) {
         this.canvas = canvas;
         this.scene = new THREE.Scene();
-        
         this.scene.background = new THREE.Color(0x87CEEB);
         this.scene.fog = new THREE.Fog(0x87CEEB, 30, 120);
 
@@ -52,7 +59,6 @@ export class Engine {
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 1.0;
         
         const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
         const envMap = pmremGenerator.fromScene(new RoomEnvironment()).texture;
@@ -73,11 +79,8 @@ export class Engine {
         this.sun.castShadow = true;
         this.sun.shadow.mapSize.width = 2048;
         this.sun.shadow.mapSize.height = 2048;
-        this.sun.shadow.camera.near = 0.5;
-        this.sun.shadow.camera.far = 150;
         this.sun.shadow.camera.left = -40; this.sun.shadow.camera.right = 40;
         this.sun.shadow.camera.top = 40; this.sun.shadow.camera.bottom = -40;
-        this.sun.shadow.bias = -0.0005;
         this.scene.add(this.sun);
         this.scene.add(this.sun.target);
 
@@ -108,10 +111,7 @@ export class Engine {
         this.stars = new THREE.Points(starsGeo, starsMat);
         this.scene.add(this.stars);
 
-        this.moon = new THREE.Mesh(
-            new THREE.SphereGeometry(3, 16, 16),
-            new THREE.MeshBasicMaterial({ color: 0xdddddd })
-        );
+        this.moon = new THREE.Mesh(new THREE.SphereGeometry(3, 16, 16), new THREE.MeshBasicMaterial({ color: 0xdddddd }));
         this.scene.add(this.moon);
 
         this.objects = [];
@@ -120,7 +120,7 @@ export class Engine {
         this.onSelect = null;
         this.onSceneChange = null;
         this.sceneVersion = 0;
-        this.totalTime = 0; // لاستخدامه في السلوكيات
+        this.totalTime = 0;
 
         this.loadScene();
         this.resize();
@@ -165,7 +165,7 @@ export class Engine {
         }
         
         if (!obj.userData || Object.keys(obj.userData).length === 0) {
-            obj.userData = { id: 'obj_' + (this.idCounter++), type: type, material: 'default', physics: { enabled: false, vy: 0, bounce: 0.5 }, behaviors: [] };
+            obj.userData = { id: 'obj_' + (this.idCounter++), type: type, material: 'default', physics: { enabled: false, vy: 0, bounce: 0.5 }, behaviors: {}, behaviorStates: {} };
         }
         
         if (opts.position) obj.position.fromArray(opts.position);
@@ -173,7 +173,6 @@ export class Engine {
         if (opts.scale) obj.scale.fromArray(opts.scale);
         if (opts.behaviors) obj.userData.behaviors = opts.behaviors;
         
-        // حفظ الارتفاع الأساسي لسلوك الطيران
         obj.userData.baseY = obj.position.y;
 
         if (opts.material && obj.isMesh) { obj.material.dispose(); obj.material = this.makeMaterial(opts.material, opts.color); obj.userData.material = opts.material; }
@@ -210,7 +209,7 @@ export class Engine {
             material: obj.userData.material,
             color: obj.isMesh ? obj.material.color.getHex() : (obj.isLight ? obj.color.getHex() : null),
             physics: { ...obj.userData.physics },
-            behaviors: [...(obj.userData.behaviors || [])]
+            behaviors: JSON.parse(JSON.stringify(obj.userData.behaviors)) // Deep copy
         };
         if (obj.isLight) opts.intensity = obj.intensity;
         return this.addObject(obj.userData.type, opts);
@@ -275,7 +274,7 @@ export class Engine {
             gltf.animations.forEach(clip => { actions[clip.name] = mixer.clipAction(clip); });
             if (actions['Idle']) actions['Idle'].play();
             
-            model.userData = { id: 'char_' + (this.idCounter++), type: 'character', mixer, actions, currentAction: 'Idle', material: 'n/a', physics: { enabled: false, vy: 0, bounce: 0 }, behaviors: [] };
+            model.userData = { id: 'char_' + (this.idCounter++), type: 'character', mixer, actions, currentAction: 'Idle', material: 'n/a', physics: { enabled: false, vy: 0, bounce: 0 }, behaviors: {}, behaviorStates: {} };
             this.scene.add(model);
             this.objects.push(model);
             if (!opts.isLoading) {
@@ -341,15 +340,14 @@ export class Engine {
             const data = JSON.parse(saved);
             data.forEach(d => { 
                 if (d.type === 'character') this.loadCharacter({ position: d.position, rotation: d.rotation, isLoading: true });
-                else this.addObject(d.type, d); 
+                else this.addObject(d.type, d);
             });
         } catch(e) { this.addObject('cube'); }
     }
 
     update(dt) {
-        this.totalTime = (this.totalTime || 0) + dt;
+        this.totalTime += dt;
 
-        // 1. تحديث دورة الليل والنهار
         this.timeOfDay = (this.timeOfDay + dt * this.daySpeed) % 1;
         const angle = this.timeOfDay * Math.PI * 2;
         this.sun.position.x = Math.cos(angle) * 50;
@@ -383,12 +381,10 @@ export class Engine {
         this.moon.position.z = Math.sin(angle + Math.PI) * 20;
         this.stars.rotation.y += 0.01 * dt;
 
-        // 2. تحديث الفيزياء والسلوكيات (Scripts)
         const box = new THREE.Box3(), size = new THREE.Vector3();
         this.objects.forEach(o => {
             if (o.userData.mixer) o.userData.mixer.update(dt);
             
-            // الفيزياء
             const p = o.userData.physics;
             if (p && p.enabled && (o.isMesh || o.isGroup)) {
                 p.vy -= 9.8 * dt; o.position.y += p.vy * dt;
@@ -400,13 +396,13 @@ export class Engine {
                 }
             }
 
-            // تشغيل السلوكيات المضافة للمجسم
+            // تشغيل السلوكيات مع تمرير الإعدادات
             if (o.userData.behaviors) {
-                o.userData.behaviors.forEach(bName => {
-                    if (BEHAVIORS[bName]) {
-                        BEHAVIORS[bName].update(o, dt, this.totalTime, this);
+                for (const bName in o.userData.behaviors) {
+                    if (BEHAVIORS[bName] && BEHAVIORS[bName].update) {
+                        BEHAVIORS[bName].update(o, o.userData.behaviors[bName], o.userData.behaviorStates, dt, this.totalTime, this);
                     }
-                });
+                }
             }
         });
         

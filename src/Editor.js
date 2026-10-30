@@ -23,12 +23,24 @@ export class Editor {
         this.bindButtons();
         this.bindInspector();
         this.setupRaycaster();
+        this.populateBehaviorSelect();
         
         engine.onSelect = (obj) => this.updateInspector(obj);
         engine.onSceneChange = () => this.updateList();
         
         this.updateList();
         if (this.engine.selected) this.updateInspector(this.engine.selected);
+    }
+
+    populateBehaviorSelect() {
+        const select = document.getElementById('add-behavior-select');
+        select.innerHTML = '<option value="">-- اختر سلوك --</option>';
+        for (const key in BEHAVIORS) {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = BEHAVIORS[key].name;
+            select.appendChild(option);
+        }
     }
 
     setupRaycaster() {
@@ -103,17 +115,19 @@ export class Editor {
             }
         });
 
-        // زر إضافة سلوك
         document.getElementById('btn-add-behavior').onclick = () => {
             if (!this.engine.selected) return;
             const select = document.getElementById('add-behavior-select');
             const bName = select.value;
             if (!bName) return;
 
-            if (!this.engine.selected.userData.behaviors) this.engine.selected.userData.behaviors = [];
-            if (!this.engine.selected.userData.behaviors.includes(bName)) {
-                this.engine.selected.userData.behaviors.push(bName);
-                this.updateActiveBehaviorsList();
+            if (!this.engine.selected.userData.behaviors) this.engine.selected.userData.behaviors = {};
+            if (!this.engine.selected.userData.behaviorStates) this.engine.selected.userData.behaviorStates = {};
+            
+            // نضيف السلوك مع نسخ الإعدادات الافتراضية
+            if (!this.engine.selected.userData.behaviors[bName]) {
+                this.engine.selected.userData.behaviors[bName] = { ...BEHAVIORS[bName].defaultParams };
+                this.renderBehaviorsUI();
             }
             select.value = '';
         };
@@ -157,38 +171,93 @@ export class Editor {
         else if (obj.isLight) document.getElementById('prop-color').value = '#' + obj.color.getHexString();
     }
 
-    updateActiveBehaviorsList() {
-        const list = document.getElementById('active-behaviors-list');
-        list.innerHTML = '';
-        const behaviors = this.engine.selected.userData.behaviors || [];
-        
-        if (behaviors.length === 0) {
-            list.innerHTML = '<span style="color:#666;">لا توجد سلوكيات مضافة</span>';
-            return;
-        }
+    renderBehaviorsUI() {
+        const container = document.getElementById('active-behaviors-list');
+        container.innerHTML = '';
+        if (!this.engine.selected) return;
 
-        behaviors.forEach((b, index) => {
-            const div = document.createElement('div');
-            div.style.display = 'flex';
-            div.style.justifyContent = 'space-between';
-            div.style.background = '#2a2a3a';
-            div.style.padding = '4px';
-            div.style.borderRadius = '4px';
-            div.style.marginBottom = '4px';
+        const behaviors = this.engine.selected.userData.behaviors || {};
+
+        for (const bName in behaviors) {
+            const behaviorDef = BEHAVIORS[bName];
+            if (!behaviorDef) continue;
             
-            div.innerHTML = `<span>⚙️ ${BEHAVIORS[b]?.name || b}</span>`;
-            
-            const delBtn = document.createElement('span');
-            delBtn.innerText = '✕';
-            delBtn.style.color = '#ff5577';
-            delBtn.style.cursor = 'pointer';
-            delBtn.onclick = () => {
-                behaviors.splice(index, 1);
-                this.updateActiveBehaviorsList();
-            };
-            div.appendChild(delBtn);
-            list.appendChild(div);
-        });
+            const currentParams = behaviors[bName];
+
+            const card = document.createElement('div');
+            card.style.background = '#25252b';
+            card.style.padding = '10px';
+            card.style.borderRadius = '6px';
+            card.style.border = '1px solid #3c3c45';
+
+            const header = document.createElement('div');
+            header.style.display = 'flex';
+            header.style.justifyContent = 'space-between';
+            header.style.alignItems = 'center';
+            header.style.marginBottom = '8px';
+
+            const title = document.createElement('span');
+            title.style.fontWeight = 'bold';
+            title.style.color = '#60a5fa';
+            title.textContent = behaviorDef.name;
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = '✕';
+            deleteBtn.style.background = 'transparent';
+            deleteBtn.style.border = 'none';
+            deleteBtn.style.color = '#ef4444';
+            deleteBtn.style.cursor = 'pointer';
+            deleteBtn.style.fontSize = '14px';
+            deleteBtn.addEventListener('click', () => {
+                delete this.engine.selected.userData.behaviors[bName];
+                if (this.engine.selected.userData.behaviorStates) {
+                    delete this.engine.selected.userData.behaviorStates[bName];
+                }
+                this.renderBehaviorsUI();
+            });
+
+            header.appendChild(title);
+            header.appendChild(deleteBtn);
+            card.appendChild(header);
+
+            for (const paramKey in behaviorDef.defaultParams) {
+                const row = document.createElement('div');
+                row.style.display = 'flex';
+                row.style.justifyContent = 'space-between';
+                row.style.alignItems = 'center';
+                row.style.marginTop = '6px';
+
+                const paramLabel = document.createElement('label');
+                paramLabel.style.fontSize = '12px';
+                paramLabel.style.color = '#bbb';
+                paramLabel.textContent = paramKey + ':';
+
+                const input = document.createElement('input');
+                input.type = typeof behaviorDef.defaultParams[paramKey] === 'number' ? 'number' : 'text';
+                input.value = currentParams[paramKey] !== undefined ? currentParams[paramKey] : behaviorDef.defaultParams[paramKey];
+                input.style.width = '90px';
+                input.style.padding = '3px 6px';
+                input.style.background = '#18181b';
+                input.style.border = '1px solid #444';
+                input.style.borderRadius = '3px';
+                input.style.color = '#fff';
+                input.style.fontSize = '12px';
+
+                input.addEventListener('input', (e) => {
+                    const val = input.type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value;
+                    currentParams[paramKey] = val;
+                    // إعادة ضبط الحالة الداخلية عشان تتحدث القيم
+                    if (this.engine.selected.userData.behaviorStates) {
+                        delete this.engine.selected.userData.behaviorStates[bName];
+                    }
+                });
+
+                row.appendChild(paramLabel);
+                row.appendChild(input);
+                card.appendChild(row);
+            }
+            container.appendChild(card);
+        }
     }
 
     updateInspector(obj) {
@@ -200,7 +269,7 @@ export class Editor {
         this.inspector.style.display = 'block';
         this.gizmo.attach(obj);
         this.updateUIValues();
-        this.updateActiveBehaviorsList();
+        this.renderBehaviorsUI();
         
         if (obj.userData.physics) {
             document.getElementById('prop-physics').checked = obj.userData.physics.enabled;
