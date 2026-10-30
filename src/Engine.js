@@ -37,7 +37,7 @@ export class Engine {
         this.scene.fog = new THREE.Fog(0x87CEEB, 30, 120);
 
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // تحسين الأداء
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -45,9 +45,10 @@ export class Engine {
         this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
         this.camera.position.set(8, 6, 10);
 
+        // Post-Processing
         this.composer = new EffectComposer(this.renderer);
         this.composer.addPass(new RenderPass(this.scene, this.camera));
-        this.bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0, 0.4, 0.8);
+        this.bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0, 0.4, 0.8); // مطفي افتراضياً
         this.composer.addPass(this.bloomPass);
         this.vignettePass = new ShaderPass(VignetteShader);
         this.vignettePass.uniforms["offset"].value = 1.0;
@@ -90,8 +91,27 @@ export class Engine {
         grid.material.transparent = true;
         this.scene.add(grid);
 
-        this.timeOfDay = 0.25; 
-        this.daySpeed = 0.02; 
+        // إعدادات الوقت
+        this.timeOfDay = 6 / 24; // 6 صباحاً
+        this.autoTime = true;
+        this.daySpeed = 0.01;
+        this.isManualSun = false;
+
+        // إعدادات المطر
+        this.isRaining = false;
+        const rainGeo = new THREE.BufferGeometry();
+        const rainCount = 3000;
+        const rainPos = new Float32Array(rainCount * 3);
+        for(let i=0; i<rainCount*3; i+=3) {
+            rainPos[i] = (Math.random() - 0.5) * 100;
+            rainPos[i+1] = Math.random() * 40;
+            rainPos[i+2] = (Math.random() - 0.5) * 100;
+        }
+        rainGeo.setAttribute("position", new THREE.BufferAttribute(rainPos, 3));
+        const rainMat = new THREE.PointsMaterial({ color: 0xaaccff, size: 0.15, transparent: true, opacity: 0.6 });
+        this.rain = new THREE.Points(rainGeo, rainMat);
+        this.rain.visible = false;
+        this.scene.add(this.rain);
 
         const starsGeo = new THREE.BufferGeometry();
         const starsCount = 3000;
@@ -199,15 +219,21 @@ export class Engine {
         const box = new THREE.Box3().setFromObject(obj);
         const size = box.getSize(new THREE.Vector3()).length();
         const center = box.getCenter(new THREE.Vector3());
-        
         this.controls.target.copy(center);
-        
         const direction = new THREE.Vector3().subVectors(this.camera.position, center).normalize();
         const distance = size * 2.5; 
-        
         this.camera.position.copy(center).add(direction.multiplyScalar(distance));
         this.camera.updateProjectionMatrix();
         this.controls.update();
+    }
+
+    setTimeOfDay(hours) {
+        this.timeOfDay = hours / 24;
+    }
+
+    toggleRain(isRaining) {
+        this.isRaining = isRaining;
+        if (this.rain) this.rain.visible = isRaining;
     }
 
     createParticleSystem(type, position) {
@@ -221,13 +247,7 @@ export class Engine {
             positions[i * 3] = (Math.random() - 0.5) * 0.5;
             positions[i * 3 + 1] = Math.random() * 0.5;
             positions[i * 3 + 2] = (Math.random() - 0.5) * 0.5;
-            
-            velocities.push({
-                x: (Math.random() - 0.5) * 0.5,
-                y: Math.random() * 1.5 + 0.5,
-                z: (Math.random() - 0.5) * 0.5
-            });
-
+            velocities.push({ x: (Math.random() - 0.5) * 0.5, y: Math.random() * 1.5 + 0.5, z: (Math.random() - 0.5) * 0.5 });
             if (type === 'fire') { colors[i*3] = 1.0; colors[i*3+1] = Math.random() * 0.5 + 0.2; colors[i*3+2] = 0; }
             else if (type === 'sparks') { colors[i*3] = 1.0; colors[i*3+1] = 1.0; colors[i*3+2] = 0; }
             else { colors[i*3] = 0.5; colors[i*3+1] = 0.5; colors[i*3+2] = 0.5; }
@@ -237,25 +257,13 @@ export class Engine {
         geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
         const material = new THREE.PointsMaterial({
-            size: type === 'smoke' ? 0.5 : 0.2,
-            vertexColors: true,
-            transparent: true,
-            opacity: 0.8,
-            blending: type === 'fire' || type === 'sparks' ? THREE.AdditiveBlending : THREE.NormalBlending,
-            depthWrite: false
+            size: type === 'smoke' ? 0.5 : 0.2, vertexColors: true, transparent: true, opacity: 0.8,
+            blending: type === 'fire' || type === 'sparks' ? THREE.AdditiveBlending : THREE.NormalBlending, depthWrite: false
         });
 
         const points = new THREE.Points(geometry, material);
         points.position.copy(position);
-        points.userData = { 
-            id: 'vfx_' + (this.idCounter++), 
-            type: 'vfx', 
-            vfxType: type, 
-            velocities, 
-            count, 
-            life: 0,
-            physics: { enabled: false }
-        };
+        points.userData = { id: 'vfx_' + (this.idCounter++), type: 'vfx', vfxType: type, velocities, count, life: 0, physics: { enabled: false } };
 
         this.scene.add(points);
         this.objects.push(points);
@@ -267,28 +275,15 @@ export class Engine {
     createAudioEmitter(position) {
         const listener = new THREE.AudioListener();
         this.camera.add(listener);
-        
         const sound = new THREE.PositionalAudio(listener);
         const audioLoader = new THREE.AudioLoader();
         audioLoader.load('https://actions.google.com/sounds/v1/alarms/beep_short.ogg', (buffer) => {
-            sound.setBuffer(buffer);
-            sound.setRefDistance(5);
-            sound.setLoop(true);
-            sound.play();
+            sound.setBuffer(buffer); sound.setRefDistance(5); sound.setLoop(true); sound.play();
         });
-
-        const geometry = new THREE.SphereGeometry(0.3, 16, 16);
-        const material = new THREE.MeshBasicMaterial({ color: 0xff5577, wireframe: true });
-        const mesh = new THREE.Mesh(geometry, material);
+        const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), new THREE.MeshBasicMaterial({ color: 0xff5577, wireframe: true }));
         mesh.position.copy(position);
         mesh.add(sound);
-        
-        mesh.userData = { 
-            id: 'audio_' + (this.idCounter++), 
-            type: 'audio', 
-            physics: { enabled: false } 
-        };
-
+        mesh.userData = { id: 'audio_' + (this.idCounter++), type: 'audio', physics: { enabled: false } };
         this.scene.add(mesh);
         this.objects.push(mesh);
         this.selectObject(mesh);
@@ -299,15 +294,9 @@ export class Engine {
     saveAsAsset(obj) {
         if (!obj) return;
         const assetData = {
-            id: 'asset_' + Date.now(),
-            name: obj.userData.type + '_' + (this.assets.length + 1),
-            type: obj.userData.type,
-            material: obj.userData.material,
-            color: obj.isMesh ? obj.material.color.getHex() : (obj.isLight ? obj.color.getHex() : 0xffffff),
-            intensity: obj.isLight ? obj.intensity : undefined,
-            scale: obj.scale.toArray(),
-            physics: obj.userData.physics,
-            behaviors: JSON.parse(JSON.stringify(obj.userData.behaviors || {}))
+            id: 'asset_' + Date.now(), name: obj.userData.type + '_' + (this.assets.length + 1), type: obj.userData.type,
+            material: obj.userData.material, color: obj.isMesh ? obj.material.color.getHex() : (obj.isLight ? obj.color.getHex() : 0xffffff),
+            intensity: obj.isLight ? obj.intensity : undefined, scale: obj.scale.toArray(), physics: obj.userData.physics, behaviors: JSON.parse(JSON.stringify(obj.userData.behaviors || {}))
         };
         this.assets.push(assetData);
         localStorage.setItem('kgtf_assets', JSON.stringify(this.assets));
@@ -317,15 +306,7 @@ export class Engine {
     spawnAsset(assetId) {
         const asset = this.assets.find(a => a.id === assetId);
         if (!asset) return;
-        this.addObject(asset.type, {
-            position: [0, 1, 0],
-            material: asset.material,
-            color: asset.color,
-            intensity: asset.intensity,
-            scale: asset.scale,
-            physics: asset.physics,
-            behaviors: asset.behaviors
-        });
+        this.addObject(asset.type, { position: [0, 1, 0], material: asset.material, color: asset.color, intensity: asset.intensity, scale: asset.scale, physics: asset.physics, behaviors: asset.behaviors });
     }
 
     removeAsset(assetId) {
@@ -345,9 +326,7 @@ export class Engine {
     }
 
     createProjectile(pos, dir, speed) {
-        const geo = new THREE.SphereGeometry(0.2, 8, 8);
-        const mat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-        const mesh = new THREE.Mesh(geo, mat);
+        const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
         mesh.position.copy(pos);
         this.scene.add(mesh);
         this.projectiles.push({ mesh, direction: dir, speed: speed, life: 3.0 });
@@ -367,13 +346,9 @@ export class Engine {
         if (!this.selected || this.selected.userData.type === 'character') return;
         const obj = this.selected;
         const opts = {
-            position: [obj.position.x + 1.5, obj.position.y, obj.position.z],
-            rotation: [obj.rotation.x, obj.rotation.y, obj.rotation.z],
-            scale: [obj.scale.x, obj.scale.y, obj.scale.z],
-            material: obj.userData.material,
-            color: obj.isMesh ? obj.material.color.getHex() : (obj.isLight ? obj.color.getHex() : null),
-            physics: { ...obj.userData.physics },
-            behaviors: JSON.parse(JSON.stringify(obj.userData.behaviors))
+            position: [obj.position.x + 1.5, obj.position.y, obj.position.z], rotation: [obj.rotation.x, obj.rotation.y, obj.rotation.z], scale: [obj.scale.x, obj.scale.y, obj.scale.z],
+            material: obj.userData.material, color: obj.isMesh ? obj.material.color.getHex() : (obj.isLight ? obj.color.getHex() : null),
+            physics: { ...obj.userData.physics }, behaviors: JSON.parse(JSON.stringify(obj.userData.behaviors))
         };
         if (obj.isLight) opts.intensity = obj.intensity;
         return this.addObject(obj.userData.type, opts);
@@ -393,19 +368,8 @@ export class Engine {
         this.sceneVersion++;
         this.objects.forEach(obj => {
             this.scene.remove(obj);
-            if (obj.traverse) {
-                obj.traverse(child => {
-                    if (child.isMesh) {
-                        if (child.geometry) child.geometry.dispose();
-                        if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
-                        else if (child.material) child.material.dispose();
-                    }
-                });
-            } else {
-                if (obj.geometry) obj.geometry.dispose();
-                if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
-                else if (obj.material) obj.material.dispose();
-            }
+            if (obj.traverse) { obj.traverse(child => { if (child.isMesh) { if (child.geometry) child.geometry.dispose(); if (Array.isArray(child.material)) child.material.forEach(m => m.dispose()); else if (child.material) child.material.dispose(); } }); } 
+            else { if (obj.geometry) obj.geometry.dispose(); if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose()); else if (obj.material) obj.material.dispose(); }
         });
         this.objects = [];
         this.projectiles.forEach(p => this.scene.remove(p.mesh));
@@ -422,17 +386,14 @@ export class Engine {
         loader.load('https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb', (gltf) => {
             if (this.sceneVersion !== currentVersion) return;
             const model = gltf.scene;
-            model.position.y = 0; 
-            model.scale.set(0.7, 0.7, 0.7);
+            model.position.y = 0; model.scale.set(0.7, 0.7, 0.7);
             if (opts.position) model.position.fromArray(opts.position);
             if (opts.rotation) model.rotation.set(opts.rotation[0] || 0, opts.rotation[1] || 0, opts.rotation[2] || 0);
-            
             model.traverse(o => { if(o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
             const mixer = new THREE.AnimationMixer(model);
             const actions = {};
             gltf.animations.forEach(clip => { actions[clip.name] = mixer.clipAction(clip); });
             if (actions['Idle']) actions['Idle'].play();
-            
             model.userData = { id: 'char_' + (this.idCounter++), type: 'character', mixer, actions, currentAction: 'Idle', material: 'n/a', physics: { enabled: false, vy: 0, bounce: 0 }, behaviors: {}, behaviorStates: {} };
             this.scene.add(model);
             this.objects.push(model);
@@ -445,10 +406,8 @@ export class Engine {
 
     saveScene() {
         const data = this.objects.map(o => ({
-            type: o.userData.type, material: o.userData.material,
-            color: o.isMesh ? o.material.color.getHex() : (o.isLight ? o.color.getHex() : 0xffffff),
-            intensity: o.isLight ? o.intensity : undefined,
-            position: o.position.toArray(), rotation: [o.rotation.x, o.rotation.y, o.rotation.z], scale: o.scale.toArray(), physics: o.userData.physics, behaviors: o.userData.behaviors
+            type: o.userData.type, material: o.userData.material, color: o.isMesh ? o.material.color.getHex() : (o.isLight ? o.color.getHex() : 0xffffff),
+            intensity: o.isLight ? o.intensity : undefined, position: o.position.toArray(), rotation: [o.rotation.x, o.rotation.y, o.rotation.z], scale: o.scale.toArray(), physics: o.userData.physics, behaviors: o.userData.behaviors
         }));
         localStorage.setItem('kgtf_scene_final', JSON.stringify(data));
         alert('تم حفظ المشهد بنجاح!');
@@ -456,18 +415,13 @@ export class Engine {
 
     exportScene() {
         const data = this.objects.map(o => ({
-            type: o.userData.type, material: o.userData.material,
-            color: o.isMesh ? o.material.color.getHex() : (o.isLight ? o.color.getHex() : 0xffffff),
-            intensity: o.isLight ? o.intensity : undefined,
-            position: o.position.toArray(), rotation: [o.rotation.x, o.rotation.y, o.rotation.z], scale: o.scale.toArray(), physics: o.userData.physics, behaviors: o.userData.behaviors
+            type: o.userData.type, material: o.userData.material, color: o.isMesh ? o.material.color.getHex() : (o.isLight ? o.color.getHex() : 0xffffff),
+            intensity: o.isLight ? o.intensity : undefined, position: o.position.toArray(), rotation: [o.rotation.x, o.rotation.y, o.rotation.z], scale: o.scale.toArray(), physics: o.userData.physics, behaviors: o.userData.behaviors
         }));
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = 'kgtf_scene.json';
-        a.click();
-        URL.revokeObjectURL(url);
+        a.href = url; a.download = 'kgtf_scene.json'; a.click(); URL.revokeObjectURL(url);
     }
 
     importScene(file) {
@@ -485,9 +439,7 @@ export class Engine {
                 this.selectObject(null);
                 if (this.onSceneChange) this.onSceneChange();
                 alert('تم استيراد المشهد بنجاح!');
-            } catch (err) {
-                alert('عذراً، هذا الملف غير صالح أو تالف.');
-            }
+            } catch (err) { alert('عذراً، هذا الملف غير صالح أو تالف.'); }
         };
         reader.readAsText(file);
     }
@@ -506,7 +458,12 @@ export class Engine {
 
     update(dt) {
         this.totalTime += dt;
-        this.timeOfDay = (this.timeOfDay + dt * this.daySpeed) % 1;
+        
+        // نظام الوقت
+        if (this.autoTime) {
+            this.timeOfDay = (this.timeOfDay + dt * this.daySpeed) % 1;
+        }
+        
         const angle = this.timeOfDay * Math.PI * 2;
         this.sun.position.x = Math.cos(angle) * 50;
         this.sun.position.y = Math.sin(angle) * 50;
@@ -521,13 +478,13 @@ export class Engine {
         if (sunHeight > 0) {
             const t = Math.min(sunHeight / 30, 1);
             currentSkyColor.lerpColors(sunsetColor, dayColor, t);
-            this.sun.intensity = t * 2.0;
+            if (!this.isManualSun) this.sun.intensity = t * 2.0;
             this.stars.material.opacity = 0;
             this.moon.visible = false;
         } else {
             const t = Math.min(Math.abs(sunHeight) / 30, 1);
             currentSkyColor.lerpColors(sunsetColor, nightColor, t);
-            this.sun.intensity = 0;
+            if (!this.isManualSun) this.sun.intensity = 0;
             this.stars.material.opacity = t;
             this.moon.visible = true;
         }
@@ -538,6 +495,16 @@ export class Engine {
         this.moon.position.y = Math.sin(angle + Math.PI) * 50;
         this.moon.position.z = Math.sin(angle + Math.PI) * 20;
         this.stars.rotation.y += 0.01 * dt;
+
+        // نظام المطر
+        if (this.isRaining && this.rain) {
+            const positions = this.rain.geometry.attributes.position.array;
+            for (let i = 1; i < positions.length; i += 3) {
+                positions[i] -= 25 * dt;
+                if (positions[i] < 0) positions[i] = 30;
+            }
+            this.rain.geometry.attributes.position.needsUpdate = true;
+        }
 
         const box = new THREE.Box3(), size = new THREE.Vector3();
         this.objects.forEach(o => {
@@ -573,11 +540,8 @@ export class Engine {
                     positions[i * 3] += o.userData.velocities[i].x * dt;
                     positions[i * 3 + 1] += o.userData.velocities[i].y * dt;
                     positions[i * 3 + 2] += o.userData.velocities[i].z * dt;
-                    
                     if (positions[i * 3 + 1] > 3) {
-                        positions[i * 3] = (Math.random() - 0.5) * 0.5;
-                        positions[i * 3 + 1] = 0;
-                        positions[i * 3 + 2] = (Math.random() - 0.5) * 0.5;
+                        positions[i * 3] = (Math.random() - 0.5) * 0.5; positions[i * 3 + 1] = 0; positions[i * 3 + 2] = (Math.random() - 0.5) * 0.5;
                     }
                 }
                 o.geometry.attributes.position.needsUpdate = true;
@@ -588,20 +552,13 @@ export class Engine {
             const p = this.projectiles[i];
             p.mesh.position.addScaledVector(p.direction, p.speed * dt);
             p.life -= dt;
-            if (p.life <= 0) {
-                this.scene.remove(p.mesh);
-                p.mesh.geometry.dispose();
-                p.mesh.material.dispose();
-                this.projectiles.splice(i, 1);
-            }
+            if (p.life <= 0) { this.scene.remove(p.mesh); p.mesh.geometry.dispose(); p.mesh.material.dispose(); this.projectiles.splice(i, 1); }
         }
         
         if (!document.body.classList.contains('play-mode')) this.controls.update();
     }
 
-    render() { 
-        this.composer.render(); 
-    }
+    render() { this.composer.render(); }
     
     resize() { 
         const c = document.getElementById('viewport-container'); 
