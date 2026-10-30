@@ -59,3 +59,13 @@ body.play-mode #exit-play { display: block; }
     .prop-row { margin-bottom: 6px; }
     .panel-section { padding: 8px; }
 }
+
+/* نقل عداد الفريمات لليمين في وضع اللعب عشان ما يتعارض مع زر الخروج */
+body.play-mode #status-bar {
+    left: auto;
+    right: 15px;
+    z-index: 30;
+    background: rgba(20,20,30,0.9);
+    border-color: #4ade80;
+    color: #4ade80;
+}
