@@ -1,5 +1,5 @@
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-body { font-family: system-ui, sans-serif; background: #0a0a0f; color: #fff; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+body { font-family: system-ui, sans-serif; background: #0a0a0f; color: #fff; height: 100vh; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
 #header { height: 50px; background: #141420; border-bottom: 1px solid #2a2a3a; display: flex; align-items: center; padding: 0 10px; gap: 10px; z-index: 10; flex-shrink: 0; }
 .logo { color: #00e5ff; font-weight: 900; letter-spacing: 1px; font-size: 14px; margin-left: auto; }
 .btn { background: #2a2a3a; color: #ccc; border: none; padding: 8px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
@@ -12,11 +12,11 @@ body { font-family: system-ui, sans-serif; background: #0a0a0f; color: #fff; hei
 .icon-btn:hover { border-color: #00e5ff; color: #00e5ff; }
 #viewport-container { flex: 1; position: relative; background: #000; overflow: hidden; display: flex; flex-direction: column; touch-action: none; }
 #viewport { width: 100%; height: 100%; display: block; flex: 1; }
-#right-panel { width: 250px; background: #141420; border-right: 1px solid #2a2a3a; display: flex; flex-direction: column; z-index: 10; overflow-y: auto; flex-shrink: 0; }
+#right-panel { width: 280px; background: #141420; border-right: 1px solid #2a2a3a; display: flex; flex-direction: column; z-index: 10; overflow-y: auto; flex-shrink: 0; }
 .panel-section { border-bottom: 1px solid #2a2a3a; padding: 10px; }
 .panel-title { font-size: 11px; color: #888; font-weight: bold; margin-bottom: 8px; letter-spacing: 1px; }
 .prop-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 5px; }
-.prop-row label { font-size: 11px; color: #aaa; width: 50px; flex-shrink: 0; }
+.prop-row label { font-size: 11px; color: #aaa; width: 60px; flex-shrink: 0; }
 .prop-row input[type="range"] { flex: 1; }
 .prop-row input[type="color"] { width: 32px; height: 32px; border: none; background: none; cursor: pointer; }
 .prop-row input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; }
@@ -32,12 +32,9 @@ body { font-family: system-ui, sans-serif; background: #0a0a0f; color: #fff; hei
 #joystick-zone { position: absolute; bottom: 30px; left: 30px; width: 120px; height: 120px; display: none; z-index: 100; touch-action: none; }
 #joystick-base { width: 100%; height: 100%; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; position: relative; }
 #joystick-knob { width: 50px; height: 50px; background: #00e5ff; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px rgba(0,229,255,0.6); }
-
-/* زر القفز */
 #btn-jump { position: absolute; bottom: 50px; right: 30px; width: 70px; height: 70px; border-radius: 50%; background: rgba(74,222,128,0.8); border: 2px solid #4ade80; color: #fff; font-weight: bold; font-size: 12px; display: none; z-index: 100; cursor: pointer; box-shadow: 0 4px 15px rgba(74,222,128,0.5); }
-
 #floating-controls { position: absolute; top: 15px; right: 15px; z-index: 50; display: flex; flex-direction: column; gap: 10px; }
-.fab-btn { background: #00e5ff; color: #000; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; font-weight: 900; cursor: pointer; box-shadow: 0 4px 15px rgba(0,229,255,0.4); display: flex; align-items: center; justify-content: center; gap: 8px; }
+.fab-btn { background: #00e5ff; color: #000; border: none; padding: 10px 15px; border-radius: 8px; font-size: 14px; font-weight: 900; cursor: pointer; box-shadow: 0 4px 15px rgba(0,229,255,0.4); display: flex; align-items: center; justify-content: center; gap: 8px; }
 .fab-btn.green { background: #4ade80; box-shadow: 0 4px 15px rgba(74,222,128,0.4); }
 body.play-mode #header, body.play-mode #left-panel, body.play-mode #right-panel, body.play-mode #ai-fab, body.play-mode #floating-controls { display: none !important; }
 body.play-mode #workspace { flex-direction: column; }
@@ -45,11 +42,39 @@ body.play-mode #joystick-zone { display: block; }
 body.play-mode #btn-jump { display: block; }
 #exit-play { position: absolute; top: 15px; left: 15px; z-index: 30; display: none; background: #ff5577; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
 body.play-mode #exit-play { display: block; }
-@media (max-width: 768px) {
+
+/* تنسيق الموبايل (تغيير جذري عشان يطلع عمودي ومرتب) */
+@media (max-width: 1024px) {
     #header { display: none; }
-    #workspace { flex-direction: column; height: 100vh; }
-    #viewport-container { order: 1; flex: 1; min-height: 45vh; }
-    #left-panel { order: 2; width: 100%; height: 65px; flex-direction: row; justify-content: flex-start; border-left: none; border-top: 1px solid #2a2a3a; border-bottom: 1px solid #2a2a3a; padding: 5px 10px; overflow-x: auto; flex-shrink: 0; }
-    .icon-btn { width: 65px; height: 55px; flex-shrink: 0; }
-    #right-panel { order: 3; width: 100%; height: 42vh; border-right: none; border-top: 1px solid #2a2a3a; flex-shrink: 0; }
+    #workspace { flex-direction: column; height: 100dvh; }
+    
+    #viewport-container { order: 1; flex: 1; min-height: 35vh; }
+    
+    #left-panel { 
+        order: 2; 
+        width: 100%; 
+        height: 60px; 
+        flex-direction: row; 
+        justify-content: flex-start; 
+        border-left: none; 
+        border-top: 1px solid #2a2a3a; 
+        border-bottom: 1px solid #2a2a3a; 
+        padding: 5px; 
+        overflow-x: auto; 
+        flex-shrink: 0; 
+    }
+    .icon-btn { width: 60px; height: 50px; flex-shrink: 0; }
+    
+    #right-panel { 
+        order: 3; 
+        width: 100%; 
+        height: 45vh; /* تكبير اللوحة عشان تبان كل الخصائص */
+        max-height: 45vh;
+        border-right: none; 
+        border-top: 1px solid #2a2a3a; 
+        flex-shrink: 0; 
+        overflow-y: auto; /* السماح بالسحب */
+    }
+    .prop-row { margin-bottom: 6px; }
+    .panel-section { padding: 8px; }
 }
