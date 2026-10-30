@@ -84,3 +84,7 @@ body { background: #121215; color: #d1d1d1; height: 100vh; height: 100dvh; displ
     .play-btn { width: 28px; height: 28px; font-size: 14px; }
     #inspector-panel { flex: 0 0 48vh; }
 }
+
+/* تأكيد إخفاء التبويبات غير النشطة */
+.tab-pane { display: none !important; }
+.tab-pane.active { display: flex !important; }
