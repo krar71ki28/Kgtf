@@ -54,6 +54,13 @@ export class Engine {
         ground.receiveShadow = true;
         this.scene.add(ground);
 
+        // إضافة الشبكة الأرضية (Grid)
+        const grid = new THREE.GridHelper(100, 100, 0x00e5ff, 0x2a2a3a);
+        grid.position.y = 0.01; // رفعها قليلاً عن الأرض عشان ما تتداخل
+        grid.material.opacity = 0.3;
+        grid.material.transparent = true;
+        this.scene.add(grid);
+
         this.objects = [];
         this.selected = null;
         this.idCounter = 1;
@@ -130,34 +137,41 @@ export class Engine {
         }
     }
 
-    loadCharacter() {
+    loadCharacter(opts = {}) {
         const loader = new GLTFLoader();
         loader.load('https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb', (gltf) => {
             const model = gltf.scene;
             model.position.y = 0; 
-            model.scale.set(0.7, 0.7, 0.7); // تصغير الحجم ليناسب الكاميرا
+            model.scale.set(0.7, 0.7, 0.7);
+            if (opts.position) model.position.fromArray(opts.position);
+            if (opts.rotation) model.rotation.set(opts.rotation[0] || 0, opts.rotation[1] || 0, opts.rotation[2] || 0);
+            
             model.traverse(o => { if(o.isMesh) o.castShadow = true; });
             const mixer = new THREE.AnimationMixer(model);
             const actions = {};
             gltf.animations.forEach(clip => { actions[clip.name] = mixer.clipAction(clip); });
             if (actions['Idle']) actions['Idle'].play();
+            
             model.userData = { id: 'char_' + (this.idCounter++), type: 'character', mixer, actions, currentAction: 'Idle', material: 'n/a', physics: { enabled: false, vy: 0, bounce: 0 } };
             this.scene.add(model);
             this.objects.push(model);
-            this.selectObject(model);
-            if (this.onSceneChange) this.onSceneChange();
+            
+            if (!opts.isLoading) {
+                this.selectObject(model);
+                if (this.onSceneChange) this.onSceneChange();
+            }
         }, undefined, (err) => { alert('تعذر تحميل الشخصية.'); });
     }
 
     saveScene() {
-        const data = this.objects.filter(o => o.userData.type !== 'character').map(o => ({
+        const data = this.objects.map(o => ({
             type: o.userData.type, material: o.userData.material,
             color: o.isMesh ? o.material.color.getHex() : (o.isLight ? o.color.getHex() : 0xffffff),
             intensity: o.isLight ? o.intensity : undefined,
             position: o.position.toArray(), rotation: [o.rotation.x, o.rotation.y, o.rotation.z], scale: o.scale.toArray(), physics: o.userData.physics
         }));
         localStorage.setItem('kgtf_scene_final', JSON.stringify(data));
-        alert('تم حفظ المشهد بنجاح!');
+        alert('تم حفظ المشهد بنجاح! (بما في ذلك الشخصية)');
     }
 
     loadScene() {
@@ -165,7 +179,13 @@ export class Engine {
         if (!saved) { this.addObject('cube'); return; }
         try {
             const data = JSON.parse(saved);
-            data.forEach(d => { this.addObject(d.type, d); });
+            data.forEach(d => { 
+                if (d.type === 'character') {
+                    this.loadCharacter({ position: d.position, rotation: d.rotation, isLoading: true });
+                } else {
+                    this.addObject(d.type, d); 
+                }
+            });
         } catch(e) { this.addObject('cube'); }
     }
 
@@ -185,7 +205,6 @@ export class Engine {
             }
         });
         
-        // لا نحدث الكاميرا الأوربت في وضع اللعب عشان ما تتصادم مع كاميرا اللاعب
         if (!document.body.classList.contains('play-mode')) {
             this.controls.update();
         }
