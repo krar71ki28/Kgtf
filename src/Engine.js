@@ -50,10 +50,8 @@ export class Engine {
         this.sun.shadow.mapSize.height = 2048;
         this.sun.shadow.camera.near = 0.5;
         this.sun.shadow.camera.far = 150;
-        this.sun.shadow.camera.left = -40; 
-        this.sun.shadow.camera.right = 40;
-        this.sun.shadow.camera.top = 40; 
-        this.sun.shadow.camera.bottom = -40;
+        this.sun.shadow.camera.left = -40; this.sun.shadow.camera.right = 40;
+        this.sun.shadow.camera.top = 40; this.sun.shadow.camera.bottom = -40;
         this.sun.shadow.bias = -0.0005;
         this.scene.add(this.sun);
         this.scene.add(this.sun.target);
@@ -118,6 +116,10 @@ export class Engine {
         else if (type === 'cone') { obj = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.2, 32), this.makeMaterial('default')); obj.position.y = 0.6; }
         else if (type === 'torus') { obj = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.2, 16, 100), this.makeMaterial('default')); obj.position.y = 0.7; }
         else if (type === 'light') { obj = new THREE.PointLight(0xffaa00, 5, 15); obj.position.set(0, 3, 0); }
+        else if (type === 'jumppad') {
+            obj = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.2, 32), this.makeMaterial('emissive', 0x00ff00));
+            obj.position.y = 0.1;
+        }
         else if (type === 'tree') {
             obj = new THREE.Group();
             const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 1.5), this.makeMaterial('wood', 0x4a2e15));
@@ -289,7 +291,7 @@ export class Engine {
             try {
                 const data = JSON.parse(e.target.result);
                 this.clearScene(); 
-                this.objects = []; // نمسح الكائنات الحالية بدون اضافة المكعب الافتراضي
+                this.objects = []; 
                 document.getElementById('object-list').innerHTML = '';
                 data.forEach(d => {
                     if (d.type === 'character') this.loadCharacter({ position: d.position, rotation: d.rotation, isLoading: true });

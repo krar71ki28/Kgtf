@@ -16,8 +16,13 @@ export class Player {
         this.cameraYaw = 0; 
         this.cameraPitch = 0.4; 
         this.lastTouch = { x: 0, y: 0 };
-
         this.playerBoxSize = new THREE.Vector3(0.6, 1.5, 0.6);
+
+        // إعدادات الصوت
+        this.bgm = document.getElementById('bgm');
+        this.jumpSfx = document.getElementById('jump-sfx');
+        this.bgm.volume = 0.3;
+        this.jumpSfx.volume = 0.5;
 
         this.setupControls();
     }
@@ -32,7 +37,6 @@ export class Player {
         const zone = document.getElementById('joystick-zone');
         const knob = document.getElementById('joystick-knob');
         const base = document.getElementById('joystick-base');
-
         let touchStart = null;
         const maxDist = 40;
 
@@ -53,7 +57,11 @@ export class Player {
 
         document.getElementById('btn-jump').addEventListener('touchstart', (e) => {
             e.preventDefault(); e.stopPropagation();
-            if (this.isGrounded) { this.velocityY = 8; this.isGrounded = false; }
+            if (this.isGrounded) { 
+                this.velocityY = 8; 
+                this.isGrounded = false; 
+                this.playJumpSound();
+            }
         });
 
         const canvas = document.getElementById('viewport');
@@ -72,6 +80,11 @@ export class Player {
         });
     }
 
+    playJumpSound() {
+        this.jumpSfx.currentTime = 0;
+        this.jumpSfx.play().catch(e => console.log("Audio error:", e));
+    }
+
     startPlay() {
         const playerObj = this.engine.objects.find(o => o.userData.type === 'character');
         if (!playerObj) { alert('أضف شخصية أولاً لتتمكن من اللعب!'); return; }
@@ -85,6 +98,9 @@ export class Player {
         this.cameraYaw = this.playerModel.rotation.y;
         this.cameraPitch = 0.4;
         
+        // تشغيل الموسيقى الخلفية
+        this.bgm.play().catch(e => console.log("Audio error:", e));
+
         this.updateCamera(1); 
         this.engine.resize();
     }
@@ -96,6 +112,9 @@ export class Player {
         this.engine.camera.position.set(8, 6, 10);
         this.engine.controls.target.set(0, 2, 0);
         this.engine.resize();
+        
+        // إيقاف الموسيقى عند الخروج
+        this.bgm.pause();
     }
 
     updateCamera(dt) {
@@ -182,14 +201,13 @@ export class Player {
             }
         }
 
-        // --- فيزياء الهبوط فوق المجسمات (كود Argon) ---
+        // --- فيزياء الهبوط والقفز فوق المنصات ---
         this.velocityY -= 24 * dt;
         const prevY = this.playerModel.position.y;
         let nextY = prevY + this.velocityY * dt;
         let supportY = 0;
         let hitJumpPad = false;
 
-        // نجمع كل المجسمات اللي ممكن نقف فوقها (نستثني الشخصية والضوء)
         const colliders = this.engine.objects.filter(o => o !== this.playerModel && o.userData.type !== 'character' && o.userData.type !== 'light');
 
         for (const obj of colliders) {
@@ -208,13 +226,13 @@ export class Player {
 
         if (nextY <= supportY) {
             nextY = supportY;
-            this.velocityY = hitJumpPad ? 15.5 : 0;
+            this.velocityY = hitJumpPad ? 16 : 0;
             this.isGrounded = !hitJumpPad;
+            if (hitJumpPad) this.playJumpSound(); // صوت القفز لو دخل المنصة
         } else {
             this.isGrounded = false;
         }
         this.playerModel.position.y = nextY;
-        // ---------------------------------------------
 
         this.updateCamera(dt);
     }

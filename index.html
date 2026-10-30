@@ -18,6 +18,7 @@
             <button class="icon-btn" id="btn-tree"><span>🌲</span>شجرة</button>
             <button class="icon-btn" id="btn-rock"><span>🪨</span>صخرة</button>
             <button class="icon-btn" id="btn-building"><span>🏢</span>مبنى</button>
+            <button class="icon-btn" id="btn-jumppad"><span>🟢</span>منصة قفز</button>
             <button class="icon-btn" id="btn-light"><span>💡</span>ضوء</button>
             <button class="icon-btn" id="btn-character"><span>🏃</span>شخصية</button>
         </div>
@@ -81,9 +82,14 @@
             </div>
         </div>
     </div>
+    
+    <!-- ملفات الصوت -->
+    <audio id="bgm" loop src="https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3"></audio>
+    <audio id="jump-sfx" src="https://assets.mixkit.co/active_storage/sfx/224/224-preview.mp3"></audio>
+
     <script type="importmap">
     { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
-    <script type="module" src="src/main.js?v=30"></script>
+    <script type="module" src="src/main.js?v=31"></script>
 </body>
 </html>

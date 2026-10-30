@@ -67,6 +67,7 @@ export class Editor {
         document.getElementById('btn-tree').onclick = () => this.engine.addObject('tree');
         document.getElementById('btn-rock').onclick = () => this.engine.addObject('rock');
         document.getElementById('btn-building').onclick = () => this.engine.addObject('building');
+        document.getElementById('btn-jumppad').onclick = () => this.engine.addObject('jumppad');
         document.getElementById('btn-light').onclick = () => this.engine.addObject('light');
         document.getElementById('btn-character').onclick = () => this.engine.loadCharacter();
         
