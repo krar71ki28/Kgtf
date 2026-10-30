@@ -45,19 +45,15 @@ export class Engine {
         this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
         this.camera.position.set(8, 6, 10);
 
-        // Post-Processing Setup
         this.composer = new EffectComposer(this.renderer);
         this.composer.addPass(new RenderPass(this.scene, this.camera));
-        
         this.bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.5, 0.4, 0.8);
         this.composer.addPass(this.bloomPass);
-        
         this.vignettePass = new ShaderPass(VignetteShader);
         this.vignettePass.uniforms["offset"].value = 1.0;
         this.vignettePass.uniforms["darkness"].value = 1.0;
         this.vignettePass.enabled = false;
         this.composer.addPass(this.vignettePass);
-        
         this.composer.addPass(new OutputPass());
 
         const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
@@ -196,6 +192,22 @@ export class Engine {
         this.selectObject(obj);
         if (this.onSceneChange) this.onSceneChange();
         return obj;
+    }
+
+    focusOnObject(obj) {
+        if (!obj) return;
+        const box = new THREE.Box3().setFromObject(obj);
+        const size = box.getSize(new THREE.Vector3()).length();
+        const center = box.getCenter(new THREE.Vector3());
+        
+        this.controls.target.copy(center);
+        
+        const direction = new THREE.Vector3().subVectors(this.camera.position, center).normalize();
+        const distance = size * 2.5; 
+        
+        this.camera.position.copy(center).add(direction.multiplyScalar(distance));
+        this.camera.updateProjectionMatrix();
+        this.controls.update();
     }
 
     createParticleSystem(type, position) {
@@ -555,7 +567,6 @@ export class Engine {
                 }
             }
 
-            // تحديث الجزيئات
             if (o.userData.type === "vfx" && o.geometry) {
                 const positions = o.geometry.attributes.position.array;
                 for (let i = 0; i < o.userData.count; i++) {
@@ -601,20 +612,3 @@ export class Engine {
         this.composer.setSize(w, h); 
     }
 }
-
-// إضافة ميزة التركيز على المجسم (Focus)
-Engine.prototype.focusOnObject = function(obj) {
-    if (!obj) return;
-    const box = new THREE.Box3().setFromObject(obj);
-    const size = box.getSize(new THREE.Vector3()).length();
-    const center = box.getCenter(new THREE.Vector3());
-    
-    this.controls.target.copy(center);
-    
-    const direction = new THREE.Vector3().subVectors(this.camera.position, center).normalize();
-    const distance = size * 2.5; // مسافة الكاميرا حسب حجم المجسم
-    
-    this.camera.position.copy(center).add(direction.multiplyScalar(distance));
-    this.camera.updateProjectionMatrix();
-    this.controls.update();
-};

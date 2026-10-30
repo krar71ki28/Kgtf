@@ -22,12 +22,12 @@ export class Editor {
 
         this.bindButtons();
         this.bindInspector();
-        this.setupRaycaster();
-        this.setupDropdown();
-        this.setupTabs();
         this.bindMaterialProps();
         this.bindWorldSettings();
         this.bindPhase5Settings();
+        this.setupRaycaster();
+        this.setupDropdown();
+        this.setupTabs();
         this.populateBehaviorSelect();
         
         engine.onSelect = (obj) => this.updateInspector(obj);
@@ -205,6 +205,34 @@ export class Editor {
         document.getElementById('pp-vignette-strength').addEventListener('input', (e) => { this.engine.vignettePass.uniforms["darkness"].value = parseFloat(e.target.value); });
     }
 
+    bindPhase5Settings() {
+        document.getElementById('btn-focus').onclick = () => {
+            if (this.engine.selected) {
+                this.engine.focusOnObject(this.engine.selected);
+            } else {
+                alert('الرجاء تحديد مجسم أولاً للتركيز عليه.');
+            }
+        };
+
+        document.getElementById('env-sun-intensity').addEventListener('input', (e) => {
+            this.engine.sun.intensity = parseFloat(e.target.value);
+        });
+        document.getElementById('env-fog-distance').addEventListener('input', (e) => {
+            this.engine.scene.fog.far = parseFloat(e.target.value);
+        });
+
+        const bindRot = (id, axis) => {
+            document.getElementById(id).addEventListener('input', (e) => {
+                if (!this.engine.selected) return;
+                this.engine.selected.rotation[axis] = parseFloat(e.target.value);
+                this.gizmo.attach(this.engine.selected);
+            });
+        };
+        bindRot('prop-rot-x', 'x');
+        bindRot('prop-rot-y', 'y');
+        bindRot('prop-rot-z', 'z');
+    }
+
     setActiveTool(id) {
         document.querySelectorAll('.gizmo-group .icon-btn').forEach(btn => btn.classList.remove('active'));
         document.getElementById(id).classList.add('active');
@@ -260,7 +288,6 @@ export class Editor {
         bindProp('prop-x', (obj, v) => obj.position.x = v);
         bindProp('prop-y', (obj, v) => obj.position.y = v);
         bindProp('prop-z', (obj, v) => obj.position.z = v);
-        bindProp('prop-rot', (obj, v) => obj.rotation.y = v);
         bindProp('prop-scale', (obj, v) => obj.scale.set(v, v, v));
         bindProp('prop-color', (obj, v) => { if (obj.isMesh) obj.material.color.set(v); else if (obj.isLight) obj.color.set(v); });
         bindProp('prop-physics', (obj, v) => { if(obj.userData.physics) obj.userData.physics.enabled = v; });
@@ -379,35 +406,3 @@ export class Editor {
         });
     }
 }
-
-// دالة لربط الإعدادات الجديدة
-Editor.prototype.bindPhase5Settings = function() {
-    // زر التركيز
-    document.getElementById('btn-focus').onclick = () => {
-        if (this.engine.selected) {
-            this.engine.focusOnObject(this.engine.selected);
-        } else {
-            alert('الرجاء تحديد مجسم أولاً للتركيز عليه.');
-        }
-    };
-
-    // إعدادات البيئة (Environment)
-    document.getElementById('env-sun-intensity').addEventListener('input', (e) => {
-        this.engine.sun.intensity = parseFloat(e.target.value);
-    });
-    document.getElementById('env-fog-distance').addEventListener('input', (e) => {
-        this.engine.scene.fog.far = parseFloat(e.target.value);
-    });
-
-    // الدوران 3D
-    const bindRot = (id, axis) => {
-        document.getElementById(id).addEventListener('input', (e) => {
-            if (!this.engine.selected) return;
-            this.engine.selected.rotation[axis] = parseFloat(e.target.value);
-            this.gizmo.attach(this.engine.selected);
-        });
-    };
-    bindRot('prop-rot-x', 'x');
-    bindRot('prop-rot-y', 'y');
-    bindRot('prop-rot-z', 'z');
-};
