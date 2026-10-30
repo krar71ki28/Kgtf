@@ -46,6 +46,13 @@
                     <button class="btn" id="btn-duplicate" style="flex:1; background:#1a3a2a; color:#4ade80; padding:10px;">📑 تكرار</button>
                     <button class="btn" id="btn-delete" style="flex:1; background:#3a1a1a; color:#ff5577; padding:10px;">🗑️ حذف</button>
                 </div>
+                
+                <!-- نقلنا قسم الفيزياء هنا ليكون أول شي يطلع -->
+                <div class="panel-title" style="color:#ffaa00;">PHYSICS</div>
+                <div class="prop-row"><label>جاذبية</label><input type="checkbox" id="prop-physics"></div>
+                <div class="prop-row"><label>ارتداد</label><input type="range" id="prop-bounce" min="0" max="1" step="0.1" value="0.5"></div>
+                
+                <div class="panel-title" style="margin-top:15px; color:#888;">TRANSFORM</div>
                 <div class="prop-row"><label>المادة</label><select id="prop-material"><option value="default">عادي</option><option value="wood">خشب</option><option value="metal">معدن</option><option value="gold">ذهب</option><option value="glass">زجاج</option><option value="rubber">مطاط</option><option value="marble">رخام</option><option value="emissive">مضيء</option></select></div>
                 <div class="prop-row"><label>اللون</label><input type="color" id="prop-color" value="#00e5ff"></div>
                 <div class="prop-row"><label>X</label><input type="range" id="prop-x" min="-20" max="20" step="0.1" value="0"></div>
@@ -53,15 +60,13 @@
                 <div class="prop-row"><label>Z</label><input type="range" id="prop-z" min="-20" max="20" step="0.1" value="0"></div>
                 <div class="prop-row"><label>دوران</label><input type="range" id="prop-rot" min="0" max="6.28" step="0.1" value="0"></div>
                 <div class="prop-row"><label>حجم</label><input type="range" id="prop-scale" min="0.1" max="4" step="0.1" value="1"></div>
-                <div class="panel-title" style="margin-top:15px; color:#ffaa00;">PHYSICS</div>
-                <div class="prop-row"><label>جاذبية</label><input type="checkbox" id="prop-physics"></div>
-                <div class="prop-row"><label>ارتداد</label><input type="range" id="prop-bounce" min="0" max="1" step="0.1" value="0.5"></div>
             </div>
         </div>
     </div>
     <script type="importmap">
     { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
-    <script type="module" src="src/main.js"></script>
+    <!-- غيرنا النسخة لـ v=3 عشان نكسر الكاش -->
+    <script type="module" src="src/main.js?v=3"></script>
 </body>
 </html>
