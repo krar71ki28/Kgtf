@@ -66,10 +66,13 @@ export class Player {
         this.playerModel = playerObj;
         document.body.classList.add('play-mode');
         
-        // إخفاء الأسهم بالقوة
+        // إخفاء الأسهم
         this.engine.selectObject(null);
         
-        // ضبط كاميرا البداية (أعلى وأبعد)
+        // تعطيل تحكم الكاميرا اليدوي (OrbitControls) عشان ما تتصادم
+        this.engine.controls.enabled = false;
+        
+        // ضبط كاميرا البداية (خلف الشخصية وفوقها)
         this.engine.camera.position.copy(this.playerModel.position).add(new THREE.Vector3(0, 4, -8));
         this.engine.controls.target.copy(this.playerModel.position);
         this.engine.resize();
@@ -78,6 +81,10 @@ export class Player {
     stopPlay() {
         this.isPlaying = false;
         document.body.classList.remove('play-mode');
+        
+        // إعادة تفعيل تحكم الكاميرا
+        this.engine.controls.enabled = true;
+        
         this.engine.camera.position.set(8, 6, 10);
         this.engine.controls.target.set(0, 2, 0);
         this.engine.resize();
@@ -125,15 +132,21 @@ export class Player {
             }
         }
 
-        // متابعة الكاميرا للشخصية
+        // --- إصلاح الكاميرا ---
         const targetPos = this.playerModel.position.clone();
-        targetPos.y += 1.5; 
+        targetPos.y += 1.5; // نقطة النظر تكون عند صدر الشخصية
+        
+        // حساب موقع الكاميرا المطلوب (خلف الشخصية بـ 7 وحدات، وفوقها بـ 4)
+        const camOffset = new THREE.Vector3(0, 4, -7); 
+        camOffset.applyAxisAngle(new THREE.Vector3(0,1,0), this.playerModel.rotation.y);
+        
+        const desiredCamPos = this.playerModel.position.clone().add(camOffset);
+        
+        // تحريك الكاميرا بسلاسة
+        this.engine.camera.position.lerp(desiredCamPos, 0.1);
         this.engine.controls.target.lerp(targetPos, 0.1);
         
-        const desiredCamPos = new THREE.Vector3(0, 4, -8); // المسافة والارتفاع
-        desiredCamPos.applyAxisAngle(new THREE.Vector3(0,1,0), this.playerModel.rotation.y);
-        desiredCamPos.add(this.playerModel.position);
-        
-        this.engine.camera.position.lerp(desiredCamPos, 0.1);
+        // إجبار الكاميرا على النظر لصدر الشخصية
+        this.engine.camera.lookAt(this.engine.controls.target);
     }
 }
