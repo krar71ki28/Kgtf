@@ -63,6 +63,10 @@ export class Editor {
         document.addEventListener('click', (e) => { if (!menu.contains(e.target) && e.target !== btn) menu.classList.remove('show'); });
         
         const types = ['cube','sphere','cylinder','cone','torus','tree','rock','building','light','character'];
+        document.getElementById('btn-vfx-fire').onclick = () => { this.engine.createParticleSystem('fire', new THREE.Vector3(0, 0.5, 0)); menu.classList.remove('show'); };
+        document.getElementById('btn-vfx-sparks').onclick = () => { this.engine.createParticleSystem('sparks', new THREE.Vector3(0, 0.5, 0)); menu.classList.remove('show'); };
+        document.getElementById('btn-vfx-smoke').onclick = () => { this.engine.createParticleSystem('smoke', new THREE.Vector3(0, 0.5, 0)); menu.classList.remove('show'); };
+        document.getElementById('btn-audio').onclick = () => { this.engine.createAudioEmitter(new THREE.Vector3(0, 1, 0)); menu.classList.remove('show'); };
         types.forEach(t => {
             document.getElementById(`btn-${t}`).onclick = () => {
                 if(t === 'character') this.engine.loadCharacter();

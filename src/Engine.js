@@ -466,6 +466,26 @@ export class Engine {
             }
         });
 
+        // تحديث الجزيئات
+        this.objects.forEach(o => {
+            if (o.userData.type === "vfx" && o.geometry) {
+                const positions = o.geometry.attributes.position.array;
+                for (let i = 0; i < o.userData.count; i++) {
+                    positions[i * 3] += o.userData.velocities[i].x * dt;
+                    positions[i * 3 + 1] += o.userData.velocities[i].y * dt;
+                    positions[i * 3 + 2] += o.userData.velocities[i].z * dt;
+                    
+                    // إعادة تعيين الجزيء إذا طار بعيداً
+                    if (positions[i * 3 + 1] > 3) {
+                        positions[i * 3] = (Math.random() - 0.5) * 0.5;
+                        positions[i * 3 + 1] = 0;
+                        positions[i * 3 + 2] = (Math.random() - 0.5) * 0.5;
+                    }
+                }
+                o.geometry.attributes.position.needsUpdate = true;
+            }
+        });
+
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
             const p = this.projectiles[i];
             p.mesh.position.addScaledVector(p.direction, p.speed * dt);
@@ -494,3 +514,92 @@ export class Engine {
         this.composer.setSize(w, h); // تحديث حجم composer
     }
 }
+
+// إضافة دالة لإنشاء أنظمة الجزيئات
+Engine.prototype.createParticleSystem = function(type, position) {
+    const count = 100;
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(count * 3);
+    const velocities = [];
+    const colors = new Float32Array(count * 3);
+
+    for (let i = 0; i < count; i++) {
+        positions[i * 3] = (Math.random() - 0.5) * 0.5;
+        positions[i * 3 + 1] = Math.random() * 0.5;
+        positions[i * 3 + 2] = (Math.random() - 0.5) * 0.5;
+        
+        velocities.push({
+            x: (Math.random() - 0.5) * 0.5,
+            y: Math.random() * 1.5 + 0.5,
+            z: (Math.random() - 0.5) * 0.5
+        });
+
+        if (type === 'fire') { colors[i*3] = 1.0; colors[i*3+1] = Math.random() * 0.5 + 0.2; colors[i*3+2] = 0; }
+        else if (type === 'sparks') { colors[i*3] = 1.0; colors[i*3+1] = 1.0; colors[i*3+2] = 0; }
+        else { colors[i*3] = 0.5; colors[i*3+1] = 0.5; colors[i*3+2] = 0.5; }
+    }
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+    const material = new THREE.PointsMaterial({
+        size: type === 'smoke' ? 0.5 : 0.2,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.8,
+        blending: type === 'fire' || type === 'sparks' ? THREE.AdditiveBlending : THREE.NormalBlending,
+        depthWrite: false
+    });
+
+    const points = new THREE.Points(geometry, material);
+    points.position.copy(position);
+    points.userData = { 
+        id: 'vfx_' + (this.idCounter++), 
+        type: 'vfx', 
+        vfxType: type, 
+        velocities, 
+        count, 
+        life: 0,
+        physics: { enabled: false }
+    };
+
+    this.scene.add(points);
+    this.objects.push(points);
+    this.selectObject(points);
+    if (this.onSceneChange) this.onSceneChange();
+    return points;
+};
+
+// إضافة دالة إنشاء مكبر الصوت
+Engine.prototype.createAudioEmitter = function(position) {
+    const listener = new THREE.AudioListener();
+    this.camera.add(listener);
+    
+    const sound = new THREE.PositionalAudio(listener);
+    const audioLoader = new THREE.AudioLoader();
+    // رابط صوت جاهز
+    audioLoader.load('https://actions.google.com/sounds/v1/alarms/beep_short.ogg', (buffer) => {
+        sound.setBuffer(buffer);
+        sound.setRefDistance(5);
+        sound.setLoop(true);
+        sound.play();
+    });
+
+    const geometry = new THREE.SphereGeometry(0.3, 16, 16);
+    const material = new THREE.MeshBasicMaterial({ color: 0xff5577, wireframe: true });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.copy(position);
+    mesh.add(sound);
+    
+    mesh.userData = { 
+        id: 'audio_' + (this.idCounter++), 
+        type: 'audio', 
+        physics: { enabled: false } 
+    };
+
+    this.scene.add(mesh);
+    this.objects.push(mesh);
+    this.selectObject(mesh);
+    if (this.onSceneChange) this.onSceneChange();
+    return mesh;
+};
