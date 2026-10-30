@@ -13,6 +13,8 @@
             <button class="icon-btn" id="btn-cube"><span>📦</span>مكعب</button>
             <button class="icon-btn" id="btn-sphere"><span>🔴</span>كرة</button>
             <button class="icon-btn" id="btn-cylinder"><span>🛢️</span>أسطوانة</button>
+            <button class="icon-btn" id="btn-cone"><span>🔺</span>مخروط</button>
+            <button class="icon-btn" id="btn-torus"><span>🍩</span>حلقة</button>
             <button class="icon-btn" id="btn-tree"><span>🌲</span>شجرة</button>
             <button class="icon-btn" id="btn-rock"><span>🪨</span>صخرة</button>
             <button class="icon-btn" id="btn-building"><span>🏢</span>مبنى</button>
@@ -31,22 +33,21 @@
             <button id="exit-play">✕ خروج</button>
             <div id="status-bar">FPS: <span id="fps">--</span></div>
             
-            <!-- منطقة التحكم باللاعب -->
             <div id="joystick-zone"><div id="joystick-base"><div id="joystick-knob"></div></div></div>
             <button id="btn-jump">⬆️ قفز</button>
             
             <div id="ai-fab">🤖</div>
             <div id="ai-chat">
                 <div class="ai-header"><span>KGTF AI</span><span id="close-ai" style="cursor:pointer;">✕</span></div>
-                <div class="ai-messages" id="ai-messages">مرحباً! اطلب مني أي شي.</div>
-                <div class="ai-input-row"><input type="text" id="ai-input" placeholder="اطلب كود..." /><button id="ai-send">إرسال</button></div>
+                <div class="ai-messages" id="ai-messages">مرحباً! اكتب طلبك (مثلاً: أضف 3 مكعبات عشوائية).</div>
+                <div class="ai-input-row"><input type="text" id="ai-input" placeholder="اطلب شي..." /><button id="ai-send">إرسال</button></div>
             </div>
         </div>
         <div id="right-panel">
             <div class="panel-section">
                 <div class="panel-title">HIERARCHY</div>
                 <div id="object-list" style="font-size:12px; color:#aaa; max-height:80px; overflow-y:auto;"></div>
-                <button class="btn" id="btn-clear-scene" style="width:100%; margin-top:10px; background:#3a1a1a; color:#ff5577; border: 1px solid #ff5577;">🗑️ مسح المشهد (Clear Scene)</button>
+                <button class="btn" id="btn-clear-scene" style="width:100%; margin-top:10px; background:#3a1a1a; color:#ff5577; border: 1px solid #ff5577;">🗑️ مسح المشهد</button>
             </div>
             <div class="panel-section" id="inspector" style="display:none;">
                 <div class="panel-title">PROPERTIES</div>
@@ -54,6 +55,9 @@
                     <button class="btn" id="btn-duplicate" style="flex:1; background:#1a3a2a; color:#4ade80; padding:10px;">📑 تكرار</button>
                     <button class="btn" id="btn-delete" style="flex:1; background:#3a1a1a; color:#ff5577; padding:10px;">🗑️ حذف</button>
                 </div>
+                
+                <div class="prop-row"><label style="color:#00e5ff; font-weight:bold;">محاذاة الشبكة</label><input type="checkbox" id="prop-snap"></div>
+
                 <div class="panel-title" style="color:#ffaa00;">PHYSICS</div>
                 <div class="prop-row"><label>جاذبية</label><input type="checkbox" id="prop-physics"></div>
                 <div class="prop-row"><label>ارتداد</label><input type="range" id="prop-bounce" min="0" max="1" step="0.1" value="0.5"></div>
@@ -72,6 +76,6 @@
     <script type="importmap">
     { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
-    <script type="module" src="src/main.js?v=10"></script>
+    <script type="module" src="src/main.js?v=17"></script>
 </body>
 </html>

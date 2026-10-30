@@ -38,7 +38,6 @@ export class Engine {
         this.controls.target.set(0, 2, 0);
         this.controls.maxPolarAngle = Math.PI / 2.05;
 
-        // إضاءة محسنة للظلال
         const sun = new THREE.DirectionalLight(0xffffff, 2.5);
         sun.position.set(15, 30, 15);
         sun.castShadow = true;
@@ -88,9 +87,9 @@ export class Engine {
         if (type === 'cube') { obj = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), this.makeMaterial('default')); obj.position.y = 0.5; }
         else if (type === 'sphere') { obj = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), this.makeMaterial('default')); obj.position.y = 0.5; }
         else if (type === 'cylinder') { obj = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 1.2, 32), this.makeMaterial('default')); obj.position.y = 0.6; }
+        else if (type === 'cone') { obj = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.2, 32), this.makeMaterial('default')); obj.position.y = 0.6; }
+        else if (type === 'torus') { obj = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.2, 16, 100), this.makeMaterial('default')); obj.position.y = 0.7; }
         else if (type === 'light') { obj = new THREE.PointLight(0xffaa00, 5, 15); obj.position.set(0, 3, 0); }
-        
-        // مجسمات جديدة
         else if (type === 'tree') {
             obj = new THREE.Group();
             const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 1.5), this.makeMaterial('wood', 0x4a2e15));
@@ -247,7 +246,7 @@ export class Engine {
         this.objects.forEach(o => {
             if (o.userData.mixer) o.userData.mixer.update(dt);
             const p = o.userData.physics;
-            if (p && p.enabled && o.isMesh) {
+            if (p && p.enabled && (o.isMesh || o.isGroup)) {
                 p.vy -= 9.8 * dt; o.position.y += p.vy * dt;
                 box.setFromObject(o); box.getSize(size);
                 const groundLevel = size.y / 2;

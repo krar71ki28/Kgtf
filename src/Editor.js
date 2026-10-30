@@ -7,9 +7,19 @@ export class Editor {
         this.gizmo = new TransformControls(this.engine.camera, this.engine.renderer.domElement);
         this.gizmo.setSize(0.8);
         this.engine.scene.add(this.gizmo);
+        this.snapEnabled = false;
 
         this.gizmo.addEventListener('dragging-changed', (event) => { this.engine.controls.enabled = !event.value; });
-        this.gizmo.addEventListener('objectChange', () => this.updateUIValues());
+        
+        this.gizmo.addEventListener('objectChange', () => {
+            if (this.snapEnabled && this.gizmo.getMode() === 'translate' && this.engine.selected) {
+                const p = this.engine.selected.position;
+                p.x = Math.round(p.x * 2) / 2; // Snap to 0.5
+                p.y = Math.round(p.y * 2) / 2;
+                p.z = Math.round(p.z * 2) / 2;
+            }
+            this.updateUIValues();
+        });
 
         this.bindButtons();
         this.bindInspector();
@@ -25,6 +35,8 @@ export class Editor {
         document.getElementById('btn-cube').onclick = () => this.engine.addObject('cube');
         document.getElementById('btn-sphere').onclick = () => this.engine.addObject('sphere');
         document.getElementById('btn-cylinder').onclick = () => this.engine.addObject('cylinder');
+        document.getElementById('btn-cone').onclick = () => this.engine.addObject('cone');
+        document.getElementById('btn-torus').onclick = () => this.engine.addObject('torus');
         document.getElementById('btn-tree').onclick = () => this.engine.addObject('tree');
         document.getElementById('btn-rock').onclick = () => this.engine.addObject('rock');
         document.getElementById('btn-building').onclick = () => this.engine.addObject('building');
@@ -45,6 +57,11 @@ export class Editor {
         document.getElementById('btn-clear-scene').onclick = () => {
             if (confirm('هل أنت متأكد من مسح المشهد بالكامل؟')) this.engine.clearScene();
         };
+        
+        // تفعيل/تعطيل الـ Snap
+        document.getElementById('prop-snap').addEventListener('change', (e) => {
+            this.snapEnabled = e.target.checked;
+        });
     }
 
     bindInspector() {
