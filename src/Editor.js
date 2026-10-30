@@ -6,8 +6,6 @@ export class Editor {
     constructor(engine) {
         this.engine = engine;
         this.inspector = document.getElementById('inspector');
-        this.bottomPanel = document.getElementById('bottom-panel');
-        this.inspectorHeader = document.getElementById('inspector-header');
         this.raycaster = new THREE.Raycaster();
         this.pointerDown = { x: 0, y: 0 };
         this.isDraggingGizmo = false;
@@ -34,12 +32,6 @@ export class Editor {
             const scoreVal = document.getElementById('score-val');
             if(scoreVal) scoreVal.innerText = score;
         };
-
-        // سحب اللوحة السفلية
-        const dragHandle = document.querySelector('.drag-handle');
-        dragHandle.addEventListener('click', () => {
-            this.bottomPanel.classList.toggle('closed');
-        });
 
         this.updateList();
         if (this.engine.selected) this.updateInspector(this.engine.selected);
@@ -76,11 +68,7 @@ export class Editor {
             if (hits.length > 0) {
                 let root = hits[0].object;
                 while (root && root.parent !== this.engine.scene) root = root.parent;
-                if (root) {
-                    this.engine.selectObject(root);
-                    this.bottomPanel.classList.remove('closed'); // فتح اللوحة عند التحديد
-                    return;
-                }
+                if (root) return this.engine.selectObject(root);
             }
             this.engine.selectObject(null);
         });
@@ -101,8 +89,6 @@ export class Editor {
         document.getElementById('btn-gizmo-translate').onclick = () => { this.gizmo.setMode('translate'); this.setActiveTool('btn-gizmo-translate'); };
         document.getElementById('btn-gizmo-rotate').onclick = () => { this.gizmo.setMode('rotate'); this.setActiveTool('btn-gizmo-rotate'); };
         document.getElementById('btn-gizmo-scale').onclick = () => { this.gizmo.setMode('scale'); this.setActiveTool('btn-gizmo-scale'); };
-
-        document.getElementById('btn-toggle-panel').onclick = () => this.bottomPanel.classList.toggle('closed');
 
         document.getElementById('btn-duplicate').onclick = () => {
             const newObj = this.engine.duplicateObject();
@@ -171,7 +157,7 @@ export class Editor {
     }
 
     setActiveTool(id) {
-        document.querySelectorAll('#right-toolbar .tool-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.gizmo-btn').forEach(btn => btn.classList.remove('active'));
         document.getElementById(id).classList.add('active');
     }
 
@@ -238,6 +224,7 @@ export class Editor {
             card.style.padding = '6px';
             card.style.borderRadius = '4px';
             card.style.border = '1px solid #3c3c45';
+            card.style.marginTop = '5px';
 
             const header = document.createElement('div');
             header.style.display = 'flex';
@@ -248,7 +235,7 @@ export class Editor {
             const title = document.createElement('span');
             title.style.fontWeight = 'bold';
             title.style.color = '#60a5fa';
-            title.style.fontSize = '11px';
+            title.style.fontSize = '10px';
             title.textContent = behaviorDef.name;
 
             const deleteBtn = document.createElement('button');
@@ -277,20 +264,20 @@ export class Editor {
                 row.style.marginTop = '2px';
 
                 const paramLabel = document.createElement('label');
-                paramLabel.style.fontSize = '10px';
+                paramLabel.style.fontSize = '9px';
                 paramLabel.style.color = '#bbb';
                 paramLabel.textContent = paramKey + ':';
 
                 const input = document.createElement('input');
                 input.type = typeof behaviorDef.defaultParams[paramKey] === 'number' ? 'number' : 'text';
                 input.value = currentParams[paramKey] !== undefined ? currentParams[paramKey] : behaviorDef.defaultParams[paramKey];
-                input.style.width = '60px';
+                input.style.width = '50px';
                 input.style.padding = '2px 4px';
-                input.style.background = '#18181b';
+                input.style.background = '#0f0f13';
                 input.style.border = '1px solid #444';
                 input.style.borderRadius = '3px';
                 input.style.color = '#fff';
-                input.style.fontSize = '10px';
+                input.style.fontSize = '9px';
 
                 input.addEventListener('input', (e) => {
                     const val = input.type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value;
@@ -311,12 +298,11 @@ export class Editor {
     updateInspector(obj) {
         if (!obj) {
             this.inspector.style.display = 'none';
-            this.inspectorHeader.style.display = 'none';
             this.gizmo.detach();
             return;
         }
-        this.inspector.style.display = 'block';
-        this.inspectorHeader.style.display = 'flex';
+        this.inspector.style.display = 'flex';
+        this.inspector.style.flexDirection = 'column';
         this.gizmo.attach(obj);
         this.updateUIValues();
         this.renderBehaviorsUI();
@@ -341,17 +327,9 @@ export class Editor {
         list.innerHTML = '';
         this.engine.objects.forEach(obj => {
             const div = document.createElement('div');
-            div.style.padding = '4px 8px';
-            div.style.cursor = 'pointer';
-            div.style.background = '#1e1e30';
-            div.style.borderRadius = '4px';
-            div.style.fontSize = '10px';
-            div.style.border = '1px solid transparent';
+            div.className = 'obj-item';
             div.innerText = obj.userData.type;
-            div.onclick = () => {
-                this.engine.selectObject(obj);
-                this.bottomPanel.classList.remove('closed');
-            };
+            div.onclick = () => this.engine.selectObject(obj);
             list.appendChild(div);
         });
     }
