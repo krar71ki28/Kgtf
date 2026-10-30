@@ -2,12 +2,11 @@ import { Engine } from './Engine.js';
 import { Editor } from './Editor.js';
 import { Player } from './Player.js';
 
-// كود إعادة ضبط المصنع
 if (window.location.search.includes('reset')) {
     localStorage.removeItem('kgtf_scene_final');
     localStorage.removeItem('kgtf_assets');
     localStorage.removeItem('kgtf_all_scenes');
-    alert('تم مسح كل البيانات القديمة بنجاح! سيتم إعادة تشغيل المحرك الآن.');
+    alert('تم مسح البيانات بنجاح!');
     window.location.href = window.location.pathname; 
 }
 

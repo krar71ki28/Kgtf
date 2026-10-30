@@ -488,3 +488,22 @@ export class Editor {
         });
     }
 }
+
+// إضافة زر رفع النماذج في دالة bindButtons
+const originalBindButtons = Editor.prototype.bindButtons;
+Editor.prototype.bindButtons = function() {
+    originalBindButtons.call(this);
+    
+    const uploadBtn = document.getElementById('btn-upload-model');
+    const uploadInput = document.getElementById('model-upload-input');
+    
+    if (uploadBtn && uploadInput) {
+        uploadBtn.onclick = () => uploadInput.click();
+        uploadInput.onchange = (e) => {
+            if (e.target.files.length > 0) {
+                this.engine.loadModelFromFile(e.target.files[0]);
+                e.target.value = ''; // تصفير الحقل
+            }
+        };
+    }
+};
