@@ -19,10 +19,7 @@ export class Engine {
         this.canvas = canvas;
         this.scene = new THREE.Scene();
         
-        // 1. تغيير الخلفية للون السماء (أزرق فاتح)
         this.scene.background = new THREE.Color(0x87CEEB);
-        
-        // 2. إضافة ضباب (Fog) عشان يعطي إحساس بالمسافة والعمق
         this.scene.fog = new THREE.Fog(0x87CEEB, 30, 120);
 
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -30,9 +27,8 @@ export class Engine {
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 1.0; // تقليل السطوع شوي عشان الشمس
+        this.renderer.toneMappingExposure = 1.0;
         
-        // الحفاظ على انعكاسات البيئة للمعادن
         const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
         const envMap = pmremGenerator.fromScene(new RoomEnvironment()).texture;
         this.scene.environment = envMap;
@@ -45,24 +41,23 @@ export class Engine {
         this.controls.target.set(0, 2, 0);
         this.controls.maxPolarAngle = Math.PI / 2.05;
 
-        // 3. إضافة ضوء السماء (HemisphereLight) عشان يمنع الظلال من أن تصبح سوداء تماماً
-        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5);
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
         this.scene.add(hemiLight);
 
-        // 4. تعديل ضوء الشمس ليكون نهارياً
-        const sun = new THREE.DirectionalLight(0xfff5e6, 2.0);
-        sun.position.set(20, 40, 20);
-        sun.castShadow = true;
-        sun.shadow.mapSize.width = 2048;
-        sun.shadow.mapSize.height = 2048;
-        sun.shadow.camera.near = 0.5;
-        sun.shadow.camera.far = 100;
-        sun.shadow.camera.left = -40; sun.shadow.camera.right = 40;
-        sun.shadow.camera.top = 40; sun.shadow.camera.bottom = -40;
-        sun.shadow.bias = -0.0005;
-        this.scene.add(sun);
+        this.sun = new THREE.DirectionalLight(0xfff5e6, 2.0);
+        this.sun.castShadow = true;
+        this.sun.shadow.mapSize.width = 2048;
+        this.sun.shadow.mapSize.height = 2048;
+        this.sun.shadow.camera.near = 0.5;
+        this.sun.shadow.camera.far = 150;
+        this.sun.shadow.camera.left = -40; 
+        this.sun.shadow.camera.right = 40;
+        this.sun.shadow.camera.top = 40; 
+        this.sun.shadow.camera.bottom = -40;
+        this.sun.shadow.bias = -0.0005;
+        this.scene.add(this.sun);
+        this.scene.add(this.sun.target);
 
-        // 5. تغيير لون الأرضية ليكون متناسق مع البيئة (أخضر عشبي غامق)
         const groundGeo = new THREE.PlaneGeometry(200, 200);
         const groundMat = new THREE.MeshStandardMaterial({ color: 0x3a5a40, roughness: 0.9, metalness: 0.1 });
         const ground = new THREE.Mesh(groundGeo, groundMat);
@@ -70,12 +65,34 @@ export class Engine {
         ground.receiveShadow = true;
         this.scene.add(ground);
 
-        // 6. تعديل ألوان الشبكة لتكون أوضح على الأرضية الجديدة
         const grid = new THREE.GridHelper(200, 100, 0x00e5ff, 0x556677);
         grid.position.y = 0.05; 
         grid.material.opacity = 0.4;
         grid.material.transparent = true;
         this.scene.add(grid);
+
+        // === إعدادات دورة الليل والنهار ===
+        this.timeOfDay = 0.25; // 0=شروق، 0.25=ظهر، 0.5=غروب، 0.75=منتصف الليل
+        this.daySpeed = 0.02; // سرعة مرور الوقت
+
+        // إنشاء النجوم
+        const starsGeo = new THREE.BufferGeometry();
+        const starsCount = 3000;
+        const starsPos = new Float32Array(starsCount * 3);
+        for (let i = 0; i < starsCount * 3; i++) {
+            starsPos[i] = (Math.random() - 0.5) * 300;
+        }
+        starsGeo.setAttribute('position', new THREE.BufferAttribute(starsPos, 3));
+        const starsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.6, transparent: true, opacity: 0 });
+        this.stars = new THREE.Points(starsGeo, starsMat);
+        this.scene.add(this.stars);
+
+        // إنشاء القمر
+        this.moon = new THREE.Mesh(
+            new THREE.SphereGeometry(3, 16, 16),
+            new THREE.MeshBasicMaterial({ color: 0xdddddd })
+        );
+        this.scene.add(this.moon);
 
         this.objects = [];
         this.selected = null;
@@ -266,6 +283,51 @@ export class Engine {
     }
 
     update(dt) {
+        // === تحديث دورة الليل والنهار ===
+        this.timeOfDay = (this.timeOfDay + dt * this.daySpeed) % 1;
+        const angle = this.timeOfDay * Math.PI * 2;
+
+        // حركة الشمس
+        this.sun.position.x = Math.cos(angle) * 50;
+        this.sun.position.y = Math.sin(angle) * 50;
+        this.sun.position.z = Math.sin(angle) * 20;
+        
+        const sunHeight = this.sun.position.y;
+
+        const dayColor = new THREE.Color(0x87CEEB); // أزرق نهار
+        const nightColor = new THREE.Color(0x050510); // أسود ليل
+        const sunsetColor = new THREE.Color(0xff5500); // برتقالي غروب
+
+        let currentSkyColor = new THREE.Color();
+
+        if (sunHeight > 0) {
+            // نهار
+            const t = Math.min(sunHeight / 30, 1);
+            currentSkyColor.lerpColors(sunsetColor, dayColor, t);
+            this.sun.intensity = t * 2.0;
+            this.stars.material.opacity = 0;
+            this.moon.visible = false;
+        } else {
+            // ليل
+            const t = Math.min(Math.abs(sunHeight) / 30, 1);
+            currentSkyColor.lerpColors(sunsetColor, nightColor, t);
+            this.sun.intensity = 0;
+            this.stars.material.opacity = t;
+            this.moon.visible = true;
+        }
+
+        this.scene.background.copy(currentSkyColor);
+        this.scene.fog.color.copy(currentSkyColor);
+
+        // حركة القمر (عكس الشمس)
+        this.moon.position.x = Math.cos(angle + Math.PI) * 50;
+        this.moon.position.y = Math.sin(angle + Math.PI) * 50;
+        this.moon.position.z = Math.sin(angle + Math.PI) * 20;
+
+        // دوران النجوم
+        this.stars.rotation.y += 0.01 * dt;
+        // ===================================
+
         const box = new THREE.Box3(), size = new THREE.Vector3();
         this.objects.forEach(o => {
             if (o.userData.mixer) o.userData.mixer.update(dt);
