@@ -93,7 +93,7 @@ export class Engine {
 
         // إعدادات الوقت
         this.timeOfDay = 6 / 24; // 6 صباحاً
-        this.autoTime = true;
+        this.autoTime = false;
         this.daySpeed = 0.01;
         this.isManualSun = false;
 
