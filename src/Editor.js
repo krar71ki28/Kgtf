@@ -15,13 +15,13 @@ export class Editor {
 
         this.gizmo.addEventListener('dragging-changed', (event) => { 
             this.engine.controls.enabled = !event.value; 
-            this.isDraggingGizmo = event.value; // لحماية التحديد أثناء سحب الأسهم
+            this.isDraggingGizmo = event.value;
         });
         this.gizmo.addEventListener('objectChange', () => this.updateUIValues());
 
         this.bindButtons();
         this.bindInspector();
-        this.setupRaycaster(); // تشغيل خاصية النقر
+        this.setupRaycaster();
         
         engine.onSelect = (obj) => this.updateInspector(obj);
         engine.onSceneChange = () => this.updateList();
@@ -37,7 +37,6 @@ export class Editor {
         });
 
         canvas.addEventListener('pointerup', (e) => {
-            // إذا كنا في وضع اللعب، أو نسحب الأسهم، أو سحبنا الكاميرا، نتجاهل النقر
             if (document.body.classList.contains('play-mode') || this.isDraggingGizmo) return;
             if (Math.hypot(e.clientX - this.pointerDown.x, e.clientY - this.pointerDown.y) > 5) return;
 
@@ -52,11 +51,9 @@ export class Editor {
             
             if (hits.length > 0) {
                 let root = hits[0].object;
-                // البحث عن المجسم الأساسي (لأن الروبوت يتكون من أجزاء كثيرة)
                 while (root && root.parent !== this.engine.scene) root = root.parent;
                 if (root) return this.engine.selectObject(root);
             }
-            // إذا ضغطنا على الفراغ، نلغي التحديد
             this.engine.selectObject(null);
         });
     }
@@ -83,6 +80,16 @@ export class Editor {
         };
         document.getElementById('btn-delete').onclick = () => this.engine.deleteSelected();
         document.getElementById('btn-save').onclick = () => this.engine.saveScene();
+        
+        // أزرار التصدير والاستيراد
+        document.getElementById('btn-export').onclick = () => this.engine.exportScene();
+        document.getElementById('btn-import').onclick = () => document.getElementById('file-import').click();
+        document.getElementById('file-import').onchange = (e) => {
+            if (e.target.files.length > 0) {
+                this.engine.importScene(e.target.files[0]);
+                e.target.value = ''; // إعادة تعيين الحقل عشان تقدر تختار ملف ثاني
+            }
+        };
         
         document.getElementById('btn-clear-scene').onclick = () => {
             if (confirm('هل أنت متأكد من مسح المشهد بالكامل؟')) this.engine.clearScene();

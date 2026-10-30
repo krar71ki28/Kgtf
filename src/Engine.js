@@ -71,11 +71,9 @@ export class Engine {
         grid.material.transparent = true;
         this.scene.add(grid);
 
-        // === إعدادات دورة الليل والنهار ===
-        this.timeOfDay = 0.25; // 0=شروق، 0.25=ظهر، 0.5=غروب، 0.75=منتصف الليل
-        this.daySpeed = 0.02; // سرعة مرور الوقت
+        this.timeOfDay = 0.25; 
+        this.daySpeed = 0.02; 
 
-        // إنشاء النجوم
         const starsGeo = new THREE.BufferGeometry();
         const starsCount = 3000;
         const starsPos = new Float32Array(starsCount * 3);
@@ -87,7 +85,6 @@ export class Engine {
         this.stars = new THREE.Points(starsGeo, starsMat);
         this.scene.add(this.stars);
 
-        // إنشاء القمر
         this.moon = new THREE.Mesh(
             new THREE.SphereGeometry(3, 16, 16),
             new THREE.MeshBasicMaterial({ color: 0xdddddd })
@@ -270,6 +267,44 @@ export class Engine {
         alert('تم حفظ المشهد بنجاح!');
     }
 
+    exportScene() {
+        const data = this.objects.map(o => ({
+            type: o.userData.type, material: o.userData.material,
+            color: o.isMesh ? o.material.color.getHex() : (o.isLight ? o.color.getHex() : 0xffffff),
+            intensity: o.isLight ? o.intensity : undefined,
+            position: o.position.toArray(), rotation: [o.rotation.x, o.rotation.y, o.rotation.z], scale: o.scale.toArray(), physics: o.userData.physics
+        }));
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'kgtf_scene.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    importScene(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                this.clearScene(); 
+                this.objects = []; // نمسح الكائنات الحالية بدون اضافة المكعب الافتراضي
+                document.getElementById('object-list').innerHTML = '';
+                data.forEach(d => {
+                    if (d.type === 'character') this.loadCharacter({ position: d.position, rotation: d.rotation, isLoading: true });
+                    else this.addObject(d.type, d);
+                });
+                this.selectObject(null);
+                if (this.onSceneChange) this.onSceneChange();
+                alert('تم استيراد المشهد بنجاح!');
+            } catch (err) {
+                alert('عذراً، هذا الملف غير صالح أو تالف.');
+            }
+        };
+        reader.readAsText(file);
+    }
+
     loadScene() {
         const saved = localStorage.getItem('kgtf_scene_final');
         if (!saved) { this.addObject('cube'); return; }
@@ -283,32 +318,28 @@ export class Engine {
     }
 
     update(dt) {
-        // === تحديث دورة الليل والنهار ===
         this.timeOfDay = (this.timeOfDay + dt * this.daySpeed) % 1;
         const angle = this.timeOfDay * Math.PI * 2;
 
-        // حركة الشمس
         this.sun.position.x = Math.cos(angle) * 50;
         this.sun.position.y = Math.sin(angle) * 50;
         this.sun.position.z = Math.sin(angle) * 20;
         
         const sunHeight = this.sun.position.y;
 
-        const dayColor = new THREE.Color(0x87CEEB); // أزرق نهار
-        const nightColor = new THREE.Color(0x050510); // أسود ليل
-        const sunsetColor = new THREE.Color(0xff5500); // برتقالي غروب
+        const dayColor = new THREE.Color(0x87CEEB);
+        const nightColor = new THREE.Color(0x050510);
+        const sunsetColor = new THREE.Color(0xff5500);
 
         let currentSkyColor = new THREE.Color();
 
         if (sunHeight > 0) {
-            // نهار
             const t = Math.min(sunHeight / 30, 1);
             currentSkyColor.lerpColors(sunsetColor, dayColor, t);
             this.sun.intensity = t * 2.0;
             this.stars.material.opacity = 0;
             this.moon.visible = false;
         } else {
-            // ليل
             const t = Math.min(Math.abs(sunHeight) / 30, 1);
             currentSkyColor.lerpColors(sunsetColor, nightColor, t);
             this.sun.intensity = 0;
@@ -319,14 +350,11 @@ export class Engine {
         this.scene.background.copy(currentSkyColor);
         this.scene.fog.color.copy(currentSkyColor);
 
-        // حركة القمر (عكس الشمس)
         this.moon.position.x = Math.cos(angle + Math.PI) * 50;
         this.moon.position.y = Math.sin(angle + Math.PI) * 50;
         this.moon.position.z = Math.sin(angle + Math.PI) * 20;
 
-        // دوران النجوم
         this.stars.rotation.y += 0.01 * dt;
-        // ===================================
 
         const box = new THREE.Box3(), size = new THREE.Vector3();
         this.objects.forEach(o => {
