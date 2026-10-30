@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>KGTF ENGINE - Cinematic</title>
+<title>KGTF ENGINE - Character Controller</title>
 <style>
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body { font-family: system-ui, sans-serif; background: #0a0a0f; color: #fff; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
@@ -15,7 +15,7 @@
     .btn.primary { background: #00e5ff; color: #000; }
     .btn.green { background: #4ade80; color: #000; }
     
-    #workspace { flex: 1; display: flex; overflow: hidden; }
+    #workspace { flex: 1; display: flex; overflow: hidden; position: relative; }
     
     #left-panel { width: 70px; background: #141420; border-left: 1px solid #2a2a3a; display: flex; flex-direction: column; align-items: center; padding: 10px 0; gap: 8px; z-index: 10; overflow-y: auto; }
     .icon-btn { width: 52px; height: 52px; background: #1e1e30; border: 1px solid #2a2a3a; border-radius: 8px; color: #fff; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 9px; gap: 2px; padding: 4px; }
@@ -45,8 +45,14 @@
     .ai-input-row input { flex: 1; background: #0a0a0f; border: 1px solid #2a2a3a; color: #fff; padding: 8px; border-radius: 4px; outline: none; }
     .ai-input-row button { background: #ff5577; color: #fff; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; }
 
+    /* عصا التحكم */
+    #joystick-zone { position: absolute; bottom: 30px; left: 30px; width: 120px; height: 120px; display: none; z-index: 100; touch-action: none; }
+    #joystick-base { width: 100%; height: 100%; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; position: relative; }
+    #joystick-knob { width: 50px; height: 50px; background: #00e5ff; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px rgba(0,229,255,0.6); }
+
     body.play-mode #header, body.play-mode #left-panel, body.play-mode #right-panel, body.play-mode #ai-fab { display: none !important; }
     body.play-mode #workspace { flex-direction: column; }
+    body.play-mode #joystick-zone { display: block; }
     #exit-play { position: absolute; top: 15px; left: 15px; z-index: 30; display: none; }
     body.play-mode #exit-play { display: block; }
 
@@ -82,6 +88,12 @@
             <button class="btn primary" id="exit-play">✕ خروج</button>
             <div id="status-bar">FPS: <span id="fps">--</span></div>
             
+            <div id="joystick-zone">
+                <div id="joystick-base">
+                    <div id="joystick-knob"></div>
+                </div>
+            </div>
+
             <div id="ai-fab">🤖</div>
             <div id="ai-chat">
                 <div class="ai-header"><span>KGTF AI Assistant</span><span id="close-ai" style="cursor:pointer;">✕</span></div>
@@ -158,18 +170,17 @@
         const canvas = document.getElementById('viewport');
         const scene = new THREE.Scene();
         
-        // 1. إضاءة سينمائية (ACES Tone Mapping + PMREM Environment)
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap; // ظلال ناعمة
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         renderer.toneMappingExposure = 1.2;
         
         const pmremGenerator = new THREE.PMREMGenerator(renderer);
         const envMap = pmremGenerator.fromScene(new RoomEnvironment()).texture;
-        scene.environment = envMap; // انعكاسات واقعية للمواد
-        scene.background = new THREE.Color(0x0a0a0f); // لون السماء الداكن
+        scene.environment = envMap;
+        scene.background = new THREE.Color(0x0a0a0f);
 
         const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
         camera.position.set(8, 6, 10);
@@ -179,7 +190,6 @@
         controls.target.set(0, 2, 0);
         controls.maxPolarAngle = Math.PI / 2.05;
 
-        // 2. الشمس والظلال
         const sun = new THREE.DirectionalLight(0xffeedd, 2.0);
         sun.position.set(10, 20, 10);
         sun.castShadow = true;
@@ -189,13 +199,8 @@
         sun.shadow.bias = -0.0005;
         scene.add(sun);
 
-        // 3. أرضية واقعية بدلاً من الشبكة
         const groundGeo = new THREE.PlaneGeometry(100, 100);
-        const groundMat = new THREE.MeshStandardMaterial({ 
-            color: 0x1a1a2e, 
-            roughness: 0.8, 
-            metalness: 0.2 
-        });
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x1a1a2e, roughness: 0.8, metalness: 0.2 });
         const ground = new THREE.Mesh(groundGeo, groundMat);
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
@@ -204,6 +209,10 @@
         let objects = [];
         let selected = null;
         let idCounter = 1;
+        
+        // حالة اللاعب
+        let player = null;
+        let isPlaying = false;
 
         function makeMaterial(matName, colorHex) {
             const base = MATERIALS[matName] || MATERIALS.default;
@@ -329,14 +338,21 @@
                 model.traverse(o => { if(o.isMesh) o.castShadow = true; });
                 
                 const mixer = new THREE.AnimationMixer(model);
-                if (gltf.animations.length > 0) {
-                    const action = mixer.clipAction(gltf.animations[0]);
-                    action.play();
-                }
+                const actions = {};
+                // تجهيز كل الحركات المتاحة
+                gltf.animations.forEach(clip => {
+                    actions[clip.name] = mixer.clipAction(clip);
+                });
+
+                // تشغيل حركة الوقوف كبداية
+                if (actions['Idle']) actions['Idle'].play();
+
                 model.userData = { 
                     id: 'char_' + (idCounter++), 
                     type: 'character', 
                     mixer: mixer, 
+                    actions: actions,
+                    currentAction: 'Idle',
                     material: 'n/a', 
                     physics: { enabled: false, vy: 0, bounce: 0 }
                 };
@@ -381,7 +397,6 @@
         document.getElementById('prop-z').oninput = (e) => { if (selected) selected.position.z = parseFloat(e.target.value); };
         document.getElementById('prop-rot').oninput = (e) => { if (selected) selected.rotation.y = parseFloat(e.target.value); };
         document.getElementById('prop-scale').oninput = (e) => { if (selected) selected.scale.setScalar(parseFloat(e.target.value)); };
-        
         document.getElementById('prop-physics').onchange = (e) => {
             if (selected && selected.userData.physics) {
                 selected.userData.physics.enabled = e.target.checked;
@@ -391,7 +406,6 @@
         document.getElementById('prop-bounce').oninput = (e) => {
             if (selected && selected.userData.physics) selected.userData.physics.bounce = parseFloat(e.target.value);
         };
-        
         document.getElementById('btn-delete').onclick = deleteSelected;
 
         document.getElementById('btn-save').onclick = () => {
@@ -407,12 +421,12 @@
                     scale: o.scale.toArray(),
                     physics: o.userData.physics
                 }));
-            localStorage.setItem('kgtf_scene_v4', JSON.stringify(data));
+            localStorage.setItem('kgtf_scene_v5', JSON.stringify(data));
             alert('تم حفظ المشهد (' + data.length + ' كائن)');
         };
 
         function loadScene() {
-            const saved = localStorage.getItem('kgtf_scene_v4');
+            const saved = localStorage.getItem('kgtf_scene_v5');
             if (!saved) { addObject('cube'); return; }
             try {
                 const data = JSON.parse(saved);
@@ -430,42 +444,72 @@
             } catch(e) { console.error(e); addObject('cube'); }
         }
 
-        document.getElementById('btn-play').onclick = () => { document.body.classList.add('play-mode'); resize(); };
-        document.getElementById('exit-play').onclick = () => { document.body.classList.remove('play-mode'); resize(); };
-
-        const aiFab = document.getElementById('ai-fab');
-        const aiChat = document.getElementById('ai-chat');
-        aiFab.onclick = () => { aiChat.style.display = aiChat.style.display === 'flex' ? 'none' : 'flex'; };
-        document.getElementById('close-ai').onclick = () => { aiChat.style.display = 'none'; };
-        document.getElementById('ai-send').onclick = async () => {
-            const text = document.getElementById('ai-input').value.trim();
-            if (!text) return;
-            const msgs = document.getElementById('ai-messages');
-            document.getElementById('ai-input').value = '';
-            msgs.innerHTML += `<div style="color:#ff5577;margin-bottom:6px;">👤 ${text}</div>`;
-            msgs.innerHTML += `<div id="ai-loading" style="color:#888;">...</div>`;
-            msgs.scrollTop = msgs.scrollHeight;
-            try {
-                const res = await fetch('https://text.pollinations.ai/openai', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        model: 'openai',
-                        messages: [
-                            { role: 'system', content: 'أنت خبير Three.js. أجب بكود مختصر عند الطلب.' },
-                            { role: 'user', content: text }
-                        ]
-                    })
-                });
-                const data = await res.json();
-                document.getElementById('ai-loading').remove();
-                msgs.innerHTML += `<div style="color:#00e5ff;margin-bottom:6px;white-space:pre-wrap;">🤖 ${data.choices[0].message.content}</div>`;
-            } catch(e) {
-                document.getElementById('ai-loading').remove();
-                msgs.innerHTML += `<div style="color:#f00;">خطأ في الاتصال</div>`;
-            }
-            msgs.scrollTop = msgs.scrollHeight;
+        // --- وضع التشغيل والتحكم ---
+        document.getElementById('btn-play').onclick = () => {
+            // البحث عن شخصية لتحكم بها
+            player = objects.find(o => o.userData.type === 'character');
+            if (!player) { alert('أضف شخصية أولاً لتتمكن من اللعب!'); return; }
+            
+            isPlaying = true;
+            document.body.classList.add('play-mode');
+            // نقل الكاميرا خلف الشخصية
+            camera.position.copy(player.position).add(new THREE.Vector3(0, 3, -6));
+            controls.target.copy(player.position);
+            resize();
         };
+
+        document.getElementById('exit-play').onclick = () => {
+            isPlaying = false;
+            document.body.classList.remove('play-mode');
+            resize();
+        };
+
+        // عصا التحكم (Joystick Logic)
+        const jZone = document.getElementById('joystick-zone');
+        const jKnob = document.getElementById('joystick-knob');
+        let jActive = false;
+        let jVector = new THREE.Vector2(0, 0);
+        const maxJDist = 35;
+
+        function handleJoyStart(e) {
+            jActive = true;
+            handleJoyMove(e);
+        }
+        function handleJoyMove(e) {
+            if (!jActive) return;
+            const touch = e.touches ? e.touches[0] : e;
+            const rect = jZone.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            let dx = touch.clientX - centerX;
+            let dy = touch.clientY - centerY;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            
+            if (dist > maxJDist) {
+                dx = (dx / dist) * maxJDist;
+                dy = (dy / dist) * maxJDist;
+            }
+            
+            jKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+            
+            // حساب اتجاه الحركة (تطبيع)
+            jVector.x = dx / maxJDist;
+            jVector.y = dy / maxJDist;
+        }
+        function handleJoyEnd() {
+            jActive = false;
+            jKnob.style.transform = `translate(-50%, -50%)`;
+            jVector.set(0, 0);
+        }
+
+        jZone.addEventListener('touchstart', handleJoyStart, {passive: false});
+        jZone.addEventListener('touchmove', handleJoyMove, {passive: false});
+        jZone.addEventListener('touchend', handleJoyEnd);
+        
+        jZone.addEventListener('mousedown', handleJoyStart);
+        window.addEventListener('mousemove', handleJoyMove);
+        window.addEventListener('mouseup', handleJoyEnd);
 
         const clock = new THREE.Clock();
         let fpsAcc = 0, frames = 0;
@@ -493,21 +537,52 @@
                 if (p && p.enabled && o.isMesh) {
                     p.vy -= 9.8 * dt;
                     o.position.y += p.vy * dt;
-                    
                     box.setFromObject(o);
                     box.getSize(size);
                     const groundLevel = size.y / 2;
-                    
                     if (o.position.y < groundLevel) {
                         o.position.y = groundLevel;
-                        if (Math.abs(p.vy) > 0.5) {
-                            p.vy = -p.vy * p.bounce;
-                        } else {
-                            p.vy = 0;
-                        }
+                        if (Math.abs(p.vy) > 0.5) p.vy = -p.vy * p.bounce;
+                        else p.vy = 0;
                     }
                 }
             });
+
+            // --- تحديث حركة الشخصية ---
+            if (isPlaying && player) {
+                const speed = 5;
+                // تحريك الشخصية بناءً على عصا التحكم
+                if (jVector.lengthSq() > 0.01) {
+                    // الحركة للأمام والخلف بناءً على المحور Y للشاشة
+                    player.position.z -= jVector.y * speed * dt;
+                    // الحركة يمين ويسار بناءً على المحور X
+                    player.position.x += jVector.x * speed * dt;
+                    
+                    // تدوير الشخصية باتجاه الحركة
+                    const targetRot = Math.atan2(jVector.x, -jVector.y);
+                    // دوران ناعم
+                    player.rotation.y = THREE.MathUtils.lerp(player.rotation.y, targetRot, 10 * dt);
+
+                    // تبديل الأنيميشن إلى المشي
+                    if (player.userData.actions && player.userData.actions['Walking'] && player.userData.currentAction !== 'Walking') {
+                        if (player.userData.actions[player.userData.currentAction]) player.userData.actions[player.userData.currentAction].fadeOut(0.2);
+                        player.userData.actions['Walking'].reset().fadeIn(0.2).play();
+                        player.userData.currentAction = 'Walking';
+                    }
+                } else {
+                    // العودة لأنيميشن الوقوف
+                    if (player.userData.actions && player.userData.actions['Idle'] && player.userData.currentAction !== 'Idle') {
+                        if (player.userData.actions[player.userData.currentAction]) player.userData.actions[player.userData.currentAction].fadeOut(0.2);
+                        player.userData.actions['Idle'].reset().fadeIn(0.2).play();
+                        player.userData.currentAction = 'Idle';
+                    }
+                }
+
+                // الكاميرا تتبع الشخصية (Third Person)
+                const targetCamPos = player.position.clone().add(new THREE.Vector3(0, 3, -6).applyAxisAngle(new THREE.Vector3(0,1,0), player.rotation.y));
+                camera.position.lerp(targetCamPos, 5 * dt);
+                controls.target.lerp(player.position.clone().add(new THREE.Vector3(0, 1, 0)), 5 * dt);
+            }
 
             controls.update();
             renderer.render(scene, camera);
