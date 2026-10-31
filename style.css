@@ -112,3 +112,7 @@ body.play-mode #header, body.play-mode #inspector-panel { display: none !importa
     touch-action: none;
     z-index: 10;
 }
+
+/* إصلاح طبقات واجهة اللعب لضمان عمل الأزرار فوق الكاميرا */
+#play-ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 150; overflow: hidden; }
+#play-ui button, #play-ui #joystick-zone, #play-ui #score-display { pointer-events: auto; }

@@ -11,11 +11,11 @@ import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 
-import { VFXManager } from './VFX.js?v=13.0.0';
-import { Physics } from './Physics.js?v=13.0.0';
-import { LogicManager } from './Logic.js?v=13.0.0';
-import { UIManager } from './UI.js?v=13.0.0';
-import { AssetManager } from './AssetManager.js?v=13.0.0';
+import { VFXManager } from './VFX.js?v=14.0.0';
+import { Physics } from './Physics.js?v=14.0.0';
+import { LogicManager } from './Logic.js?v=14.0.0';
+import { UIManager } from './UI.js?v=14.0.0';
+import { AssetManager } from './AssetManager.js?v=14.0.0';
 
 export class Engine {
     constructor(canvas) {
@@ -28,9 +28,9 @@ export class Engine {
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
         
-        // إعدادات تعرض متوازنة (مثل Unreal)
+        // ✅ إضاءة Unreal السينمائية
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 1.0; 
+        this.renderer.toneMappingExposure = 0.6; // تعرض منخفض للتباين
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
@@ -38,20 +38,18 @@ export class Engine {
         const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
         this.scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
 
-        // ==========================================
-        // إضاءة وسما AAA (ثابتة بدون تعديل)
-        // ==========================================
+        // ✅ السماء
         this.sky = new Sky();
         this.sky.scale.setScalar(450000); 
         this.scene.add(this.sky);
         
         const skyParams = {
-            turbidity: 10,       
-            rayleigh: 2,        
+            turbidity: 5,       
+            rayleigh: 1.5,        
             mieCoefficient: 0.005,
-            mieDirectionalG: 0.7,
-            elevation: 45, 
-            azimuth: 180 
+            mieDirectionalG: 0.8,
+            elevation: 25, // شمس منخفضة قليلاً لظلال أطول (مثل UE)
+            azimuth: 135 
         };
 
         const phi = THREE.MathUtils.degToRad(90 - skyParams.elevation);
@@ -64,11 +62,11 @@ export class Engine {
         this.sky.material.uniforms['mieCoefficient'].value = skyParams.mieCoefficient;
         this.sky.material.uniforms['mieDirectionalG'].value = skyParams.mieDirectionalG;
 
-        // إضاءة محيطة قوية (عشان المناطق المظلمة ما تكون سودة)
-        this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5);
+        // ✅ إضاءة محيطة منخفضة (عشان الظلال تبان قوية)
+        this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x333333, 0.4);
         this.scene.add(this.hemiLight);
 
-        // ضوء الشمس
+        // ✅ ضوء شمس قوي
         this.sun = new THREE.DirectionalLight(0xfff5e6, 3.0);
         this.sun.position.copy(sunPos).multiplyScalar(30);
         this.sun.castShadow = true;
@@ -84,13 +82,13 @@ export class Engine {
         this.scene.add(this.sun);
         this.scene.add(this.sun.target);
 
-        // Post-Processing
         this.composer = new EffectComposer(this.renderer);
         this.composer.addPass(new RenderPass(this.scene, this.camera));
         
+        // توهج خفيف جداً
         this.bloomPass = new UnrealBloomPass(
             new THREE.Vector2(window.innerWidth, window.innerHeight),
-            0.4, 0.4, 0.85 
+            0.2, 0.5, 0.95 
         );
         this.composer.addPass(this.bloomPass);
 
@@ -144,8 +142,8 @@ export class Engine {
     }
 
     setupGround() {
-        // أرضية خضراء سينمائية
-        const groundMat = new THREE.MeshStandardMaterial({ color: 0x556B2F, roughness: 0.8, metalness: 0.1 });
+        // أرضية داكنة وواقعية مثل UE
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x2d3a2e, roughness: 0.9, metalness: 0.1 });
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), groundMat);
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
@@ -153,7 +151,7 @@ export class Engine {
 
         const grid = new THREE.GridHelper(200, 100, 0x00e5ff, 0x111111);
         grid.position.y = 0.01;
-        grid.material.opacity = 0.15;
+        grid.material.opacity = 0.1;
         grid.material.transparent = true;
         this.scene.add(grid);
     }

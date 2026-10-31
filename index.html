@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>KGTF ENGINE</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=13.0.0">
+<link rel="stylesheet" href="style.css?v=14.0.0">
 </head>
 <body>
     <header id="header">
@@ -50,15 +50,15 @@
         <div id="status-bar">FPS: <span id="fps">--</span></div>
         
         <div id="play-ui">
-            <!-- منطقة سحب الكاميرا (النصف الأيمن من الشاشة) -->
-            <div id="camera-drag-zone"></div>
+            <!-- الأزرار الحقيقية -->
+            <button id="exit-play" style="z-index: 1000;">✕ إيقاف</button>
+            <button id="btn-camera-toggle" style="z-index: 1000;" title="تبديل الكاميرا">👁️</button>
+            <div id="score-display" style="display:none; z-index: 1000;">النقاط: <span id="score-val">0</span></div>
             
-            <div id="score-display" style="display:none;">النقاط: <span id="score-val">0</span></div>
-            <button id="exit-play">✕ إيقاف</button>
-            <button id="btn-camera-toggle" title="تبديل الكاميرا">👁️</button>
-            <div id="joystick-zone"><div id="joystick-knob"></div></div>
-            <button id="btn-jump">قفز</button>
-            <div id="custom-hud"></div>
+            <div id="joystick-zone" style="z-index: 1000;"><div id="joystick-knob"></div></div>
+            <button id="btn-jump" style="z-index: 1000;">قفز</button>
+            
+            <div id="custom-hud" style="z-index: 500;"></div>
         </div>
     </main>
 
@@ -117,7 +117,6 @@
                 </div>
             </div>
 
-            <!-- World Tab (بدون أشرطة تحكم، فقط إعدادات نهائية) -->
             <div class="panel-section tab-pane" id="tab-world">
                 <div class="panel-header"><span class="panel-title">WORLD</span></div>
                 <div style="padding:20px; text-align:center; color:#888; font-size:12px;">
@@ -173,6 +172,6 @@
     <script type="importmap">
     { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
-    <script type="module" src="src/main.js?v=13.0.0"></script>
+    <script type="module" src="src/main.js?v=14.0.0"></script>
 </body>
 </html>
