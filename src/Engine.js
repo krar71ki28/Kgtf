@@ -9,7 +9,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js'; 
 import { VignetteShader } from 'three/addons/shaders/VignetteShader.js';
-import { Sky } from 'three/addons/objects/Sky.js'; // إضافة السماء
+import { Sky } from 'three/addons/objects/Sky.js';
 
 export const MATERIALS = {
     default:  { color: 0x00e5ff, roughness: 0.4, metalness: 0.1 },
@@ -36,7 +36,6 @@ export class Engine {
         this.canvas = canvas;
         this.scene = new THREE.Scene();
         
-        // إعداد السماء الواقعية
         this.sky = new Sky();
         this.sky.scale.setScalar(450000);
         this.scene.add(this.sky);
@@ -46,7 +45,6 @@ export class Engine {
         uniforms['mieCoefficient'].value = 0.005;
         uniforms['mieDirectionalG'].value = 0.8;
         
-        // ضبط الضباب ليتناسب مع لون السماء
         this.scene.fog = new THREE.Fog(0xaabbcc, 30, 150);
 
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -56,12 +54,13 @@ export class Engine {
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.renderer.toneMappingExposure = 1.0;
         
-        this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
-        this.camera.position.set(8, 6, 10);
+        this.editorCamera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+        this.editorCamera.position.set(8, 6, 10);
+        this.activeCamera = this.editorCamera;
 
-        // إعداد المعالجة اللاحقة
         this.composer = new EffectComposer(this.renderer);
-        this.composer.addPass(new RenderPass(this.scene, this.camera));
+        this.renderPass = new RenderPass(this.scene, this.activeCamera);
+        this.composer.addPass(this.renderPass);
         
         this.smaaPass = new SMAAPass(window.innerWidth, window.innerHeight);
         this.composer.addPass(this.smaaPass);
@@ -81,12 +80,11 @@ export class Engine {
         const envMap = pmremGenerator.fromScene(new RoomEnvironment()).texture;
         this.scene.environment = envMap;
 
-        this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+        this.controls = new OrbitControls(this.editorCamera, this.renderer.domElement);
         this.controls.enableDamping = true;
         this.controls.target.set(0, 2, 0);
         this.controls.maxPolarAngle = Math.PI / 2.05;
 
-        // إعداد الإضاءة
         this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.4);
         this.scene.add(this.hemiLight);
 
@@ -100,7 +98,6 @@ export class Engine {
         this.scene.add(this.sun);
         this.scene.add(this.sun.target);
 
-        // إعداد الأرضية العشبية
         const canvasTexture = document.createElement('canvas');
         canvasTexture.width = 512; canvasTexture.height = 512;
         const ctx = canvasTexture.getContext('2d');
@@ -161,10 +158,12 @@ export class Engine {
         this.scene.add(this.moon);
 
         this.objects = [];
+        this.customCameras = []; // مصفوفة لتخزين الكاميرات المضافة
         this.projectiles = []; 
         this.assets = JSON.parse(localStorage.getItem('kgtf_assets') || '[]'); 
         this.score = 0;
         this.onScoreChanged = null;
+        this.onCameraListChange = null; // حدث لتحديث القائمة
 
         this.selected = null;
         this.idCounter = 1;
@@ -202,6 +201,11 @@ export class Engine {
         }
     }
 
+    setActiveCamera(camera) {
+        this.activeCamera = camera;
+        this.renderPass.camera = camera;
+    }
+
     makeMaterial(matName, colorHex) {
         const base = MATERIALS[matName] || MATERIALS.default;
         const opts = { ...base };
@@ -234,6 +238,25 @@ export class Engine {
             this.scene.add(obj); this.objects.push(obj); this.selectObject(obj);
             if (this.onSceneChange) this.onSceneChange();
             return obj;
+        }
+        else if (type === 'camera') {
+            const cam = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+            cam.position.set(0, 5, 10);
+            cam.lookAt(0, 0, 0);
+            
+            const helper = new THREE.CameraHelper(cam);
+            this.scene.add(helper);
+            
+            cam.userData = { id: 'cam_' + (this.idCounter++), type: 'camera', material: 'n/a', physics: { enabled: false }, behaviors: {}, behaviorStates: {}, helper: helper };
+            
+            this.scene.add(cam); // إضافة الكاميرا للمشهد للتحكم بها
+            this.objects.push(cam);
+            this.customCameras.push(cam);
+            
+            this.selectObject(cam);
+            if (this.onCameraListChange) this.onCameraListChange();
+            if (this.onSceneChange) this.onSceneChange();
+            return cam;
         }
         else if (type === 'tree') {
             obj = new THREE.Group();
@@ -272,6 +295,22 @@ export class Engine {
         return obj;
     }
 
+    removeObject(obj) {
+        const idx = this.objects.indexOf(obj);
+        if (idx !== -1) { 
+            this.scene.remove(obj); 
+            if (obj.material) obj.material.dispose(); 
+            this.objects.splice(idx, 1); 
+            if (obj.userData.type === 'camera') {
+                this.customCameras = this.customCameras.filter(c => c !== obj);
+                if (obj.userData.helper) this.scene.remove(obj.userData.helper);
+                if (this.onCameraListChange) this.onCameraListChange();
+            }
+            if (this.onSceneChange) this.onSceneChange(); 
+            if (this.selected === obj) this.selectObject(null); 
+        }
+    }
+
     toggleNightMode(isNight) {
         this.isNightMode = isNight;
         this.autoTime = false;
@@ -290,32 +329,44 @@ export class Engine {
         document.getElementById('env-time-slider').value = this.timeOfDay * 24;
     }
 
-    loadModelFromFile(file) { /* ... نفس الكود السابق ... */ }
-    focusOnObject(obj) { /* ... نفس الكود السابق ... */ }
+    /* ... بقية الدوال كما هي ... */
+    loadModelFromFile(file) { /* ... */ }
+    focusOnObject(obj) { /* ... */ }
     setTimeOfDay(hours) { this.timeOfDay = hours / 24; }
     toggleRain(isRaining) { this.isRaining = isRaining; if (this.rain) this.rain.visible = isRaining; }
-    createParticleSystem(type, position) { /* ... نفس الكود السابق ... */ }
-    createAudioEmitter(position) { /* ... نفس الكود السابق ... */ }
-    saveAsAsset(obj) { /* ... نفس الكود السابق ... */ }
-    spawnAsset(assetId) { /* ... نفس الكود السابق ... */ }
-    removeAsset(assetId) { /* ... نفس الكود السابق ... */ }
-    removeObject(obj) { /* ... نفس الكود السابق ... */ }
-    createProjectile(pos, dir, speed) { /* ... نفس الكود السابق ... */ }
-    checkCollision(box1, excludeObj) { /* ... نفس الكود السابق ... */ }
-    duplicateObject() { /* ... نفس الكود السابق ... */ }
-    selectObject(obj) { /* ... نفس الكود السابق ... */ }
-    deleteSelected() { /* ... نفس الكود السابق ... */ }
-    clearScene() { /* ... نفس الكود السابق ... */ }
-    loadCharacter(opts = {}) { /* ... نفس الكود السابق ... */ }
-    getSceneData() { /* ... نفس الكود السابق ... */ }
-    loadSceneData(data) { /* ... نفس الكود السابق ... */ }
-    saveSceneAs(name) { /* ... نفس الكود السابق ... */ }
-    loadSceneByName(name) { /* ... نفس الكود السابق ... */ }
-    deleteSceneByName(name) { /* ... نفس الكود السابق ... */ }
-    saveScene() { /* ... نفس الكود السابق ... */ }
-    exportScene() { /* ... نفس الكود السابق ... */ }
-    importScene(file) { /* ... نفس الكود السابق ... */ }
-    loadScene() { /* ... نفس الكود السابق ... */ }
+    createParticleSystem(type, position) { /* ... */ }
+    createAudioEmitter(position) { /* ... */ }
+    saveAsAsset(obj) { /* ... */ }
+    spawnAsset(assetId) { /* ... */ }
+    removeAsset(assetId) { /* ... */ }
+    createProjectile(pos, dir, speed) { /* ... */ }
+    checkCollision(box1, excludeObj) { /* ... */ }
+    duplicateObject() { /* ... */ }
+    selectObject(obj) { this.selected = obj; if (this.onSelect) this.onSelect(obj); }
+    deleteSelected() { if (!this.selected || this.selected.userData.type === 'character') return; this.removeObject(this.selected); }
+    clearScene() { 
+        this.sceneVersion++;
+        this.objects.forEach(obj => {
+            this.scene.remove(obj);
+            if (obj.userData.type === 'camera' && obj.userData.helper) this.scene.remove(obj.userData.helper);
+            if (obj.traverse) { obj.traverse(child => { if (child.isMesh) { if (child.geometry) child.geometry.dispose(); if (Array.isArray(child.material)) child.material.forEach(m => m.dispose()); else if (child.material) child.material.dispose(); } }); } 
+            else { if (obj.geometry) obj.geometry.dispose(); if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose()); else if (obj.material) obj.material.dispose(); }
+        });
+        this.objects = []; this.customCameras = [];
+        this.projectiles.forEach(p => this.scene.remove(p.mesh)); this.projectiles = []; this.selectObject(null);
+        if (this.onCameraListChange) this.onCameraListChange();
+        if (this.onSceneChange) this.onSceneChange();
+    }
+    loadCharacter(opts = {}) { /* ... */ }
+    getSceneData() { /* ... */ }
+    loadSceneData(data) { /* ... */ }
+    saveSceneAs(name) { /* ... */ }
+    loadSceneByName(name) { /* ... */ }
+    deleteSceneByName(name) { /* ... */ }
+    saveScene() { /* ... */ }
+    exportScene() { /* ... */ }
+    importScene(file) { /* ... */ }
+    loadScene() { /* ... */ }
 
     update(dt) {
         this.totalTime += dt;
@@ -377,8 +428,8 @@ export class Engine {
     resize() { 
         const c = document.getElementById('viewport-container'); 
         const w = c.clientWidth, h = c.clientHeight; 
-        this.camera.aspect = w / h; 
-        this.camera.updateProjectionMatrix(); 
+        this.editorCamera.aspect = w / h; 
+        this.editorCamera.updateProjectionMatrix(); 
         this.renderer.setSize(w, h, false); 
         this.composer.setSize(w, h); 
         if (this.smaaPass) this.smaaPass.setSize(w, h);

@@ -21,6 +21,7 @@
                 <div class="dropdown-content" id="add-menu">
                     <button id="btn-cube">📦 مكعب</button><button id="btn-sphere">🔴 كرة</button><button id="btn-cylinder">🛢️ أسطوانة</button><button id="btn-cone">🔺 مخروط</button><button id="btn-torus">🍩 حلقة</button>
                     <button id="btn-tree">🌲 شجرة</button><button id="btn-bush">🌿 شجيرة</button><button id="btn-mountain">⛰️ جبل</button><button id="btn-rock">🪨 صخرة</button><button id="btn-building">🏢 مبنى</button>
+                    <button id="btn-camera">📷 كاميرا</button>
                     <button id="btn-light">💡 ضوء عادي</button><button id="btn-spotlight">🔦 كشاف</button><button id="btn-character">🏃 شخصية</button>
                     <button id="btn-vfx-fire" style="color:#ffaa00;">🔥 نار</button><button id="btn-vfx-sparks" style="color:#00e5ff;">✨ شرارات</button><button id="btn-vfx-smoke" style="color:#aaa;">☁️ دخان</button><button id="btn-audio" style="color:#ff5577;">🔊 مكبر صوت</button>
                 </div>
@@ -60,7 +61,14 @@
             <div class="panel-section tab-pane" id="tab-world">
                 <div class="panel-header"><span class="panel-title" style="color:#ffaa00;">WORLD SETTINGS</span></div>
                 <div style="padding: 15px; overflow-y: auto;">
-                    <div class="prop-group"><div class="prop-title" style="color:#ff5577;">TIME (الوقت)</div>
+                    <div class="prop-group"><div class="prop-title" style="color:#ff5577;">ACTIVE CAMERA (الكاميرا النشطة)</div>
+                        <div class="prop-row">
+                            <select id="active-camera-select" style="width:100%; background:#121215; border:1px solid #333; color:#fff; padding:6px; border-radius:4px;">
+                                <option value="editor">Editor Camera (Default)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="prop-group" style="margin-top:15px;"><div class="prop-title" style="color:#ff5577;">TIME (الوقت)</div>
                         <div class="prop-row" style="background:#1a1a24; padding:6px; border-radius:4px; margin-bottom:8px;">
                             <label style="color:#00e5ff; font-weight:bold;">الوضع الليلي</label>
                             <input type="checkbox" id="env-night-mode">
@@ -80,6 +88,6 @@
     <script type="importmap">
     { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
-    <script type="module" src="src/main.js?v=76"></script>
+    <script type="module" src="src/main.js?v=78"></script>
 </body>
 </html>
