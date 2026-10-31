@@ -60,15 +60,8 @@ export class Editor {
         const btn = document.getElementById('btn-add-menu');
         const menu = document.getElementById('add-menu');
         if(btn && menu) {
-            btn.onclick = (e) => { 
-                e.stopPropagation(); 
-                menu.classList.toggle('show'); 
-            };
-            document.addEventListener('click', (e) => { 
-                if (!menu.contains(e.target) && e.target !== btn) {
-                    menu.classList.remove('show'); 
-                }
-            });
+            btn.onclick = (e) => { e.stopPropagation(); menu.classList.toggle('show'); };
+            document.addEventListener('click', (e) => { if (!menu.contains(e.target) && e.target !== btn) menu.classList.remove('show'); });
         }
         
         const types = ['cube','sphere','cylinder','cone','torus','tree','rock','building','light','character'];
@@ -200,6 +193,19 @@ export class Editor {
             reader.readAsDataURL(file);
             e.target.value = '';
         };
+
+        // ربط زر رفع الملفات
+        const uploadModelBtn = document.getElementById('btn-upload-model');
+        const modelUploadInput = document.getElementById('model-upload-input');
+        if(uploadModelBtn && modelUploadInput) {
+            uploadModelBtn.onclick = () => modelUploadInput.click();
+            modelUploadInput.onchange = (e) => {
+                if (e.target.files.length > 0) {
+                    this.engine.loadModelFromFile(e.target.files[0]);
+                    e.target.value = '';
+                }
+            };
+        }
     }
 
     bindMaterialProps() {
@@ -437,7 +443,7 @@ export class Editor {
                 input.addEventListener('input', (e) => {
                     const val = input.type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value;
                     currentParams[paramKey] = val;
-                    if (this.engine.selected.userData.behaviorStates) delete this.engine.selected.userData.behaviorStates[paramKey];
+                    if (this.engine.selected.userData.behaviorStates) delete this.engine.selected.userData.behaviorStates[bName];
                 });
                 row.appendChild(paramLabel); row.appendChild(input); card.appendChild(row);
             }
@@ -488,22 +494,3 @@ export class Editor {
         });
     }
 }
-
-// إضافة زر رفع النماذج في دالة bindButtons
-const originalBindButtons = Editor.prototype.bindButtons;
-Editor.prototype.bindButtons = function() {
-    originalBindButtons.call(this);
-    
-    const uploadBtn = document.getElementById('btn-upload-model');
-    const uploadInput = document.getElementById('model-upload-input');
-    
-    if (uploadBtn && uploadInput) {
-        uploadBtn.onclick = () => uploadInput.click();
-        uploadInput.onchange = (e) => {
-            if (e.target.files.length > 0) {
-                this.engine.loadModelFromFile(e.target.files[0]);
-                e.target.value = ''; // تصفير الحقل
-            }
-        };
-    }
-};

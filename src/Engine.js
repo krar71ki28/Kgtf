@@ -211,6 +211,29 @@ export class Engine {
         return obj;
     }
 
+    loadModelFromFile(file) {
+        const loader = new GLTFLoader();
+        const url = URL.createObjectURL(file);
+        loader.load(url, (gltf) => {
+            const model = gltf.scene;
+            model.position.set(0, 0, 0);
+            model.scale.set(1, 1, 1);
+            
+            model.traverse(o => { if(o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+
+            model.userData = { id: 'model_' + (this.idCounter++), type: 'model', material: 'custom', physics: { enabled: false, vy: 0, bounce: 0 }, behaviors: {}, behaviorStates: {} };
+
+            this.scene.add(model);
+            this.objects.push(model);
+            this.selectObject(model);
+            if (this.onSceneChange) this.onSceneChange();
+            URL.revokeObjectURL(url); 
+        }, undefined, (err) => {
+            alert('خطأ في تحميل المجسم. تأكد من أنه بصيغة .glb أو .gltf صحيحة ومحسنة للموبايل.');
+            console.error(err);
+        });
+    }
+
     focusOnObject(obj) {
         if (!obj) return;
         const box = new THREE.Box3().setFromObject(obj);
@@ -585,41 +608,3 @@ export class Engine {
         this.composer.setSize(w, h); 
     }
 }
-
-// دالة لتحميل مجسم خارجي (GLB/GLTF) من جهاز المستخدم
-Engine.prototype.loadModelFromFile = function(file) {
-    const loader = new GLTFLoader();
-    const url = URL.createObjectURL(file);
-    
-    loader.load(url, (gltf) => {
-        const model = gltf.scene;
-        model.position.set(0, 0, 0); // حطه في المنتصف
-        model.scale.set(1, 1, 1);
-        
-        model.traverse(o => { 
-            if(o.isMesh) { 
-                o.castShadow = true; 
-                o.receiveShadow = true; 
-            } 
-        });
-
-        // إعدادات المجسم
-        model.userData = { 
-            id: 'model_' + (this.idCounter++), 
-            type: 'model', 
-            material: 'custom', 
-            physics: { enabled: false, vy: 0, bounce: 0 }, 
-            behaviors: {}, 
-            behaviorStates: {} 
-        };
-
-        this.scene.add(model);
-        this.objects.push(model);
-        this.selectObject(model);
-        if (this.onSceneChange) this.onSceneChange();
-        URL.revokeObjectURL(url); // تنظيف الذاكرة
-    }, undefined, (err) => {
-        alert('خطأ في تحميل المجسم. تأكد من أنه بصيغة .glb أو .gltf صحيحة ومحسنة للموبايل.');
-        console.error(err);
-    });
-};
