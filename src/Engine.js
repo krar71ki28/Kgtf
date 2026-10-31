@@ -7,6 +7,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js'; // إضافة التنعيم
 import { VignetteShader } from 'three/addons/shaders/VignetteShader.js';
 
 export const MATERIALS = {
@@ -36,24 +37,38 @@ export class Engine {
         this.scene.background = new THREE.Color(0x87CEEB);
         this.scene.fog = new THREE.Fog(0x87CEEB, 30, 120);
 
-        this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); 
+        this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true }); // تفعيل التنعيم الأساسي
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // دقة عالية جداً
         this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // ظلال ناعمة
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping; // ألوان سينمائية مثل UE
+        this.renderer.toneMappingExposure = 1.0;
         
         this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
         this.camera.position.set(8, 6, 10);
 
+        // إعداد نظام المعالجة (Post-Processing)
         this.composer = new EffectComposer(this.renderer);
+        
+        // تمرير المشهد الأساسي
         this.composer.addPass(new RenderPass(this.scene, this.camera));
+        
+        // إضافة التنعيم (SMAA)
+        this.smaaPass = new SMAAPass(window.innerWidth, window.innerHeight);
+        this.composer.addPass(this.smaaPass);
+
+        // إضافة التوهج (Bloom)
         this.bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0, 0.4, 0.8); 
         this.composer.addPass(this.bloomPass);
+        
+        // إضافة تعتيم الأطراف (Vignette)
         this.vignettePass = new ShaderPass(VignetteShader);
         this.vignettePass.uniforms["offset"].value = 1.0;
         this.vignettePass.uniforms["darkness"].value = 1.0;
         this.vignettePass.enabled = false;
         this.composer.addPass(this.vignettePass);
+        
+        // تمرير الإخراج النهائي
         this.composer.addPass(new OutputPass());
 
         const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
@@ -207,7 +222,6 @@ export class Engine {
             const actions = {};
             gltf.animations.forEach(clip => { actions[clip.name] = mixer.clipAction(clip); });
 
-            // تشغيل أول أنميشن تلقائياً
             const animNames = Object.keys(actions);
             let defaultAnim = null;
             if (animNames.length > 0) {
@@ -356,7 +370,6 @@ export class Engine {
             const actions = {};
             gltf.animations.forEach(clip => { actions[clip.name] = mixer.clipAction(clip); });
             
-            // تشغيل الأنميشن تلقائياً أول ما تنزل الشخصية
             const animNames = Object.keys(actions);
             let defaultAnim = null;
             if (animNames.length > 0) {
@@ -503,5 +516,14 @@ export class Engine {
     }
 
     render() { this.composer.render(); }
-    resize() { const c = document.getElementById('viewport-container'); const w = c.clientWidth, h = c.clientHeight; this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); this.renderer.setSize(w, h, false); this.composer.setSize(w, h); }
+    
+    resize() { 
+        const c = document.getElementById('viewport-container'); 
+        const w = c.clientWidth, h = c.clientHeight; 
+        this.camera.aspect = w / h; 
+        this.camera.updateProjectionMatrix(); 
+        this.renderer.setSize(w, h, false); 
+        this.composer.setSize(w, h); 
+        if (this.smaaPass) this.smaaPass.setSize(w, h); // تحديث حجم التنعيم
+    }
 }
