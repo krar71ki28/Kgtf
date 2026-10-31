@@ -14,15 +14,11 @@ export class Editor {
         this.engine.onSelect = (obj) => this.updateInspector(obj);
         this.engine.onSceneChange = () => this.updateList();
         
-        // اختيار أول مجسم تلقائياً عشان يطلع الـ Gizmo
-        if (this.engine.objects.length > 0) {
-            this.engine.selectObject(this.engine.objects[0]);
-        }
+        if (this.engine.objects.length > 0) this.engine.selectObject(this.engine.objects[0]);
         this.updateList();
     }
 
     setupUI() {
-        // التبويبات
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.onclick = () => {
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -32,25 +28,23 @@ export class Editor {
             };
         });
 
-        // أزرار الإضافة (اليسار)
-        const types = ['cube','sphere','cylinder','cone','torus','tree','bush','mountain','rock','building','light','character','camera'];
+        const addMenu = document.getElementById('add-menu');
+        document.getElementById('btn-add-menu').onclick = (e) => { e.stopPropagation(); addMenu.classList.toggle('show'); };
+        document.body.onclick = (e) => { if (!addMenu.contains(e.target) && e.target.id !== 'btn-add-menu') addMenu.classList.remove('show'); };
+
+        const types = ['cube','sphere','cylinder','tree','rock','light','character','camera'];
         types.forEach(t => {
             const el = document.getElementById(`btn-${t}`);
             if(el) el.onclick = () => {
                 if(t === 'character') this.engine.loadCharacter();
                 else this.engine.addObject(t);
+                addMenu.classList.remove('show');
             };
         });
         
-        const uploadBtn = document.getElementById('btn-upload-model');
-        if(uploadBtn) {
-            uploadBtn.onclick = () => document.getElementById('model-upload-input').click();
-            document.getElementById('model-upload-input').onchange = (e) => {
-                if(e.target.files.length > 0) this.engine.loadModelFromFile(e.target.files[0]);
-            };
-        }
+        document.getElementById('btn-upload-model').onclick = () => document.getElementById('model-upload-input').click();
+        document.getElementById('model-upload-input').onchange = (e) => { if(e.target.files.length > 0) this.engine.loadModelFromFile(e.target.files[0]); };
 
-        // أدوات التحكم (أعلى)
         document.getElementById('btn-gizmo-translate').onclick = () => { this.gizmo.setMode('translate'); this.setActiveTool('btn-gizmo-translate'); };
         document.getElementById('btn-gizmo-rotate').onclick = () => { this.gizmo.setMode('rotate'); this.setActiveTool('btn-gizmo-rotate'); };
         document.getElementById('btn-gizmo-scale').onclick = () => { this.gizmo.setMode('scale'); this.setActiveTool('btn-gizmo-scale'); };
@@ -59,8 +53,8 @@ export class Editor {
         document.getElementById('btn-save').onclick = () => this.engine.saveScene();
         document.getElementById('btn-clear-scene').onclick = () => { if(confirm('مسح الكل؟')) { this.engine.objects.forEach(o=>this.engine.scene.remove(o)); this.engine.objects = []; this.updateList(); } };
         document.getElementById('btn-delete').onclick = () => { if(this.engine.selected) this.engine.removeObject(this.engine.selected); };
+        document.getElementById('panel-drag-handle').onclick = () => document.getElementById('inspector-panel').classList.toggle('collapsed');
 
-        // أشرطة الخصائص
         const bindProp = (id, callback) => {
             const el = document.getElementById(id);
             if(!el) return;
@@ -80,7 +74,7 @@ export class Editor {
     }
 
     setActiveTool(id) {
-        document.querySelectorAll('.toolbar-group .tool-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.gizmo-group .icon-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(id).classList.add('active');
     }
 
