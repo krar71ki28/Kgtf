@@ -94,3 +94,9 @@ body.play-mode #header, body.play-mode #inspector-panel { display: none !importa
     background: rgba(71, 140, 191, 0.6);
     color: #fff;
 }
+
+/* إصلاح الهيدر لضمان عدم اختفاء زر التشغيل */
+#header { display: flex; justify-content: space-between; align-items: center; padding: 0 10px; gap: 10px; }
+.header-tools { flex: 1; display: flex; overflow-x: auto; gap: 6px; align-items: center; scrollbar-width: none; }
+.header-tools::-webkit-scrollbar { display: none; }
+.play-btn { flex-shrink: 0; margin: 0; position: relative; z-index: 10; }

@@ -11,20 +11,19 @@ import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 
-import { VFXManager } from './VFX.js?v=9.0.0';
-import { Physics } from './Physics.js?v=9.0.0';
-import { LogicManager } from './Logic.js?v=9.0.0';
-import { UIManager } from './UI.js?v=9.0.0';
-import { AssetManager } from './AssetManager.js?v=9.0.0';
+import { VFXManager } from './VFX.js?v=10.0.0';
+import { Physics } from './Physics.js?v=10.0.0';
+import { LogicManager } from './Logic.js?v=10.0.0';
+import { UIManager } from './UI.js?v=10.0.0';
+import { AssetManager } from './AssetManager.js?v=10.0.0';
 
 export class Engine {
     constructor(canvas) {
         this.canvas = canvas;
         this.scene = new THREE.Scene();
         
-        // إزالة اللون المسطح القديم (سيتم استبداله بالسماء)
-        // this.scene.background = new THREE.Color(0x87CEEB);
-        this.scene.fog = new THREE.Fog(0x87CEEB, 30, 120); // ضباب خفيف
+        // ✅ إزالة الضباب نهائياً عشان تظهر السماء
+        // this.scene.fog = new THREE.Fog(0x87CEEB, 30, 120);
 
         this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
         this.camera.position.set(6, 6, 8);
@@ -32,7 +31,7 @@ export class Engine {
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 0.5; // تعديل التعرض ليناسب السماء
+        this.renderer.toneMappingExposure = 0.5; 
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
@@ -41,35 +40,33 @@ export class Engine {
         this.scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
 
         // ==========================================
-        // إعداد السماء الحقيقية (Procedural Sky)
+        // إعداد السماء الحقيقية
         // ==========================================
         this.sky = new Sky();
-        this.sky.scale.setScalar(10000); // حجم السماء ضخم جداً
+        this.sky.scale.setScalar(10000); 
         this.scene.add(this.sky);
         
         this.skyParams = {
-            turbidity: 10,       // الغيوم/الغبار
-            rayleigh: 3,         // تشتت الضوء الأزرق
+            turbidity: 10, 
+            rayleigh: 3, 
             mieCoefficient: 0.005,
             mieDirectionalG: 0.7,
-            elevation: 45,       // ارتفاع الشمس (يتم التحكم به)
-            azimuth: 180         // اتجاه الشمس
+            elevation: 45, 
+            azimuth: 180 
         };
 
         this.composer = new EffectComposer(this.renderer);
         this.composer.addPass(new RenderPass(this.scene, this.camera));
         
+        // ✅ تقليل التوهج عشان ما يبيض المكعب
         this.bloomPass = new UnrealBloomPass(
             new THREE.Vector2(window.innerWidth, window.innerHeight),
-            0.8, 0.4, 0.85
+            0.3, 0.4, 0.9 
         );
         this.composer.addPass(this.bloomPass);
 
         this.outlinePass = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), this.scene, this.camera);
         this.outlinePass.edgeStrength = 3.0;
-        this.outlinePass.edgeGlow = 0.0;
-        this.outlinePass.edgeThickness = 1.0;
-        this.outlinePass.pulsePeriod = 0;
         this.outlinePass.visibleEdgeColor.set('#ffaa00');
         this.outlinePass.hiddenEdgeColor.set('#ffaa00');
         this.composer.addPass(this.outlinePass);
@@ -78,13 +75,9 @@ export class Engine {
         this.composer.addPass(smaaPass);
         this.composer.addPass(new OutputPass());
 
-        // ==========================================
-        // الإضاءة
-        // ==========================================
         this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
         this.scene.add(this.hemiLight);
 
-        // شمس مع ظلال
         this.sun = new THREE.DirectionalLight(0xfff5e6, 2.0);
         this.sun.castShadow = true;
         this.sun.shadow.mapSize.width = 2048;
@@ -98,9 +91,6 @@ export class Engine {
         this.sun.shadow.bias = -0.0005;
         this.scene.add(this.sun);
         this.scene.add(this.sun.target);
-
-        // تحديث السماء والشمس أول مرة
-        this.updateSun(12); // الوقت 12 (منتصف النهار)
 
         this.orbit = new OrbitControls(this.camera, this.renderer.domElement);
         this.orbit.target.set(0, 1, 0);
@@ -139,43 +129,39 @@ export class Engine {
 
         window.addEventListener('resize', () => this.resize());
         this.resize();
+        
+        // تشغيل الشمس في البداية
+        this.updateSun(12);
     }
 
-    // ==========================================
-    // دالة تحديث موقع الشمس والسماء
-    // ==========================================
     updateSun(timeOfDay) {
-        // تحويل الوقت (0-24) إلى زاوية (0-360 درجة)
-        // 6 صباحاً = 0° (شروق)، 12 ظهراً = 90° (ذروة)، 18 مساءً = 180° (غروب)، 24 ليلاً = 270°
         const angle = (timeOfDay / 24) * 360 - 90; 
-        
-        // تحويل الزاوية إلى راديان
         const phi = THREE.MathUtils.degToRad(90 - angle);
         const theta = THREE.MathUtils.degToRad(this.skyParams.azimuth);
 
-        // حساب موقع الشمس في السماء
         const sunPos = new THREE.Vector3();
         sunPos.setFromSphericalCoords(1, phi, theta);
 
-        // تحديث متغيرات السماء
         this.sky.material.uniforms['sunPosition'].value.copy(sunPos);
+        
+        // تحديث خصائص السماء
+        this.sky.material.uniforms['turbidity'].value = this.skyParams.turbidity;
+        this.sky.material.uniforms['rayleigh'].value = this.skyParams.rayleigh;
+        this.sky.material.uniforms['mieCoefficient'].value = this.skyParams.mieCoefficient;
+        this.sky.material.uniforms['mieDirectionalG'].value = this.skyParams.mieDirectionalG;
 
-        // تحديث موقع ضوء الشمس (عشان الظلال)
         this.sun.position.copy(sunPos).multiplyScalar(30);
         this.sun.target.position.set(0, 0, 0);
+        this.sun.target.updateMatrixWorld(); // تحديث المصفوفة للظل
 
-        // تعديل شدة الإضاءة بناءً على الوقت
-        // إذا كانت الشمس تحت الأفق (ليل)، نقلل الإضاءة
         const isNight = sunPos.y < 0;
         if (isNight) {
             this.sun.intensity = 0.1;
-            this.hemiLight.intensity = 0.3;
-            this.scene.fog.color.setHex(0x050510); // ضباب ليلي
+            this.hemiLight.intensity = 0.2;
             this.renderer.toneMappingExposure = 0.2;
         } else {
-            this.sun.intensity = 2.5;
-            this.hemiLight.intensity = 1.5;
-            this.scene.fog.color.setHex(0x87CEEB); // ضباب نهاري
+            this.sun.intensity = 2.0;
+            this.hemiLight.intensity = 1.0;
             this.renderer.toneMappingExposure = 0.5;
         }
     }
@@ -192,14 +178,6 @@ export class Engine {
         grid.material.opacity = 0.2;
         grid.material.transparent = true;
         this.scene.add(grid);
-    }
-
-    toggleNightMode(isNight) {
-        if (isNight) {
-            this.updateSun(0); // الساعة 12 منتصف الليل
-        } else {
-            this.updateSun(12); // الساعة 12 ظهراً
-        }
     }
 
     toggleRain(enabled) {

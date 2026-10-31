@@ -113,7 +113,7 @@ export class Editor {
         const gS = document.getElementById('btn-gizmo-scale');
         if(gS) gS.addEventListener('click', () => this.engine.transform.setMode('scale'));
 
-        // ربط شريط وقت اليوم
+        // ✅ شريط وقت اليوم يعمل الآن
         const timeSlider = document.getElementById('env-time-of-day');
         if(timeSlider) {
             timeSlider.addEventListener('input', (e) => {
@@ -123,9 +123,6 @@ export class Editor {
 
         const rainEl = document.getElementById('env-rain-toggle');
         if(rainEl) rainEl.addEventListener('change', (e) => this.engine.toggleRain(e.target.checked));
-
-        const nightEl = document.getElementById('env-night-mode');
-        if(nightEl) nightEl.addEventListener('change', (e) => this.engine.toggleNightMode(e.target.checked));
 
         const btnAddText = document.getElementById('btn-add-text');
         if(btnAddText) btnAddText.addEventListener('click', () => {

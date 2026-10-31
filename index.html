@@ -5,10 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>KGTF ENGINE</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=9.0.0">
+<link rel="stylesheet" href="style.css?v=10.0.0">
 </head>
 <body>
     <header id="header">
+        <!-- الشريط الأيسر للأزرار (قابل للتمرير) -->
         <div class="header-tools">
             <div class="tool-group">
                 <button class="icon-btn active" id="btn-gizmo-translate" title="تحريك">✥</button>
@@ -40,9 +41,10 @@
                 <button class="icon-btn" id="btn-import" title="استيراد">📥</button>
                 <input type="file" id="file-import" accept=".json" style="display:none;">
             </div>
-
-            <button class="play-btn" id="btn-play" title="تشغيل">▶</button>
         </div>
+        
+        <!-- زر التشغيل ثابت في الزاوية -->
+        <button class="play-btn" id="btn-play" title="تشغيل">▶</button>
     </header>
 
     <main id="viewport-container">
@@ -81,8 +83,8 @@
                 <div class="panel-header">
                     <span class="panel-title" style="color:#00e5ff;">DETAILS</span>
                     <div id="object-actions" style="display:none; gap:5px;">
-                        <button class="btn-small" id="btn-duplicate" style="background:#478cbf; color:#fff;" title="نسخ المجسم">📑 نسخ</button>
-                        <button class="btn-small" id="btn-delete-obj" style="background:#ff5577; color:#fff;" title="حذف المجسم">🗑️ حذف</button>
+                        <button class="btn-small" id="btn-duplicate" style="background:#478cbf; color:#fff;" title="نسخ">📑</button>
+                        <button class="btn-small" id="btn-delete-obj" style="background:#ff5577; color:#fff;" title="حذف">🗑️</button>
                     </div>
                 </div>
                 <div id="no-selection-msg" style="text-align:center; color:#666; font-size:12px; margin-top:10px;">لم يتم تحديد مجسم.</div>
@@ -91,12 +93,12 @@
                         <div class="prop-row" style="grid-column: span 2;">
                             <label style="width:auto;">المادة</label>
                             <select id="prop-material" style="flex:1; background:#222; border:1px solid #444; color:#fff; border-radius:4px; padding:4px;">
-                                <option value="default">عادي (Standard)</option>
-                                <option value="metal">معدن (Metal)</option>
-                                <option value="wood">خشب (Wood)</option>
-                                <option value="glass">زجاج (Glass)</option>
-                                <option value="rubber">مطاط (Rubber)</option>
-                                <option value="gold">ذهب (Gold)</option>
+                                <option value="default">عادي</option>
+                                <option value="metal">معدن</option>
+                                <option value="wood">خشب</option>
+                                <option value="glass">زجاج</option>
+                                <option value="rubber">مطاط</option>
+                                <option value="gold">ذهب</option>
                             </select>
                         </div>
                         
@@ -109,12 +111,11 @@
                             <label style="width:auto; font-weight:bold; color:#ffaa00;">تفعيل الجاذبية</label>
                             <input type="checkbox" id="prop-physics" style="width:20px; height:20px; accent-color:#ffaa00;">
                         </div>
-                        <button class="btn-small" id="btn-save-asset" style="grid-column: span 2; background: #ffaa00; color: #000; font-weight: bold; margin-top: 5px;">💾 حفظ كأصل في المكتبة</button>
+                        <button class="btn-small" id="btn-save-asset" style="grid-column: span 2; background: #ffaa00; color: #000; font-weight: bold; margin-top: 5px;">💾 حفظ كأصل</button>
                     </div>
                 </div>
             </div>
 
-            <!-- تبويب World المحدث -->
             <div class="panel-section tab-pane" id="tab-world">
                 <div class="panel-header"><span class="panel-title">WORLD</span></div>
                 <div style="padding:10px;">
@@ -123,47 +124,46 @@
                         <input type="range" id="env-time-of-day" min="0" max="24" step="0.1" value="12" style="flex:1; accent-color:#ffaa00;">
                     </div>
                     <div class="prop-row" style="margin-bottom:10px;"><label style="width:80px;">المطر</label><input type="checkbox" id="env-rain-toggle"></div>
-                    <div class="prop-row" style="margin-bottom:10px;"><label style="width:80px;">الوضع الليلي</label><input type="checkbox" id="env-night-mode"></div>
                 </div>
             </div>
 
             <div class="panel-section tab-pane" id="tab-ui">
-                <div class="panel-header"><span class="panel-title" style="color:#ffaa00;">UI / HUD EDITOR</span></div>
+                <div class="panel-header"><span class="panel-title" style="color:#ffaa00;">UI</span></div>
                 <div style="padding:10px;">
                     <div class="prop-row" style="margin-bottom:10px;">
-                        <input type="text" id="ui-text-input" placeholder="اكتب نصاً..." style="flex:1; padding:6px; background:#222; border:1px solid #444; color:#fff; border-radius:4px;">
+                        <input type="text" id="ui-text-input" placeholder="نص..." style="flex:1; padding:6px; background:#222; border:1px solid #444; color:#fff;">
                     </div>
-                    <button class="btn-small" id="btn-add-text" style="width:100%; background:#3b82f6; color:#fff; padding:8px;">إضافة نص للشاشة</button>
-                    <button class="btn-small" id="btn-clear-ui" style="width:100%; background:#ff5577; color:#fff; padding:8px; margin-top:5px;">مسح النصوص</button>
+                    <button class="btn-small" id="btn-add-text" style="width:100%; background:#3b82f6; color:#fff; padding:8px;">إضافة نص</button>
+                    <button class="btn-small" id="btn-clear-ui" style="width:100%; background:#ff5577; color:#fff; padding:8px; margin-top:5px;">مسح</button>
                 </div>
             </div>
 
             <div class="panel-section tab-pane" id="tab-logic">
                 <div class="panel-header"><span class="panel-title" style="color:#4ade80;">LOGIC</span></div>
                 <div style="padding:10px;">
-                    <div id="no-logic-selection" style="text-align:center; color:#666; font-size:12px; margin-top:10px;">حدد مجسماً لإضافة منطق.</div>
+                    <div id="no-logic-selection" style="text-align:center; color:#666; font-size:12px; margin-top:10px;">حدد مجسماً.</div>
                     <div id="logic-editor" style="display:none;">
-                        <div class="prop-row" style="margin-bottom:5px;"><label style="width:50px; font-size:12px;">الحدث</label>
+                        <div class="prop-row" style="margin-bottom:5px;"><label style="width:50px;">الحدث</label>
                             <select id="logic-event" style="flex:1; background:#222; color:#fff; border:1px solid #444; padding:4px;">
-                                <option value="onStart">عند بدء اللعبة</option>
-                                <option value="onCollide">عند الاصطدام باللاعب</option>
+                                <option value="onStart">عند البدء</option>
+                                <option value="onCollide">عند الاصطدام</option>
                             </select>
                         </div>
-                        <div class="prop-row" style="margin-bottom:10px;"><label style="width:50px; font-size:12px;">الإجراء</label>
+                        <div class="prop-row" style="margin-bottom:10px;"><label style="width:50px;">الإجراء</label>
                             <select id="logic-action" style="flex:1; background:#222; color:#fff; border:1px solid #444; padding:4px;">
-                                <option value="addScore">إضافة نقاط +10</option>
-                                <option value="destroy">تدمير المجسم</option>
-                                <option value="playSound">تشغيل صوت</option>
+                                <option value="addScore">نقاط +10</option>
+                                <option value="destroy">تدمير</option>
+                                <option value="playSound">صوت</option>
                             </select>
                         </div>
-                        <button class="btn-small" id="btn-add-logic" style="width:100%; background:#4ade80; color:#000; font-weight:bold;">إضافة المنطق</button>
+                        <button class="btn-small" id="btn-add-logic" style="width:100%; background:#4ade80; color:#000; font-weight:bold;">إضافة</button>
                         <div id="active-logic-list" style="margin-top:10px; display:flex; flex-direction:column; gap:5px;"></div>
                     </div>
                 </div>
             </div>
 
             <div class="panel-section tab-pane" id="tab-assets">
-                <div class="panel-header"><span class="panel-title" style="color:#ffaa00;">ASSETS LIBRARY</span></div>
+                <div class="panel-header"><span class="panel-title" style="color:#ffaa00;">ASSETS</span></div>
                 <div id="asset-grid" style="padding:10px; display:grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap:10px; overflow-y:auto;"></div>
             </div>
         </div>
@@ -172,6 +172,6 @@
     <script type="importmap">
     { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
-    <script type="module" src="src/main.js?v=9.0.0"></script>
+    <script type="module" src="src/main.js?v=10.0.0"></script>
 </body>
 </html>
