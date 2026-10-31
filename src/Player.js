@@ -71,7 +71,7 @@ export class Player {
         const btnCamMode = document.createElement('button');
         btnCamMode.id = 'btn-camera-mode';
         btnCamMode.innerText = this.cameraMode;
-        btnCamMode.style.cssText = 'position:absolute; top:20px; right:20px; z-index:1000; padding:8px 12px; background:rgba(0,0,0,0.5); border:1px solid #ffaa00; color:#ffaa00; border-radius:5px; font-family:Cairo; pointer-events:auto; font-weight:bold;';
+        btnCamMode.style.cssText = 'position:absolute; bottom: 130px; right: 30px; z-index:1000; padding:10px 15px; background:rgba(0,0,0,0.5); border:1px solid #ffaa00; color:#ffaa00; border-radius:5px; font-family:Cairo; pointer-events:auto; font-weight:bold;';
         document.getElementById('play-ui').appendChild(btnCamMode);
         
         btnCamMode.addEventListener('pointerdown', (e) => {
