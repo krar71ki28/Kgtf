@@ -5,14 +5,15 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 
-import { VFXManager } from './VFX.js?v=5.0.0';
-import { Physics } from './Physics.js?v=5.0.0';
-import { LogicManager } from './Logic.js?v=5.0.0';
-import { UIManager } from './UI.js?v=5.0.0';
-import { AssetManager } from './AssetManager.js?v=5.0.0';
+import { VFXManager } from './VFX.js?v=6.0.0';
+import { Physics } from './Physics.js?v=6.0.0';
+import { LogicManager } from './Logic.js?v=6.0.0';
+import { UIManager } from './UI.js?v=6.0.0';
+import { AssetManager } from './AssetManager.js?v=6.0.0';
 
 export class Engine {
     constructor(canvas) {
@@ -35,8 +36,21 @@ export class Engine {
         const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
         this.scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
 
+        // ==========================================
+        // Post-Processing (إضافة التوهج UnrealBloom)
+        // ==========================================
         this.composer = new EffectComposer(this.renderer);
         this.composer.addPass(new RenderPass(this.scene, this.camera));
+        
+        // UnrealBloom: يعطي توهج للمواد المضيئة والنار
+        this.bloomPass = new UnrealBloomPass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            0.8,  // strength (قوة التوهج)
+            0.4,  // radius (نطاق التوهج)
+            0.85  // threshold (مستوى السطوع المطلوب ليبدأ التوهج)
+        );
+        this.composer.addPass(this.bloomPass);
+
         const smaaPass = new SMAAPass(window.innerWidth * this.renderer.getPixelRatio(), window.innerHeight * this.renderer.getPixelRatio());
         this.composer.addPass(smaaPass);
         this.composer.addPass(new OutputPass());
@@ -69,6 +83,7 @@ export class Engine {
         this.selectedObj = null;
         this.loader = new GLTFLoader();
         this.rainSystem = null;
+        this.isSnapping = false; // حالة محاذاة الشبكة
         
         this.vfxManager = new VFXManager(this.scene);
         this.physics = new Physics(this);
@@ -78,6 +93,22 @@ export class Engine {
         
         this.transform = new TransformControls(this.camera, this.renderer.domElement);
         this.transform.addEventListener('dragging-changed', (e) => { this.orbit.enabled = !e.value; });
+        
+        // ==========================================
+        // تطبيق محاذاة الشبكة (Grid Snapping)
+        // ==========================================
+        this.transform.addEventListener('objectChange', () => {
+            if (!this.isSnapping || !this.selectedObj) return;
+            
+            // تقريب الإحداثيات لأقرب رقم صحيح (محاذاة 1 متر)
+            this.selectedObj.position.x = Math.round(this.selectedObj.position.x);
+            this.selectedObj.position.y = Math.round(this.selectedObj.position.y);
+            this.selectedObj.position.z = Math.round(this.selectedObj.position.z);
+            
+            // تحديث واجهة التفاصيل (اختياري، يتم في Editor.js)
+            if (this.onSelectCallback) this.onSelectCallback(this.selectedObj);
+        });
+
         this.scene.add(this.transform);
         
         this.onSelectCallback = null;
@@ -135,7 +166,6 @@ export class Engine {
         }
     }
 
-    // ✅ دالة لإنشاء مواد واقعية بناءً على النوع
     getMaterial(type, colorHex) {
         let params = { color: colorHex };
         if (type === 'metal') params = { color: colorHex, roughness: 0.2, metalness: 0.9 };
@@ -143,7 +173,7 @@ export class Engine {
         else if (type === 'glass') params = { color: colorHex, roughness: 0.05, metalness: 0.0, transparent: true, opacity: 0.4 };
         else if (type === 'rubber') params = { color: colorHex, roughness: 1.0, metalness: 0.0 };
         else if (type === 'gold') params = { color: 0xffaa00, roughness: 0.2, metalness: 1.0 };
-        else params = { color: colorHex, roughness: 0.4, metalness: 0.1 }; // default
+        else params = { color: colorHex, roughness: 0.4, metalness: 0.1 };
         
         return new THREE.MeshStandardMaterial(params);
     }

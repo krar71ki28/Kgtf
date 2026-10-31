@@ -19,7 +19,6 @@ export class Editor {
                         const obj = engine.createObject(d.type);
                         if(obj) {
                             if(d.pos) obj.position.fromArray(d.pos);
-                            // تطبيق المادة واللون عند التحميل
                             if(d.materialType) {
                                 obj.traverse(c => { if(c.isMesh) c.material = engine.getMaterial(d.materialType, d.color || 0x00e5ff); });
                             } else if(d.color) {
@@ -87,6 +86,14 @@ export class Editor {
         const btnDeleteObj = document.getElementById('btn-delete-obj');
         if(btnDeleteObj) btnDeleteObj.addEventListener('click', () => {
             if (this.engine.selectedObj) this.engine.removeObject(this.engine.selectedObj);
+        });
+
+        // ✅ ربط زر محاذاة الشبكة
+        const btnSnap = document.getElementById('btn-snap-toggle');
+        if(btnSnap) btnSnap.addEventListener('click', () => {
+            this.engine.isSnapping = !this.engine.isSnapping;
+            btnSnap.classList.toggle('active', this.engine.isSnapping);
+            btnSnap.style.color = this.engine.isSnapping ? '#00e5ff' : '#ffaa00';
         });
 
         const gT = document.getElementById('btn-gizmo-translate');
@@ -191,7 +198,6 @@ export class Editor {
             if(this.engine.selectedObj) this.engine.selectedObj.traverse(c => { if(c.isMesh && c.material && c.material.color) c.material.color.set(e.target.value); });
         });
 
-        // ✅ ربط قائمة المواد
         const matEl = document.getElementById('prop-material');
         if(matEl) matEl.addEventListener('change', (e) => {
             if(this.engine.selectedObj) {
@@ -200,7 +206,7 @@ export class Editor {
                     if(c.isMesh) {
                         let currentColor = 0x00e5ff;
                         if(c.material && c.material.color) currentColor = c.material.color.getHex();
-                        c.material.dispose(); // تنظيف المادة القديمة
+                        c.material.dispose();
                         c.material = this.engine.getMaterial(matType, currentColor);
                     }
                 });
@@ -350,7 +356,6 @@ export class Editor {
         const pc = document.getElementById('prop-color');
         if(pc) pc.value = color;
 
-        // ✅ تحديث قائمة المواد عند التحديد
         const matEl = document.getElementById('prop-material');
         if(matEl) {
             let matType = 'default';
