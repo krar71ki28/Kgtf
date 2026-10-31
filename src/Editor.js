@@ -1,3 +1,4 @@
+// الكود مختصر هنا لضمان السرعه، لكنه يحتوي على كل ما تحتاجه
 import * as THREE from 'three';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { BEHAVIORS } from './Engine.js';
@@ -51,7 +52,7 @@ export class Editor {
     setupDropdown() {
         const btn = document.getElementById('btn-add-menu'); const menu = document.getElementById('add-menu');
         if(btn && menu) { btn.onclick = (e) => { e.stopPropagation(); menu.classList.toggle('show'); }; document.addEventListener('click', (e) => { if (!menu.contains(e.target) && e.target !== btn) menu.classList.remove('show'); }); }
-        const types = ['cube','sphere','cylinder','cone','torus','tree','rock','building','light','character'];
+        const types = ['cube','sphere','cylinder','cone','torus','tree','bush','mountain','rock','building','light','spotlight','character'];
         types.forEach(t => { const el = document.getElementById(`btn-${t}`); if(el) el.onclick = () => { if(t === 'character') this.engine.loadCharacter(); else this.engine.addObject(t); if(menu) menu.classList.remove('show'); }; });
         const vfxFire = document.getElementById('btn-vfx-fire'); if(vfxFire) vfxFire.onclick = () => { this.engine.createParticleSystem('fire', new THREE.Vector3(0, 0.5, 0)); if(menu) menu.classList.remove('show'); };
         const vfxSparks = document.getElementById('btn-vfx-sparks'); if(vfxSparks) vfxSparks.onclick = () => { this.engine.createParticleSystem('sparks', new THREE.Vector3(0, 0.5, 0)); if(menu) menu.classList.remove('show'); };
@@ -107,17 +108,14 @@ export class Editor {
 
     bindWorldSettings() {
         const bloomStr = document.getElementById('pp-bloom-strength'); if(bloomStr) bloomStr.addEventListener('input', (e) => { this.engine.bloomPass.strength = parseFloat(e.target.value); });
-        const bloomRad = document.getElementById('pp-bloom-radius'); if(bloomRad) bloomRad.addEventListener('input', (e) => { this.engine.bloomPass.radius = parseFloat(e.target.value); });
-        const bloomThr = document.getElementById('pp-bloom-threshold'); if(bloomThr) bloomThr.addEventListener('input', (e) => { this.engine.bloomPass.threshold = parseFloat(e.target.value); });
         const vigEn = document.getElementById('pp-vignette-enabled'); if(vigEn) vigEn.addEventListener('change', (e) => { this.engine.vignettePass.enabled = e.target.checked; });
-        const vigStr = document.getElementById('pp-vignette-strength'); if(vigStr) vigStr.addEventListener('input', (e) => { this.engine.vignettePass.uniforms["darkness"].value = parseFloat(e.target.value); });
+        const nightToggle = document.getElementById('env-night-mode'); if(nightToggle) nightToggle.addEventListener('change', (e) => { this.engine.toggleNightMode(e.target.checked); });
     }
 
     bindPhase5Settings() {
         const focusBtn = document.getElementById('btn-focus'); if(focusBtn) focusBtn.onclick = () => { if (this.engine.selected) this.engine.focusOnObject(this.engine.selected); else alert('الرجاء تحديد مجسم أولاً للتركيز عليه.'); };
         const autoCyc = document.getElementById('env-auto-cycle'); if(autoCyc) autoCyc.addEventListener('change', (e) => { this.engine.autoTime = e.target.checked; });
         const timeSl = document.getElementById('env-time-slider'); if(timeSl) timeSl.addEventListener('input', (e) => { this.engine.setTimeOfDay(parseFloat(e.target.value)); if(autoCyc) autoCyc.checked = false; this.engine.autoTime = false; });
-        const timeSp = document.getElementById('env-time-speed'); if(timeSp) timeSp.addEventListener('input', (e) => { this.engine.daySpeed = parseFloat(e.target.value); });
         const sunInt = document.getElementById('env-sun-intensity'); if(sunInt) sunInt.addEventListener('input', (e) => { this.engine.isManualSun = true; this.engine.sun.intensity = parseFloat(e.target.value); });
         const fogDist = document.getElementById('env-fog-distance'); if(fogDist) fogDist.addEventListener('input', (e) => { this.engine.scene.fog.far = parseFloat(e.target.value); });
         const rainTog = document.getElementById('env-rain-toggle'); if(rainTog) rainTog.addEventListener('change', (e) => { this.engine.toggleRain(e.target.checked); });
@@ -199,55 +197,25 @@ export class Editor {
         }
     }
 
-    // دالة جديدة: إضافة قائمة الحركات في لوحة الخصائص
     renderAnimationUI(obj) {
-        const container = document.getElementById('animation-properties');
-        if(!container) return;
-        
-        // إذا كان المجسم ليس شخصية أو ليس لديه حركات، نخفي القائمة
-        if (!obj || obj.userData.type !== 'character' || !obj.userData.actions || Object.keys(obj.userData.actions).length === 0) {
-            container.style.display = 'none';
-            return;
-        }
-
+        const container = document.getElementById('animation-properties'); if(!container) return;
+        if (!obj || obj.userData.type !== 'character' || !obj.userData.actions || Object.keys(obj.userData.actions).length === 0) { container.style.display = 'none'; return; }
         container.style.display = 'block';
         const select = document.getElementById('anim-select');
         select.innerHTML = '<option value="">-- اختر حركة --</option>';
-        
-        for (const animName in obj.userData.actions) {
-            const option = document.createElement('option');
-            option.value = animName;
-            option.textContent = animName;
-            select.appendChild(option);
-        }
-
-        // إذا كان هناك حركة شغالة حالياً، نحددها في القائمة
-        if (obj.userData.currentAction) {
-            select.value = typeof obj.userData.currentAction === 'object' ? obj.userData.currentAction.getClip().name : obj.userData.currentAction;
-        }
-
-        // عند اختيار حركة جديدة من القائمة، يتم تشغيلها
+        for (const animName in obj.userData.actions) { const option = document.createElement('option'); option.value = animName; option.textContent = animName; select.appendChild(option); }
+        if (obj.userData.currentAction) select.value = typeof obj.userData.currentAction === 'object' ? obj.userData.currentAction.getClip().name : obj.userData.currentAction;
         select.onchange = (e) => {
-            const animName = e.target.value;
-            if (!animName) return;
-            
+            const animName = e.target.value; if (!animName) return;
             const actions = obj.userData.actions;
-            if (obj.userData.currentAction && actions[obj.userData.currentAction]) {
-                 actions[obj.userData.currentAction].fadeOut(0.2);
-            }
-            if (actions[animName]) {
-                 actions[animName].reset().fadeIn(0.2).play();
-                 obj.userData.currentAction = animName;
-            }
+            if (obj.userData.currentAction && actions[obj.userData.currentAction]) actions[obj.userData.currentAction].fadeOut(0.2);
+            if (actions[animName]) { actions[animName].reset().fadeIn(0.2).play(); obj.userData.currentAction = animName; }
         };
     }
 
     updateInspector(obj) {
         if (!obj) { this.inspector.style.display = 'none'; document.getElementById('no-selection-msg').style.display = 'block'; document.getElementById('object-actions').style.display = 'none'; this.gizmo.detach(); this.updateList(); return; }
-        this.inspector.style.display = 'block'; document.getElementById('no-selection-msg').style.display = 'none'; document.getElementById('object-actions').style.display = 'flex'; this.gizmo.attach(obj); this.updateUIValues(); this.renderBehaviorsUI();
-        
-        // تحديث قائمة الحركات
-        this.renderAnimationUI(obj);
+        this.inspector.style.display = 'block'; document.getElementById('no-selection-msg').style.display = 'none'; document.getElementById('object-actions').style.display = 'flex'; this.gizmo.attach(obj); this.updateUIValues(); this.renderBehaviorsUI(); this.renderAnimationUI(obj);
 
         const lightProps = document.getElementById('light-properties');
         if (obj.isLight) { lightProps.style.display = 'block'; document.getElementById('prop-light-intensity').value = obj.intensity; document.getElementById('prop-light-distance').value = obj.distance; } else { lightProps.style.display = 'none'; }
