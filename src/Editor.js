@@ -26,6 +26,7 @@ export class Editor {
         } else {
             engine.createObject('cube');
         }
+        this.renderAssetGrid();
     }
 
     setupTabs() {
@@ -35,6 +36,7 @@ export class Editor {
                 document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
                 btn.classList.add('active');
                 document.getElementById(btn.dataset.target).classList.add('active');
+                if(btn.dataset.target === 'tab-assets') this.renderAssetGrid();
             });
         });
     }
@@ -57,7 +59,6 @@ export class Editor {
         document.getElementById('env-night-mode').addEventListener('change', (e) => this.engine.toggleNightMode(e.target.checked));
         document.getElementById('env-rain-toggle').addEventListener('change', (e) => this.engine.toggleRain(e.target.checked));
 
-        // UI Editor
         document.getElementById('btn-add-text').addEventListener('pointerdown', () => {
             const text = document.getElementById('ui-text-input').value;
             this.engine.ui.addText(text);
@@ -65,7 +66,6 @@ export class Editor {
         });
         document.getElementById('btn-clear-ui').addEventListener('pointerdown', () => this.engine.ui.clearUI());
 
-        // Logic Editor
         document.getElementById('btn-add-logic').addEventListener('pointerdown', () => {
             if (!this.engine.selectedObj) return;
             const ev = document.getElementById('logic-event').value;
@@ -83,7 +83,34 @@ export class Editor {
                 return { type: o.userData.type, pos: o.position.toArray(), color: color, logic: o.userData.logic };
             });
             localStorage.setItem('kgtf_scene_modular', JSON.stringify(data));
-            alert('تم الحفظ!');
+            alert('تم الحفظ المحلي!');
+        });
+
+        // أزرار التصدير والاستيراد
+        document.getElementById('btn-export').addEventListener('pointerdown', () => this.engine.assetManager.exportScene());
+        
+        const fileImport = document.getElementById('file-import');
+        document.getElementById('btn-import').addEventListener('pointerdown', () => fileImport.click());
+        fileImport.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                if (this.engine.assetManager.importScene(ev.target.result)) alert('تم الاستيراد بنجاح!');
+                else alert('ملف غير صالح!');
+                this.renderAssetGrid();
+            };
+            reader.readAsText(file);
+            e.target.value = '';
+        });
+
+        // حفظ كأصل
+        document.getElementById('btn-save-asset').addEventListener('pointerdown', () => {
+            if(!this.engine.selectedObj) return;
+            if(this.engine.assetManager.savePrefab(this.engine.selectedObj)) {
+                alert('تم حفظ الأصل في المكتبة!');
+                this.renderAssetGrid();
+            }
         });
 
         const bindProp = (id, cb) => {
@@ -122,6 +149,47 @@ export class Editor {
             if (hits.length > 0) {
                 let root = hits[0].object; while (root.parent !== this.engine.scene) root = root.parent; this.engine.selectObject(root);
             } else { this.engine.selectObject(null); }
+        });
+    }
+
+    renderAssetGrid() {
+        const grid = document.getElementById('asset-grid');
+        if(!grid) return;
+        grid.innerHTML = '';
+        
+        const prefabs = this.engine.assetManager.getPrefabs();
+        if(prefabs.length === 0) {
+            grid.innerHTML = '<div style="grid-column: span 3; text-align:center; color:#666; font-size:12px; margin-top:20px;">لا توجد أصول محفوظة بعد.</div>';
+            return;
+        }
+
+        prefabs.forEach(p => {
+            const card = document.createElement('div');
+            card.className = 'asset-card';
+            card.innerHTML = `
+                <button class="asset-delete" data-id="${p.id}">✕</button>
+                <div class="asset-icon" style="color:${p.color}">📦</div>
+                <div class="asset-name">${p.type}</div>
+            `;
+            
+            // إضافة الأصل للمشهد
+            card.addEventListener('pointerdown', (e) => {
+                if(e.target.classList.contains('asset-delete')) return;
+                const obj = this.engine.createObject(p.type);
+                if (obj) {
+                    obj.traverse(c => { if(c.isMesh && c.material && c.material.color) c.material.color.set(p.color); });
+                    if (p.logic) obj.userData.logic = JSON.parse(JSON.stringify(p.logic));
+                }
+            });
+
+            // حذف الأصل
+            card.querySelector('.asset-delete').addEventListener('pointerdown', (e) => {
+                e.stopPropagation();
+                this.engine.assetManager.deletePrefab(p.id);
+                this.renderAssetGrid();
+            });
+
+            grid.appendChild(card);
         });
     }
 

@@ -6,6 +6,7 @@ import { VFXManager } from './VFX.js';
 import { Physics } from './Physics.js';
 import { LogicManager } from './Logic.js';
 import { UIManager } from './UI.js';
+import { AssetManager } from './AssetManager.js';
 
 export class Engine {
     constructor(canvas) {
@@ -39,6 +40,7 @@ export class Engine {
         this.physics = new Physics(this);
         this.logic = new LogicManager(this);
         this.ui = new UIManager();
+        this.assetManager = new AssetManager(this);
         
         this.transform = new TransformControls(this.camera, this.renderer.domElement);
         this.transform.addEventListener('dragging-changed', (e) => { this.orbit.enabled = !e.value; });
@@ -109,7 +111,7 @@ export class Engine {
         let group = new THREE.Group();
         group.userData.type = type;
         group.userData.physics = { vy: 0, enabled: false };
-        group.userData.logic = []; // مصفوفة الأحداث
+        group.userData.logic = [];
         
         if (type === 'cube') {
             const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x00e5ff }));
