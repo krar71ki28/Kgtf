@@ -67,18 +67,16 @@ export class Player {
             if(this.isPlaying && this.isGrounded) { this.velocityY = 8; this.isGrounded = false; } 
         });
 
-        // --- زر تبديل وضع الكاميرا (يضاف للواجهة) ---
-        const btnCamMode = document.createElement('button');
-        btnCamMode.id = 'btn-camera-mode';
-        btnCamMode.innerText = this.cameraMode;
-        btnCamMode.style.cssText = 'position:absolute; bottom: 130px; right: 30px; z-index:1000; padding:10px 15px; background:rgba(0,0,0,0.5); border:1px solid #ffaa00; color:#ffaa00; border-radius:5px; font-family:Cairo; pointer-events:auto; font-weight:bold;';
-        document.getElementById('play-ui').appendChild(btnCamMode);
-        
-        btnCamMode.addEventListener('pointerdown', (e) => {
-            e.preventDefault(); e.stopPropagation();
-            this.cameraMode = this.cameraMode === 'TPS' ? 'RPG' : 'TPS';
+        // --- زر تبديل وضع الكاميرا (موجود في HTML) ---
+        const btnCamMode = document.getElementById('btn-camera-mode');
+        if (btnCamMode) {
             btnCamMode.innerText = this.cameraMode;
-        });
+            btnCamMode.addEventListener('pointerdown', (e) => {
+                e.preventDefault(); e.stopPropagation();
+                this.cameraMode = this.cameraMode === 'TPS' ? 'RPG' : 'TPS';
+                btnCamMode.innerText = this.cameraMode;
+            });
+        }
 
         // --- التحكم بالكاميرا من الشاشة (لمس أو ماوس) ---
         const canvas = this.engine.renderer.domElement;
