@@ -10,13 +10,13 @@ import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 
-import { VFXManager } from './VFX.js?v=33.0.0';
-import { Physics } from './Physics.js?v=33.0.0';
-import { LogicManager } from './Logic.js?v=33.0.0';
-import { UIManager } from './UI.js?v=33.0.0';
-import { AssetManager } from './AssetManager.js?v=33.0.0';
-import { KGTFNode } from './KGTFNode.js?v=33.0.0';
-import { Animator } from './Animator.js?v=33.0.0';
+import { VFXManager } from './VFX.js?v=34.0.0';
+import { Physics } from './Physics.js?v=34.0.0';
+import { LogicManager } from './Logic.js?v=34.0.0';
+import { UIManager } from './UI.js?v=34.0.0';
+import { AssetManager } from './AssetManager.js?v=34.0.0';
+import { KGTFNode } from './KGTFNode.js?v=34.0.0';
+import { Animator } from './Animator.js?v=34.0.0';
 
 export class Engine {
     constructor(canvas) {

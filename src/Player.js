@@ -7,8 +7,6 @@ export class Player {
         this.velocityY = 0;
         this.isGrounded = true;
         this.keys = {};
-        this.playerBoxSize = new THREE.Vector3(0.6, 1.5, 0.6);
-        this.raycaster = new THREE.Raycaster();
         
         this.cameraYaw = 0; 
         this.cameraPitch = 0.3; 
@@ -35,6 +33,7 @@ export class Player {
         });
         window.addEventListener('keyup', (e) => this.keys[e.code] = false);
 
+        // --- الجويستيك ---
         let joyActive = false, joyDir = {x:0, y:0};
         const joyZone = document.getElementById('joystick-zone'), joyKnob = document.getElementById('joystick-knob');
         
@@ -55,12 +54,14 @@ export class Player {
             });
         }
         
+        // --- زر القفز ---
         const btnJump = document.getElementById('btn-jump');
         if(btnJump) btnJump.addEventListener('pointerdown', (e) => { 
             e.preventDefault(); e.stopPropagation(); 
             if(this.isPlaying && this.isGrounded) { this.velocityY = 8; this.isGrounded = false; } 
         });
 
+        // --- زر الكاميرا ---
         const btnCamMode = document.getElementById('btn-camera-mode');
         if (btnCamMode) {
             btnCamMode.innerText = this.cameraMode;
@@ -71,6 +72,7 @@ export class Player {
             });
         }
 
+        // --- التحكم بالكاميرا من الشاشة ---
         const canvas = this.engine.renderer.domElement;
         let isDraggingCam = false;
         let lastCamPos = { x: 0, y: 0 };
@@ -138,7 +140,9 @@ export class Player {
         this.engine.selectObject(null); 
         this.engine.orbit.enabled = false;
         
-        this.cameraYaw = this.playerModel.rotation.y + Math.PI; 
+        // ✅ إصلاح NaN (حماية الكاميرا من القيم الخاطئة)
+        let rotY = this.playerModel.rotation.y;
+        this.cameraYaw = isNaN(rotY) ? Math.PI : rotY + Math.PI; 
         this.cameraPitch = 0.3;
         this.targetDist = 4.5;
         
@@ -159,8 +163,10 @@ export class Player {
     update(dt) {
         if (!this.isPlaying || !this.playerModel) return;
         
-        const speed = 5;
+        // ✅ حماية إضافية
+        if (isNaN(this.cameraYaw)) this.cameraYaw = 0;
         
+        const speed = 5;
         const forward = new THREE.Vector3(-Math.sin(this.cameraYaw), 0, -Math.cos(this.cameraYaw)).normalize();
         const right = new THREE.Vector3(Math.cos(this.cameraYaw), 0, -Math.sin(this.cameraYaw)).normalize();
 
@@ -188,18 +194,17 @@ export class Player {
             const nextPos = this.playerModel.position.clone();
             nextPos.addScaledVector(moveVector, speed * dt);
 
-            if (!this.engine.physics.checkPlayerCollision(nextPos, this.playerBoxSize)) {
-                this.playerModel.position.copy(nextPos);
-                
-                if (this.cameraMode === 'RPG') {
-                    const targetRot = Math.atan2(moveVector.x, moveVector.z); 
-                    let diff = targetRot - this.playerModel.rotation.y;
-                    while (diff < -Math.PI) diff += Math.PI * 2;
-                    while (diff > Math.PI) diff -= Math.PI * 2;
-                    this.playerModel.rotation.y += diff * 10 * dt;
-                } else if (this.cameraMode === 'TPS') {
-                    this.playerModel.rotation.y = this.cameraYaw;
-                }
+            // ✅ تم إزالة فحص التصادم المسبب للمشكلة (سنعيده بنظام Cannon-es لاحقاً)
+            this.playerModel.position.copy(nextPos);
+            
+            if (this.cameraMode === 'RPG') {
+                const targetRot = Math.atan2(moveVector.x, moveVector.z); 
+                let diff = targetRot - this.playerModel.rotation.y;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                this.playerModel.rotation.y += diff * 10 * dt;
+            } else if (this.cameraMode === 'TPS') {
+                this.playerModel.rotation.y = this.cameraYaw;
             }
         }
 
@@ -213,6 +218,7 @@ export class Player {
             this.playerModel.position.y = 0; this.velocityY = 0; this.isGrounded = true; 
         }
 
+        // الكاميرا
         const camHeight = 1.5; 
         const anchorPos = this.playerModel.position.clone().add(new THREE.Vector3(0, camHeight, 0));
         
@@ -224,11 +230,9 @@ export class Player {
 
         if (!isFirstPerson) {
             const dirToCam = targetCamPos.clone().sub(anchorPos).normalize();
-            this.raycaster.set(anchorPos, dirToCam);
-            this.raycaster.far = this.currentDist;
-            
+            this.engine.raycaster = new THREE.Raycaster(anchorPos, dirToCam, 0, this.currentDist);
             const obstacles = this.engine.objects.filter(o => o !== this.playerModel && o.userData.type !== 'vfx' && o.userData.type !== 'light');
-            const hits = this.raycaster.intersectObjects(obstacles, true);
+            const hits = this.engine.raycaster.intersectObjects(obstacles, true);
             
             if (hits.length > 0) {
                 const safeDist = Math.max(0.5, hits[0].distance - 0.2);
