@@ -12,11 +12,11 @@ import { VignetteShader } from 'three/addons/shaders/VignetteShader.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 
-import { VFXManager } from './VFX.js?v=17.0.0';
-import { Physics } from './Physics.js?v=17.0.0';
-import { LogicManager } from './Logic.js?v=17.0.0';
-import { UIManager } from './UI.js?v=17.0.0';
-import { AssetManager } from './AssetManager.js?v=17.0.0';
+import { VFXManager } from './VFX.js?v=18.0.0';
+import { Physics } from './Physics.js?v=18.0.0';
+import { LogicManager } from './Logic.js?v=18.0.0';
+import { UIManager } from './UI.js?v=18.0.0';
+import { AssetManager } from './AssetManager.js?v=18.0.0';
 
 export class Engine {
     constructor(canvas) {
@@ -29,25 +29,42 @@ export class Engine {
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
         
+        // ✅ إعدادات Tone Mapping الاحترافية (مثل Unreal)
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 0.35; 
+        this.renderer.toneMappingExposure = 0.5; 
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
 
+        // ==========================================
+        // إعداد السماء (Three.js Sky)
+        // ==========================================
         this.sky = new Sky();
         this.sky.scale.setScalar(450000); 
         this.scene.add(this.sky);
         
+        // القيم الموصى بها لمحاكاة سماء Unreal
         this.skyParams = {
-            turbidity: 2, rayleigh: 1, mieCoefficient: 0.005,
-            mieDirectionalG: 0.7, elevation: 35, azimuth: 135 
+            turbidity: 10,       // غيوم خفيفة
+            rayleigh: 3,         // تشتت الضوء الأزرق
+            mieCoefficient: 0.005,
+            mieDirectionalG: 0.7,
+            elevation: 45,       // سيتم تحديثها ديناميكياً
+            azimuth: 180 
         };
 
-        this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x222222, 0.3);
+        // تطبيق القيم على الـ Shader
+        this.sky.material.uniforms['turbidity'].value = this.skyParams.turbidity;
+        this.sky.material.uniforms['rayleigh'].value = this.skyParams.rayleigh;
+        this.sky.material.uniforms['mieCoefficient'].value = this.skyParams.mieCoefficient;
+        this.sky.material.uniforms['mieDirectionalG'].value = this.skyParams.mieDirectionalG;
+
+        // إضاءة محيطة (Hemisphere)
+        this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x333333, 0.4);
         this.scene.add(this.hemiLight);
 
-        this.sun = new THREE.DirectionalLight(0xfff5e6, 3.5);
+        // ضوء الشمس (Directional)
+        this.sun = new THREE.DirectionalLight(0xfff5e6, 3.0);
         this.sun.castShadow = true;
         this.sun.shadow.mapSize.width = 2048;
         this.sun.shadow.mapSize.height = 2048;
@@ -61,6 +78,9 @@ export class Engine {
         this.scene.add(this.sun);
         this.scene.add(this.sun.target);
 
+        // ==========================================
+        // Post-Processing
+        // ==========================================
         this.composer = new EffectComposer(this.renderer);
         this.composer.addPass(new RenderPass(this.scene, this.camera));
         
@@ -120,14 +140,16 @@ export class Engine {
         window.addEventListener('resize', () => this.resize());
         this.resize();
         
-        // تحديث الشمس أول مرة
+        // تحديث الشمس أول مرة (الساعة 14:00)
         this.updateSun(14);
     }
 
-    // ✅ إصلاح معادلة الشمس
+    // ✅ دالة تحديث الشمس (محاكاة دقيقة لـ Unreal)
     updateSun(timeOfDay) {
-        // تحويل الوقت (0-24) إلى زاوية ارتفاع (0 في الفجر، 90 في الظهر، 0 في الغروب)
+        // تحويل الوقت إلى زاوية ارتفاع (0-90 درجة)
         const elevation = Math.sin((timeOfDay - 6) / 12 * Math.PI) * 90;
+        
+        // تحديث متغير الارتفاع في الـ Shader
         this.skyParams.elevation = elevation;
         
         const phi = THREE.MathUtils.degToRad(90 - elevation);
@@ -136,19 +158,21 @@ export class Engine {
         const sunPos = new THREE.Vector3();
         sunPos.setFromSphericalCoords(1, phi, theta);
 
+        // تحديث موقع الشمس في السماء
         this.sky.material.uniforms['sunPosition'].value.copy(sunPos);
-        this.sky.material.uniforms['turbidity'].value = this.skyParams.turbidity;
-        this.sky.material.uniforms['rayleigh'].value = this.skyParams.rayleigh;
-        this.sky.material.uniforms['mieCoefficient'].value = this.skyParams.mieCoefficient;
-        this.sky.material.uniforms['mieDirectionalG'].value = this.skyParams.mieDirectionalG;
 
+        // تحديث موقع ضوء الشمس (للظلال)
         this.sun.position.copy(sunPos).multiplyScalar(30);
         this.sun.target.position.set(0, 0, 0);
         this.sun.target.updateMatrixWorld();
 
+        // تغيير لون الشمس حسب الوقت (برتقالي عند الغروب)
         if (timeOfDay < 6 || timeOfDay > 18) {
             this.sun.color.setHex(0xff6600);
             this.hemiLight.intensity = 0.1;
+        } else if (timeOfDay < 8 || timeOfDay > 16) {
+            this.sun.color.setHex(0xffaa00);
+            this.hemiLight.intensity = 0.2;
         } else {
             this.sun.color.setHex(0xffffff);
             this.hemiLight.intensity = 0.4;
@@ -203,7 +227,6 @@ export class Engine {
         return new THREE.MeshStandardMaterial(params);
     }
 
-    // ✅ إضافة خيار select (عشان نمنع تحديد المكعب الجديد أثناء توليده)
     createObject(type, select = true) {
         let group = new THREE.Group();
         group.userData.type = type;
@@ -366,7 +389,6 @@ export class Engine {
             this.orbit.update();
             this.physics.updateGravity(dt);
         } else {
-            // فحص المؤقتات (Timer) أثناء اللعب
             this.objects.forEach(obj => {
                 if (obj.userData.logic) {
                     obj.userData.logic.forEach(l => {
@@ -374,7 +396,7 @@ export class Engine {
                             const now = performance.now();
                             if (!obj.userData.lastTimerAction) obj.userData.lastTimerAction = now;
                             
-                            if (now - obj.userData.lastTimerAction > 3000) { // كل 3 ثواني
+                            if (now - obj.userData.lastTimerAction > 3000) {
                                 this.logic.executeAction(obj, l.action);
                                 obj.userData.lastTimerAction = now;
                             }
