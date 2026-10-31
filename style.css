@@ -116,3 +116,20 @@ body.play-mode #header, body.play-mode #inspector-panel { display: none !importa
 /* إصلاح طبقات واجهة اللعب لضمان عمل الأزرار فوق الكاميرا */
 #play-ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 150; overflow: hidden; }
 #play-ui button, #play-ui #joystick-zone, #play-ui #score-display { pointer-events: auto; }
+
+/* طبقة سحب الكاميرا */
+#camera-drag-zone {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 50%;
+    height: 100%;
+    pointer-events: auto;
+    touch-action: none;
+    z-index: 10; /* تحت الأزرار وفوق الشاشة */
+}
+
+/* رفع الأزرار لتعمل فوق منطقة السحب */
+#exit-play, #btn-camera-toggle, #btn-jump, #joystick-zone, #score-display {
+    z-index: 20 !important; 
+}

@@ -52,55 +52,56 @@ export class Player {
             });
         }
         
-        // زر القفز (تم إصلاحه)
+        // زر القفز (إصلاح)
         const btnJump = document.getElementById('btn-jump');
-        if(btnJump) btnJump.addEventListener('touchstart', (e) => { 
-            e.preventDefault(); e.stopPropagation(); // منع تسريب اللمس للشاشة
+        if(btnJump) btnJump.addEventListener('pointerdown', (e) => { 
+            e.preventDefault(); e.stopPropagation(); 
             if(this.isPlaying && this.isGrounded) { this.velocityY = 8; this.isGrounded = false; } 
         });
 
-        // زر تبديل الكاميرا (تم إصلاحه)
+        // زر تبديل الكاميرا (إصلاح)
         const btnCamToggle = document.getElementById('btn-camera-toggle');
         if(btnCamToggle) {
-            btnCamToggle.addEventListener('touchstart', (e) => {
-                e.preventDefault(); e.stopPropagation(); // منع تسريب اللمس
+            btnCamToggle.addEventListener('pointerdown', (e) => {
+                e.preventDefault(); e.stopPropagation(); 
                 this.isFirstPerson = !this.isFirstPerson;
                 if (this.playerModel) this.playerModel.visible = !this.isFirstPerson; 
                 btnCamToggle.style.color = this.isFirstPerson ? '#4ade80' : '#478cbf';
             });
         }
 
-        // ✅ التحكم بالكاميرا من خلال الشاشة مباشرة (Unreal Style)
-        const canvas = this.engine.renderer.domElement;
+        // التحكم بالكاميرا من خلال منطقة السحب (Drag Zone)
+        const dragZone = document.getElementById('camera-drag-zone');
         let isDraggingCam = false;
         let lastCamTouch = { x: 0, y: 0 };
 
-        canvas.addEventListener('touchstart', (e) => {
-            if (!this.isPlaying) return;
-            
-            // إذا كانت اللمسة في النصف الأيمن من الشاشة (منطقة الكاميرا)
-            if (e.touches[0].clientX > window.innerWidth / 2) {
+        if (dragZone) {
+            dragZone.addEventListener('touchstart', (e) => {
+                if (!this.isPlaying) return;
+                e.stopPropagation();
                 isDraggingCam = true;
                 lastCamTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-            }
-        });
+            });
 
-        canvas.addEventListener('touchmove', (e) => {
-            if (!isDraggingCam || !this.isPlaying) return;
-            
-            const touch = e.touches[0];
-            const dx = touch.clientX - lastCamTouch.x;
-            const dy = touch.clientY - lastCamTouch.y;
-            
-            this.cameraYaw -= dx * 0.01; 
-            this.cameraPitch = Math.max(0.05, Math.min(1.0, this.cameraPitch + dy * 0.01));
-            
-            lastCamTouch = { x: touch.clientX, y: touch.clientY };
-        });
+            dragZone.addEventListener('touchmove', (e) => {
+                if (!isDraggingCam || !this.isPlaying) return;
+                e.stopPropagation();
+                
+                const touch = e.touches[0];
+                const dx = touch.clientX - lastCamTouch.x;
+                const dy = touch.clientY - lastCamTouch.y;
+                
+                this.cameraYaw -= dx * 0.01; 
+                this.cameraPitch = Math.max(0.05, Math.min(1.0, this.cameraPitch + dy * 0.01));
+                
+                lastCamTouch = { x: touch.clientX, y: touch.clientY };
+            });
 
-        canvas.addEventListener('touchend', (e) => {
-            isDraggingCam = false;
-        });
+            dragZone.addEventListener('touchend', (e) => {
+                e.stopPropagation();
+                isDraggingCam = false;
+            });
+        }
 
         this.getJoyDir = () => joyActive ? joyDir : {x:0, y:0};
     }
@@ -190,8 +191,8 @@ export class Player {
             this.isGrounded = true; 
         }
 
-        const camDist = 5;
-        const camHeight = 2;
+        const camDist = 4.5;
+        const camHeight = 1.8;
         
         const offsetX = Math.sin(this.cameraYaw) * camDist * Math.cos(this.cameraPitch);
         const offsetZ = Math.cos(this.cameraYaw) * camDist * Math.cos(this.cameraPitch);
@@ -211,7 +212,7 @@ export class Player {
             this.engine.camera.lookAt(lookAtPos);
         } else {
             this.engine.camera.position.lerp(targetCamPos, 10 * dt);
-            this.engine.camera.lookAt(this.playerModel.position.x, this.playerModel.position.y + 1, this.playerModel.position.z);
+            this.engine.camera.lookAt(this.playerModel.position.x, this.playerModel.position.y + 1.2, this.playerModel.position.z);
         }
 
         const pBox = new THREE.Box3().setFromCenterAndSize(
