@@ -70,3 +70,27 @@ body.play-mode #header, body.play-mode #inspector-panel { display: none !importa
 #score-display { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); padding: 8px 20px; border-radius: 4px; border: 1px solid #ffaa00; color: #ffaa00; font-weight: bold; font-size: 18px; }
 .logic-item { background: #1e1e1e; border: 1px solid #111; padding: 6px; border-radius: 3px; display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #ccc; }
 .logic-item button { background: none; border: none; color: #ff5577; cursor: pointer; font-size: 14px; }
+
+/* زر تبديل الكاميرا */
+#btn-camera-toggle {
+    position: absolute;
+    bottom: 130px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    background: rgba(71, 140, 191, 0.2);
+    border: 2px solid #478cbf;
+    border-radius: 50%;
+    color: #478cbf;
+    font-size: 24px;
+    pointer-events: auto;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+#btn-camera-toggle:active {
+    background: rgba(71, 140, 191, 0.6);
+    color: #fff;
+}
