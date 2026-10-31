@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>KGTF ENGINE</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=11.0.0">
+<link rel="stylesheet" href="style.css?v=13.0.0">
 </head>
 <body>
     <header id="header">
@@ -50,6 +50,9 @@
         <div id="status-bar">FPS: <span id="fps">--</span></div>
         
         <div id="play-ui">
+            <!-- منطقة سحب الكاميرا (النصف الأيمن من الشاشة) -->
+            <div id="camera-drag-zone"></div>
+            
             <div id="score-display" style="display:none;">النقاط: <span id="score-val">0</span></div>
             <button id="exit-play">✕ إيقاف</button>
             <button id="btn-camera-toggle" title="تبديل الكاميرا">👁️</button>
@@ -114,24 +117,14 @@
                 </div>
             </div>
 
-            <!-- تبويب World المطور -->
+            <!-- World Tab (بدون أشرطة تحكم، فقط إعدادات نهائية) -->
             <div class="panel-section tab-pane" id="tab-world">
-                <div class="panel-header"><span class="panel-title">WORLD & LIGHTING</span></div>
-                <div style="padding:10px; display:flex; flex-direction:column; gap:8px;">
-                    <div class="prop-row" style="background:#1e1e1e; padding:6px; border-radius:4px;">
-                        <label style="width:70px; font-weight:bold; color:#ffaa00; font-size:11px;">الوقت</label>
-                        <input type="range" id="env-time-of-day" min="0" max="24" step="0.1" value="14" style="flex:1; accent-color:#ffaa00;">
-                        <span id="time-display" style="width:35px; text-align:center; font-size:11px; color:#fff;">14:00</span>
+                <div class="panel-header"><span class="panel-title">WORLD</span></div>
+                <div style="padding:20px; text-align:center; color:#888; font-size:12px;">
+                    <p>تم تطبيق إعدادات الإضاءة السينمائية (AAA) تلقائياً.</p>
+                    <div class="prop-row" style="margin-top:20px; justify-content:center;">
+                        <label style="width:auto; margin-left:10px;">المطر</label><input type="checkbox" id="env-rain-toggle">
                     </div>
-                    <div class="prop-row" style="background:#1e1e1e; padding:6px; border-radius:4px;">
-                        <label style="width:70px; font-weight:bold; color:#ffaa00; font-size:11px;">شدة الشمس</label>
-                        <input type="range" id="env-sun-intensity" min="0" max="3" step="0.1" value="1.5" style="flex:1; accent-color:#ffaa00;">
-                    </div>
-                    <div class="prop-row" style="background:#1e1e1e; padding:6px; border-radius:4px;">
-                        <label style="width:70px; font-weight:bold; color:#ffaa00; font-size:11px;">شدة التوهج</label>
-                        <input type="range" id="env-bloom-intensity" min="0" max="1.5" step="0.05" value="0.3" style="flex:1; accent-color:#ffaa00;">
-                    </div>
-                    <div class="prop-row" style="margin-top:5px;"><label style="width:80px;">المطر</label><input type="checkbox" id="env-rain-toggle"></div>
                 </div>
             </div>
 
@@ -180,6 +173,6 @@
     <script type="importmap">
     { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
-    <script type="module" src="src/main.js?v=11.0.0"></script>
+    <script type="module" src="src/main.js?v=13.0.0"></script>
 </body>
 </html>

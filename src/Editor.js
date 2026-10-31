@@ -113,35 +113,6 @@ export class Editor {
         const gS = document.getElementById('btn-gizmo-scale');
         if(gS) gS.addEventListener('click', () => this.engine.transform.setMode('scale'));
 
-        // ✅ ربط أشرطة التحكم بالبيئة (World)
-        const timeSlider = document.getElementById('env-time-of-day');
-        const timeDisplay = document.getElementById('time-display');
-        if(timeSlider) {
-            timeSlider.addEventListener('input', (e) => {
-                const time = parseFloat(e.target.value);
-                this.engine.updateSun(time);
-                if(timeDisplay) {
-                    const h = Math.floor(time);
-                    const m = Math.floor((time - h) * 60);
-                    timeDisplay.innerText = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-                }
-            });
-        }
-
-        const sunIntSlider = document.getElementById('env-sun-intensity');
-        if(sunIntSlider) {
-            sunIntSlider.addEventListener('input', (e) => {
-                this.engine.setSunIntensity(parseFloat(e.target.value));
-            });
-        }
-
-        const bloomIntSlider = document.getElementById('env-bloom-intensity');
-        if(bloomIntSlider) {
-            bloomIntSlider.addEventListener('input', (e) => {
-                this.engine.setBloomIntensity(parseFloat(e.target.value));
-            });
-        }
-
         const rainEl = document.getElementById('env-rain-toggle');
         if(rainEl) rainEl.addEventListener('change', (e) => this.engine.toggleRain(e.target.checked));
 

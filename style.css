@@ -100,3 +100,15 @@ body.play-mode #header, body.play-mode #inspector-panel { display: none !importa
 .header-tools { flex: 1; display: flex; overflow-x: auto; gap: 6px; align-items: center; scrollbar-width: none; }
 .header-tools::-webkit-scrollbar { display: none; }
 .play-btn { flex-shrink: 0; margin: 0; position: relative; z-index: 10; }
+
+/* منطقة سحب الكاميرا (النصف الأيمن) */
+#camera-drag-zone {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 50%;
+    height: 100%;
+    pointer-events: auto;
+    touch-action: none;
+    z-index: 10;
+}

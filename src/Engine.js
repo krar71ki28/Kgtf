@@ -11,11 +11,11 @@ import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 
-import { VFXManager } from './VFX.js?v=12.0.0';
-import { Physics } from './Physics.js?v=12.0.0';
-import { LogicManager } from './Logic.js?v=12.0.0';
-import { UIManager } from './UI.js?v=12.0.0';
-import { AssetManager } from './AssetManager.js?v=12.0.0';
+import { VFXManager } from './VFX.js?v=13.0.0';
+import { Physics } from './Physics.js?v=13.0.0';
+import { LogicManager } from './Logic.js?v=13.0.0';
+import { UIManager } from './UI.js?v=13.0.0';
+import { AssetManager } from './AssetManager.js?v=13.0.0';
 
 export class Engine {
     constructor(canvas) {
@@ -27,11 +27,10 @@ export class Engine {
 
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
+        
+        // إعدادات تعرض متوازنة (مثل Unreal)
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        
-        // ✅ تقليل التعرض للضوء جداً عشان ما تحترق الشاشة
-        this.renderer.toneMappingExposure = 0.15; 
-        
+        this.renderer.toneMappingExposure = 1.0; 
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
@@ -39,47 +38,39 @@ export class Engine {
         const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
         this.scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
 
-        // إعداد السماء
+        // ==========================================
+        // إضاءة وسما AAA (ثابتة بدون تعديل)
+        // ==========================================
         this.sky = new Sky();
         this.sky.scale.setScalar(450000); 
         this.scene.add(this.sky);
         
-        // ✅ ضبط معاملات السماء لتبدو زرقاء وواقعية
-        this.skyParams = {
-            turbidity: 2,       // هواء صافي
-            rayleigh: 1,        // زرقة السماء
+        const skyParams = {
+            turbidity: 10,       
+            rayleigh: 2,        
             mieCoefficient: 0.005,
             mieDirectionalG: 0.7,
             elevation: 45, 
             azimuth: 180 
         };
 
-        this.composer = new EffectComposer(this.renderer);
-        this.composer.addPass(new RenderPass(this.scene, this.camera));
-        
-        // ✅ ضبط التوهج: Threshold = 1.0 يعني لا يشتغل إلا على الإضاءة القوية جداً
-        this.bloomPass = new UnrealBloomPass(
-            new THREE.Vector2(window.innerWidth, window.innerHeight),
-            0.2, 0.4, 1.0 
-        );
-        this.composer.addPass(this.bloomPass);
+        const phi = THREE.MathUtils.degToRad(90 - skyParams.elevation);
+        const theta = THREE.MathUtils.degToRad(skyParams.azimuth);
+        const sunPos = new THREE.Vector3().setFromSphericalCoords(1, phi, theta);
 
-        this.outlinePass = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), this.scene, this.camera);
-        this.outlinePass.edgeStrength = 3.0;
-        this.outlinePass.visibleEdgeColor.set('#ffaa00');
-        this.outlinePass.hiddenEdgeColor.set('#ffaa00');
-        this.composer.addPass(this.outlinePass);
+        this.sky.material.uniforms['sunPosition'].value.copy(sunPos);
+        this.sky.material.uniforms['turbidity'].value = skyParams.turbidity;
+        this.sky.material.uniforms['rayleigh'].value = skyParams.rayleigh;
+        this.sky.material.uniforms['mieCoefficient'].value = skyParams.mieCoefficient;
+        this.sky.material.uniforms['mieDirectionalG'].value = skyParams.mieDirectionalG;
 
-        const smaaPass = new SMAAPass(window.innerWidth * this.renderer.getPixelRatio(), window.innerHeight * this.renderer.getPixelRatio());
-        this.composer.addPass(smaaPass);
-        this.composer.addPass(new OutputPass());
-
-        // إضاءة محيطة منخفضة جداً
-        this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.2);
+        // إضاءة محيطة قوية (عشان المناطق المظلمة ما تكون سودة)
+        this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5);
         this.scene.add(this.hemiLight);
 
         // ضوء الشمس
-        this.sun = new THREE.DirectionalLight(0xfff5e6, 1.0);
+        this.sun = new THREE.DirectionalLight(0xfff5e6, 3.0);
+        this.sun.position.copy(sunPos).multiplyScalar(30);
         this.sun.castShadow = true;
         this.sun.shadow.mapSize.width = 2048;
         this.sun.shadow.mapSize.height = 2048;
@@ -92,6 +83,26 @@ export class Engine {
         this.sun.shadow.bias = -0.0005;
         this.scene.add(this.sun);
         this.scene.add(this.sun.target);
+
+        // Post-Processing
+        this.composer = new EffectComposer(this.renderer);
+        this.composer.addPass(new RenderPass(this.scene, this.camera));
+        
+        this.bloomPass = new UnrealBloomPass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            0.4, 0.4, 0.85 
+        );
+        this.composer.addPass(this.bloomPass);
+
+        this.outlinePass = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), this.scene, this.camera);
+        this.outlinePass.edgeStrength = 3.0;
+        this.outlinePass.visibleEdgeColor.set('#ffaa00');
+        this.outlinePass.hiddenEdgeColor.set('#ffaa00');
+        this.composer.addPass(this.outlinePass);
+
+        const smaaPass = new SMAAPass(window.innerWidth * this.renderer.getPixelRatio(), window.innerHeight * this.renderer.getPixelRatio());
+        this.composer.addPass(smaaPass);
+        this.composer.addPass(new OutputPass());
 
         this.orbit = new OrbitControls(this.camera, this.renderer.domElement);
         this.orbit.target.set(0, 1, 0);
@@ -130,53 +141,11 @@ export class Engine {
 
         window.addEventListener('resize', () => this.resize());
         this.resize();
-        
-        this.updateSun(14);
-    }
-
-    // ✅ تحديث موقع الشمس ولونها (بدون تغيير الشدة عشان ما يتعارض مع الشريط)
-    updateSun(timeOfDay) {
-        const angle = (timeOfDay / 24) * 360 - 90; 
-        const phi = THREE.MathUtils.degToRad(90 - angle);
-        const theta = THREE.MathUtils.degToRad(this.skyParams.azimuth);
-
-        const sunPos = new THREE.Vector3();
-        sunPos.setFromSphericalCoords(1, phi, theta);
-
-        this.sky.material.uniforms['sunPosition'].value.copy(sunPos);
-        this.sky.material.uniforms['turbidity'].value = this.skyParams.turbidity;
-        this.sky.material.uniforms['rayleigh'].value = this.skyParams.rayleigh;
-        this.sky.material.uniforms['mieCoefficient'].value = this.skyParams.mieCoefficient;
-        this.sky.material.uniforms['mieDirectionalG'].value = this.skyParams.mieDirectionalG;
-
-        this.sun.position.copy(sunPos).multiplyScalar(30);
-        this.sun.target.position.set(0, 0, 0);
-        this.sun.target.updateMatrixWorld();
-
-        // تغيير لون الشمس فقط
-        if (timeOfDay < 6 || timeOfDay > 18) {
-            this.sun.color.setHex(0xff6600); // غروب برتقالي
-        } else if (timeOfDay < 8 || timeOfDay > 16) {
-            this.sun.color.setHex(0xffaa00); // ذهبي
-        } else {
-            this.sun.color.setHex(0xffffff); // أبيض
-        }
-    }
-
-    // ✅ دالة التحكم بشدة الشمس (تشتغل مع الشريط)
-    setSunIntensity(intensity) {
-        this.sun.intensity = intensity;
-        // نرفع شدة الإضاءة المحيطة قليلاً لما تزيد الشمس عشان ما تصير الظلال سودة فاضية
-        this.hemiLight.intensity = intensity * 0.3;
-    }
-
-    // ✅ دالة التحكم بالتوهج (تشتغل مع الشريط)
-    setBloomIntensity(intensity) {
-        this.bloomPass.strength = intensity;
     }
 
     setupGround() {
-        const groundMat = new THREE.MeshStandardMaterial({ color: 0x2e4a35, roughness: 0.9, metalness: 0.1 });
+        // أرضية خضراء سينمائية
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x556B2F, roughness: 0.8, metalness: 0.1 });
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), groundMat);
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;

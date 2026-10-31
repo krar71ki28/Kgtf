@@ -11,7 +11,8 @@ export class Player {
         
         // متغيرات الكاميرا
         this.isFirstPerson = false;
-        this.cameraYaw = 0; // زاوية دوران الكاميرا في وضع الشخص الأول
+        this.cameraYaw = 0; // زاوية دوران الكاميرا الأفقي
+        this.cameraPitch = 0.2; // زاوية دوران الكاميرا العمودي
         
         this.setupControls();
     }
@@ -64,11 +65,41 @@ export class Player {
             btnCamToggle.addEventListener('pointerdown', (e) => {
                 e.preventDefault();
                 this.isFirstPerson = !this.isFirstPerson;
-                if (this.playerModel) {
-                    // إخفاء أو إظهار مجسم الشخصية
-                    this.playerModel.visible = !this.isFirstPerson; 
-                }
+                if (this.playerModel) this.playerModel.visible = !this.isFirstPerson; 
                 btnCamToggle.style.color = this.isFirstPerson ? '#4ade80' : '#478cbf';
+            });
+        }
+
+        // ✅ إضافة سحب الكاميرا (Camera Drag Zone)
+        const dragZone = document.getElementById('camera-drag-zone');
+        let isDraggingCam = false;
+        let lastCamTouch = { x: 0, y: 0 };
+
+        if(dragZone) {
+            dragZone.addEventListener('touchstart', (e) => {
+                if (!this.isPlaying) return;
+                e.stopPropagation();
+                isDraggingCam = true;
+                lastCamTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            });
+
+            dragZone.addEventListener('touchmove', (e) => {
+                if (!isDraggingCam || !this.isPlaying) return;
+                e.stopPropagation();
+                
+                const touch = e.touches[0];
+                const dx = touch.clientX - lastCamTouch.x;
+                const dy = touch.clientY - lastCamTouch.y;
+                
+                // تحديث زوايا الكاميرا
+                this.cameraYaw -= dx * 0.01; 
+                this.cameraPitch = Math.max(0.05, Math.min(1.0, this.cameraPitch + dy * 0.01));
+                
+                lastCamTouch = { x: touch.clientX, y: touch.clientY };
+            });
+
+            dragZone.addEventListener('touchend', (e) => {
+                isDraggingCam = false;
             });
         }
 
@@ -87,9 +118,9 @@ export class Player {
         this.engine.selectObject(null); 
         this.engine.orbit.enabled = false;
         
-        // إعداد الكاميرا الأولي (خلف الشخصية)
-        this.engine.camera.position.set(this.playerModel.position.x, this.playerModel.position.y + 3, this.playerModel.position.z - 5);
-        this.cameraYaw = this.playerModel.rotation.y;
+        // إعداد الكاميرا الأولي
+        this.cameraYaw = this.playerModel.rotation.y + Math.PI; // الكاميرا ورى الشخصية
+        this.cameraPitch = 0.3;
         
         this.engine.startGameLogic();
     }
@@ -102,7 +133,6 @@ export class Player {
         this.engine.camera.position.set(6, 6, 8); 
         this.engine.orbit.target.set(0, 1, 0);
         
-        // إعادة إظهار الشخصية إذا كانت مخفية
         if (this.playerModel) this.playerModel.visible = true;
 
         if (this.playerModel && this.playerModel.userData.mixer) {
@@ -117,28 +147,23 @@ export class Player {
         
         const speed = 5;
         
-        // حساب اتجاهات الكاميرا (Camera-Relative)
-        const camForward = new THREE.Vector3();
-        this.engine.camera.getWorldDirection(camForward);
-        camForward.y = 0; 
-        camForward.normalize();
-
-        const camRight = new THREE.Vector3();
-        camRight.crossVectors(camForward, new THREE.Vector3(0, 1, 0)).normalize();
+        // حساب اتجاهات الحركة بناءً على زاوية الكاميرا (Camera-Relative)
+        const forward = new THREE.Vector3(-Math.sin(this.cameraYaw), 0, -Math.cos(this.cameraYaw)).normalize();
+        const right = new THREE.Vector3(Math.cos(this.cameraYaw), 0, -Math.sin(this.cameraYaw)).normalize();
 
         let moveVector = new THREE.Vector3();
 
         // الكيبورد
-        if (this.keys['KeyW'] || this.keys['ArrowUp']) moveVector.add(camForward);
-        if (this.keys['KeyS'] || this.keys['ArrowDown']) moveVector.sub(camForward);
-        if (this.keys['KeyA'] || this.keys['ArrowLeft']) moveVector.sub(camRight); 
-        if (this.keys['KeyD'] || this.keys['ArrowRight']) moveVector.add(camRight); 
+        if (this.keys['KeyW'] || this.keys['ArrowUp']) moveVector.add(forward);
+        if (this.keys['KeyS'] || this.keys['ArrowDown']) moveVector.sub(forward);
+        if (this.keys['KeyA'] || this.keys['ArrowLeft']) moveVector.sub(right); 
+        if (this.keys['KeyD'] || this.keys['ArrowRight']) moveVector.add(right); 
 
         // الجويستيك
         const joy = this.getJoyDir();
         if (joy.x !== 0 || joy.y !== 0) {
-            moveVector.add(camRight.clone().multiplyScalar(joy.x));
-            moveVector.add(camForward.clone().multiplyScalar(-joy.y)); 
+            moveVector.add(right.clone().multiplyScalar(joy.x));
+            moveVector.add(forward.clone().multiplyScalar(-joy.y)); 
         }
 
         const isMoving = moveVector.lengthSq() > 0;
@@ -152,17 +177,16 @@ export class Player {
             if (!this.engine.physics.checkPlayerCollision(nextPos, this.playerBoxSize)) {
                 this.playerModel.position.copy(nextPos);
                 
-                // في وضع الشخص الأول، الشخصية تدور مع الكاميرا مباشرة
-                if (this.isFirstPerson) {
-                    this.playerModel.rotation.y = Math.atan2(moveVector.x, moveVector.z);
-                } else {
-                    // في وضع الشخص الثالث، تدور بسلاسة
-                    const targetRot = Math.atan2(moveVector.x, moveVector.z); 
-                    let diff = targetRot - this.playerModel.rotation.y;
-                    while (diff < -Math.PI) diff += Math.PI * 2;
-                    while (diff > Math.PI) diff -= Math.PI * 2;
-                    this.playerModel.rotation.y += diff * 10 * dt;
-                }
+                // تدوير الشخصية بسلاسة نحو اتجاه الحركة
+                const targetRot = Math.atan2(moveVector.x, moveVector.z); 
+                let diff = targetRot - this.playerModel.rotation.y;
+                
+                // اختيار أقصر مسار للدوران
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                
+                // سرعة الدوران (10 تعني دوران سريع وسلس)
+                this.playerModel.rotation.y += diff * 10 * dt;
             }
         }
 
@@ -176,26 +200,33 @@ export class Player {
         }
 
         // ==========================================
-        // تحديث الكاميرا بناءً على الوضع
+        // تحديث الكاميرا (Orbit & Follow)
         // ==========================================
+        const camDist = 5;
+        const camHeight = 2;
+        
+        // حساب موقع الكاميرا المستهدف بناءً على زوايا Yaw و Pitch
+        const offsetX = Math.sin(this.cameraYaw) * camDist * Math.cos(this.cameraPitch);
+        const offsetZ = Math.cos(this.cameraYaw) * camDist * Math.cos(this.cameraPitch);
+        const offsetY = camHeight + Math.sin(this.cameraPitch) * camDist;
+        
+        const targetCamPos = this.playerModel.position.clone().add(new THREE.Vector3(offsetX, offsetY, offsetZ));
+
+        // في وضع الشخص الأول
         if (this.isFirstPerson) {
-            // كاميرا الشخص الأول (من عيون الشخصية)
-            const headHeight = 1.5; // ارتفاع الرأس
+            const headHeight = 1.5;
             const cameraOffset = new THREE.Vector3(0, headHeight, 0);
-            
-            // إضافة إزاحة صغيرة للأمام عشان ما نشوف داخل راس الشخصية
             const forwardOffset = new THREE.Vector3(Math.sin(this.playerModel.rotation.y), 0, Math.cos(this.playerModel.rotation.y)).multiplyScalar(0.2);
             
-            const targetCamPos = this.playerModel.position.clone().add(cameraOffset).add(forwardOffset);
-            this.engine.camera.position.lerp(targetCamPos, 20 * dt); // استجابة سريعة
+            const firstPersonPos = this.playerModel.position.clone().add(cameraOffset).add(forwardOffset);
+            this.engine.camera.position.lerp(firstPersonPos, 20 * dt); 
             
-            const lookAtPos = this.playerModel.position.clone().add(cameraOffset).add(new THREE.Vector3(Math.sin(this.playerModel.rotation.y), 0, Math.cos(this.playerModel.rotation.y)));
+            // النظر للأمام من عيون الشخصية
+            const lookAtPos = firstPersonPos.clone().add(new THREE.Vector3(Math.sin(this.cameraYaw), 0, Math.cos(this.cameraYaw)));
             this.engine.camera.lookAt(lookAtPos);
-            
         } else {
-            // كاميرا الشخص الثالث (خلف الشخصية)
-            const camTarget = this.playerModel.position.clone().add(new THREE.Vector3(0, 3, -5));
-            this.engine.camera.position.lerp(camTarget, 5 * dt);
+            // وضع الشخص الثالث: الكاميرا تتبع بسلاسة
+            this.engine.camera.position.lerp(targetCamPos, 10 * dt);
             this.engine.camera.lookAt(this.playerModel.position.x, this.playerModel.position.y + 1, this.playerModel.position.z);
         }
 
