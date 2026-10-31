@@ -20,7 +20,6 @@ export class Physics {
     }
 
     addNode(node) {
-        // ✅ استبعاد الشخصية من محرك الفيزياء (لأننا نتحكم بها يدوياً)
         if (node.userData.type === 'character') return;
 
         let shape;
@@ -61,22 +60,34 @@ export class Physics {
         });
     }
 
-    // ✅ استخدام Three.js Raycaster لفحص حركة اللاعب (أكثر أماناً)
     checkPlayerCollision(nextPos, playerBoxSize) {
+        const nextBox = new THREE.Box3().setFromCenterAndSize(
+            nextPos.clone().add(new THREE.Vector3(0, 0.75, 0)),
+            playerBoxSize
+        );
+
         const playerObj = this.engine.objects.find(o => o.userData.isCharacter);
         if (!playerObj) return false;
 
-        const raycaster = new THREE.Raycaster();
-        const from = playerObj.position.clone().add(new THREE.Vector3(0, 0.75, 0));
-        const dir = nextPos.clone().sub(playerObj.position).normalize();
-        
-        raycaster.set(from, dir);
-        raycaster.far = 0.8; // مسافة الفحص
+        const currentBox = new THREE.Box3().setFromCenterAndSize(
+            playerObj.position.clone().add(new THREE.Vector3(0, 0.75, 0)),
+            playerBoxSize
+        );
 
-        // نستبعد اللاعب نفسه من الفحص
-        const obstacles = this.engine.objects.filter(o => o !== playerObj && o.userData.type !== 'vfx' && o.userData.type !== 'light');
-        const hits = raycaster.intersectObjects(obstacles, true);
-        
-        return hits.length > 0;
+        for (let i = 0; i < this.engine.objects.length; i++) {
+            const obj = this.engine.objects[i];
+            if (obj.userData.isCharacter || obj.userData.type === 'light' || obj.userData.type === 'vfx') continue;
+            
+            const objBox = new THREE.Box3().setFromObject(obj);
+            
+            // ✅ إصلاح العالق: إذا كنا عالقين، نسمح بالحركة للخروج
+            if (nextBox.intersectsBox(objBox)) {
+                if (currentBox.intersectsBox(objBox)) {
+                    continue; 
+                }
+                return true; 
+            }
+        }
+        return false;
     }
 }

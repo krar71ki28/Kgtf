@@ -128,6 +128,17 @@ export class Player {
             this.targetDist = Math.max(0.5, Math.min(8, this.targetDist + e.deltaY * 0.01));
         }, { passive: false });
 
+                // --- زر تبديل وضع الكاميرا (موجود في HTML) ---
+        const btnCamMode = document.getElementById('btn-camera-mode');
+        if (btnCamMode) {
+            btnCamMode.innerText = this.cameraMode;
+            btnCamMode.addEventListener('pointerdown', (e) => {
+                e.preventDefault(); e.stopPropagation();
+                this.cameraMode = this.cameraMode === 'TPS' ? 'RPG' : 'TPS';
+                btnCamMode.innerText = this.cameraMode;
+            });
+        }
+
         this.getJoyDir = () => joyActive ? joyDir : {x:0, y:0};
     }
 
