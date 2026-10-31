@@ -3,30 +3,35 @@ import * as THREE from 'three';
 export class Editor {
     constructor(engine) {
         this.engine = engine;
-        this.setupTabs();
-        this.setupUI();
-        this.setupRaycaster();
         
-        engine.onSelectCallback = (obj) => this.updateInspector(obj);
-        engine.onSceneChangeCallback = () => this.updateOutliner();
-        
-        const raw = localStorage.getItem('kgtf_scene_modular');
-        if (raw) {
-            try {
-                JSON.parse(raw).forEach(d => {
-                    const obj = engine.createObject(d.type);
-                    if(obj) {
-                        obj.position.fromArray(d.pos);
-                        obj.traverse(c => { if(c.isMesh && c.material && c.material.color) c.material.color.set(d.color); });
-                        if(d.logic) obj.userData.logic = d.logic;
-                    }
-                });
-                engine.selectObject(null);
-            } catch(e) {}
-        } else {
-            engine.createObject('cube');
+        try {
+            this.setupTabs();
+            this.setupUI();
+            this.setupRaycaster();
+            
+            engine.onSelectCallback = (obj) => this.updateInspector(obj);
+            engine.onSceneChangeCallback = () => this.updateOutliner();
+            
+            const raw = localStorage.getItem('kgtf_scene_modular');
+            if (raw) {
+                try {
+                    JSON.parse(raw).forEach(d => {
+                        const obj = engine.createObject(d.type);
+                        if(obj) {
+                            obj.position.fromArray(d.pos);
+                            obj.traverse(c => { if(c.isMesh && c.material && c.material.color) c.material.color.set(d.color); });
+                            if(d.logic) obj.userData.logic = d.logic;
+                        }
+                    });
+                    engine.selectObject(null);
+                } catch(e) { console.warn("Local storage scene error"); }
+            } else {
+                engine.createObject('cube');
+            }
+            this.renderAssetGrid();
+        } catch(e) {
+            console.error("Editor Initialization Error:", e);
         }
-        this.renderAssetGrid();
     }
 
     setupTabs() {
@@ -86,35 +91,41 @@ export class Editor {
             alert('تم الحفظ المحلي!');
         });
 
-        // أزرار التصدير والاستيراد
-        document.getElementById('btn-export').addEventListener('pointerdown', () => this.engine.assetManager.exportScene());
+        const btnExport = document.getElementById('btn-export');
+        if(btnExport) btnExport.addEventListener('pointerdown', () => this.engine.assetManager.exportScene());
         
         const fileImport = document.getElementById('file-import');
-        document.getElementById('btn-import').addEventListener('pointerdown', () => fileImport.click());
-        fileImport.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                if (this.engine.assetManager.importScene(ev.target.result)) alert('تم الاستيراد بنجاح!');
-                else alert('ملف غير صالح!');
-                this.renderAssetGrid();
-            };
-            reader.readAsText(file);
-            e.target.value = '';
-        });
+        const btnImport = document.getElementById('btn-import');
+        if(btnImport && fileImport) {
+            btnImport.addEventListener('pointerdown', () => fileImport.click());
+            fileImport.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    if (this.engine.assetManager.importScene(ev.target.result)) alert('تم الاستيراد بنجاح!');
+                    else alert('ملف غير صالح!');
+                    this.renderAssetGrid();
+                };
+                reader.readAsText(file);
+                e.target.value = '';
+            });
+        }
 
-        // حفظ كأصل
-        document.getElementById('btn-save-asset').addEventListener('pointerdown', () => {
-            if(!this.engine.selectedObj) return;
-            if(this.engine.assetManager.savePrefab(this.engine.selectedObj)) {
-                alert('تم حفظ الأصل في المكتبة!');
-                this.renderAssetGrid();
-            }
-        });
+        const btnSaveAsset = document.getElementById('btn-save-asset');
+        if(btnSaveAsset) {
+            btnSaveAsset.addEventListener('pointerdown', () => {
+                if(!this.engine.selectedObj) return;
+                if(this.engine.assetManager.savePrefab(this.engine.selectedObj)) {
+                    alert('تم حفظ الأصل في المكتبة!');
+                    this.renderAssetGrid();
+                }
+            });
+        }
 
         const bindProp = (id, cb) => {
-            document.getElementById(id).addEventListener('input', (e) => {
+            const el = document.getElementById(id);
+            if(el) el.addEventListener('input', (e) => {
                 if (this.engine.selectedObj) cb(this.engine.selectedObj, parseFloat(e.target.value));
             });
         };
@@ -122,11 +133,13 @@ export class Editor {
         bindProp('prop-y', (o, v) => o.position.y = v);
         bindProp('prop-z', (o, v) => o.position.z = v);
         
-        document.getElementById('prop-color').addEventListener('input', (e) => {
+        const colorEl = document.getElementById('prop-color');
+        if(colorEl) colorEl.addEventListener('input', (e) => {
             if(this.engine.selectedObj) this.engine.selectedObj.traverse(c => { if(c.isMesh && c.material && c.material.color) c.material.color.set(e.target.value); });
         });
 
-        document.getElementById('prop-physics').addEventListener('change', (e) => {
+        const physEl = document.getElementById('prop-physics');
+        if(physEl) physEl.addEventListener('change', (e) => {
             if(this.engine.selectedObj && this.engine.selectedObj.userData.physics) {
                 this.engine.selectedObj.userData.physics.enabled = e.target.checked;
             }
@@ -172,7 +185,6 @@ export class Editor {
                 <div class="asset-name">${p.type}</div>
             `;
             
-            // إضافة الأصل للمشهد
             card.addEventListener('pointerdown', (e) => {
                 if(e.target.classList.contains('asset-delete')) return;
                 const obj = this.engine.createObject(p.type);
@@ -182,19 +194,23 @@ export class Editor {
                 }
             });
 
-            // حذف الأصل
-            card.querySelector('.asset-delete').addEventListener('pointerdown', (e) => {
-                e.stopPropagation();
-                this.engine.assetManager.deletePrefab(p.id);
-                this.renderAssetGrid();
-            });
+            const delBtn = card.querySelector('.asset-delete');
+            if(delBtn) {
+                delBtn.addEventListener('pointerdown', (e) => {
+                    e.stopPropagation();
+                    this.engine.assetManager.deletePrefab(p.id);
+                    this.renderAssetGrid();
+                });
+            }
 
             grid.appendChild(card);
         });
     }
 
     updateOutliner() {
-        const list = document.getElementById('object-list'); list.innerHTML = '';
+        const list = document.getElementById('object-list'); 
+        if(!list) return;
+        list.innerHTML = '';
         this.engine.objects.forEach(o => {
             const div = document.createElement('div');
             div.className = 'obj-item' + (o === this.engine.selectedObj ? ' selected' : '');
@@ -206,6 +222,7 @@ export class Editor {
 
     renderLogicList() {
         const list = document.getElementById('active-logic-list');
+        if(!list) return;
         list.innerHTML = '';
         if (!this.engine.selectedObj || !this.engine.selectedObj.userData.logic) return;
         
@@ -213,10 +230,13 @@ export class Editor {
             const div = document.createElement('div');
             div.className = 'logic-item';
             div.innerHTML = `<span>${l.event} ➔ ${l.action}</span> <button data-index="${index}">✕</button>`;
-            div.querySelector('button').onclick = (e) => {
-                this.engine.selectedObj.userData.logic.splice(index, 1);
-                this.renderLogicList();
-            };
+            const btn = div.querySelector('button');
+            if(btn) {
+                btn.onclick = () => {
+                    this.engine.selectedObj.userData.logic.splice(index, 1);
+                    this.renderLogicList();
+                };
+            }
             list.appendChild(div);
         });
     }
@@ -228,24 +248,33 @@ export class Editor {
         const noLogicMsg = document.getElementById('no-logic-selection');
 
         if (!obj) { 
-            insp.style.display = 'none'; msg.style.display = 'block'; 
-            logicEditor.style.display = 'none'; noLogicMsg.style.display = 'block';
+            if(insp) insp.style.display = 'none'; 
+            if(msg) msg.style.display = 'block'; 
+            if(logicEditor) logicEditor.style.display = 'none'; 
+            if(noLogicMsg) noLogicMsg.style.display = 'block';
             return; 
         }
         
-        insp.style.display = 'block'; msg.style.display = 'none';
-        logicEditor.style.display = 'block'; noLogicMsg.style.display = 'none';
+        if(insp) insp.style.display = 'block'; 
+        if(msg) msg.style.display = 'none';
+        if(logicEditor) logicEditor.style.display = 'block'; 
+        if(noLogicMsg) noLogicMsg.style.display = 'none';
         
-        document.getElementById('prop-x').value = obj.position.x;
-        document.getElementById('prop-y').value = obj.position.y;
-        document.getElementById('prop-z').value = obj.position.z;
+        const px = document.getElementById('prop-x');
+        const py = document.getElementById('prop-y');
+        const pz = document.getElementById('prop-z');
+        if(px) px.value = obj.position.x;
+        if(py) py.value = obj.position.y;
+        if(pz) pz.value = obj.position.z;
         
         let color = '#00e5ff';
         obj.traverse(c => { if(c.isMesh && c.material && c.material.color) color = '#' + c.material.color.getHexString(); });
-        document.getElementById('prop-color').value = color;
+        const pc = document.getElementById('prop-color');
+        if(pc) pc.value = color;
 
-        if(obj.userData.physics) {
-            document.getElementById('prop-physics').checked = obj.userData.physics.enabled;
+        const phys = document.getElementById('prop-physics');
+        if(obj.userData.physics && phys) {
+            phys.checked = obj.userData.physics.enabled;
         }
         this.renderLogicList();
     }

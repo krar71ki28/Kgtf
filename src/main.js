@@ -1,0 +1,32 @@
+import { Engine } from './Engine.js?v=1.5.0';
+import { Editor } from './Editor.js?v=1.5.0';
+import { Player } from './Player.js?v=1.5.0';
+
+const canvas = document.getElementById('viewport');
+const engine = new Engine(canvas);
+const editor = new Editor(engine);
+const player = new Player(engine);
+
+let lastTime = performance.now();
+let fpsAcc = 0, frames = 0;
+const fpsEl = document.getElementById('fps');
+
+function animate() {
+    requestAnimationFrame(animate);
+    const now = performance.now(); 
+    const dt = Math.min((now - lastTime) / 1000, 0.1); 
+    lastTime = now;
+
+    try {
+        engine.update(dt);
+        player.update(dt);
+        engine.render();
+    } catch (e) {
+        console.error("Frame Error:", e);
+    }
+
+    fpsAcc += dt; frames++; 
+    if (fpsAcc >= 0.5) { fpsEl.innerText = Math.round(frames / fpsAcc); fpsAcc = 0; frames = 0; }
+}
+
+animate();
