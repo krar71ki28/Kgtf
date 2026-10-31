@@ -42,10 +42,22 @@ export class Engine {
         this.grid.position.y = 0.05;
         this.scene.add(this.grid);
 
+        // المطر
+        const rainGeo = new THREE.BufferGeometry();
+        const rainCount = 3000;
+        const rainPos = new Float32Array(rainCount * 3);
+        for(let i=0; i<rainCount*3; i+=3) { rainPos[i]=(Math.random()-0.5)*100; rainPos[i+1]=Math.random()*40; rainPos[i+2]=(Math.random()-0.5)*100; }
+        rainGeo.setAttribute("position", new THREE.BufferAttribute(rainPos, 3));
+        this.rain = new THREE.Points(rainGeo, new THREE.PointsMaterial({ color: 0xaaccff, size: 0.15, transparent: true, opacity: 0.6 }));
+        this.rain.visible = false; this.scene.add(this.rain);
+        this.isRaining = false;
+        this.isNightMode = false;
+
         this.objects = [];
         this.selected = null;
         this.onSelect = null;
         this.onSceneChange = null;
+        this.score = 0;
 
         this.addObject('cube');
         this.resize();
@@ -54,36 +66,39 @@ export class Engine {
 
     addObject(type) {
         let obj;
-        if (type === 'cube') { 
-            obj = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x00e5ff })); 
-            obj.position.y = 0.5; 
-        }
-        else if (type === 'sphere') { 
-            obj = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), new THREE.MeshStandardMaterial({ color: 0xff5577 })); 
-            obj.position.y = 0.5; 
-        }
+        if (type === 'cube') { obj = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x00e5ff })); obj.position.y = 0.5; }
+        else if (type === 'sphere') { obj = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), new THREE.MeshStandardMaterial({ color: 0xff5577 })); obj.position.y = 0.5; }
         else if (type === 'tree') {
             obj = new THREE.Group();
             const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.25, 1.5, 8), new THREE.MeshStandardMaterial({ color: 0x5c3a21 }));
             trunk.position.y = 0.75;
-            const leaves = new THREE.Mesh(new THREE.ConeGeometry(0.8, 2, 8), new THREE.MeshStandardMaterial({ color: 0x2d5a27 }));
-            leaves.position.y = 2;
-            obj.add(trunk, leaves);
+            for(let i=0; i<3; i++) {
+                const leaves = new THREE.Mesh(new THREE.ConeGeometry(1.2 - (i*0.3), 1.5, 8), new THREE.MeshStandardMaterial({ color: 0x1e5631 }));
+                leaves.position.y = 1.5 + (i*0.7); obj.add(leaves);
+            }
+            obj.add(trunk);
+        }
+        else if (type === 'rock') { 
+            obj = new THREE.Mesh(new THREE.DodecahedronGeometry(0.6, 1), new THREE.MeshStandardMaterial({ color: 0x666666 })); 
+            obj.position.y = 0.4; 
+            obj.scale.set(1 + Math.random()*0.5, 1 + Math.random()*0.5, 1 + Math.random()*0.5); 
         }
         else if (type === 'character') { return this.loadCharacter(); }
-        else if (type === 'light') { 
-            obj = new THREE.PointLight(0xffaa00, 10, 15); 
-            obj.position.set(0, 3, 0); 
+        else if (type === 'light') { obj = new THREE.PointLight(0xffaa00, 10, 15); obj.position.set(0, 3, 0); }
+        else if (type === 'camera') {
+            obj = new THREE.PerspectiveCamera(60, 1, 0.1, 1000); obj.position.set(0, 3, 5);
+            obj.userData = { id: 'cam_' + Date.now(), type: 'camera' };
+            this.scene.add(obj); this.objects.push(obj); this.selectObject(obj); if(this.onSceneChange) this.onSceneChange(); return obj;
         }
-        
-        if (!obj) return;
-        
-        if(obj.isMesh || obj.isGroup) {
-            obj.traverse(c => { if(c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+        else if (type === 'vfx') { 
+            obj = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), new THREE.MeshBasicMaterial({ color: 0xff4400, transparent: true, opacity: 0.8 }));
+            obj.position.y = 0.5;
         }
 
-        obj.userData = { id: 'obj_' + Date.now(), type: type, physics: { enabled: false } };
-        if(!obj.userData.physics) obj.userData.physics = { enabled: false };
+        if (!obj) return;
+
+        if(obj.isMesh || obj.isGroup) { obj.traverse(c => { if(c.isMesh) { c.castShadow = true; c.receiveShadow = true; } }); }
+        obj.userData = { id: 'obj_' + Date.now(), type: type, physics: { enabled: false }, logic: [] };
         
         this.scene.add(obj);
         this.objects.push(obj);
@@ -96,56 +111,58 @@ export class Engine {
         loader.load('./models/character.glb', (gltf) => {
             const model = gltf.scene;
             model.traverse(o => { if(o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-            
-            model.userData = { id: 'char_' + Date.now(), type: 'character', physics: { enabled: false }, actions: {} };
             const mixer = new THREE.AnimationMixer(model);
-            gltf.animations.forEach(clip => { model.userData.actions[clip.name] = mixer.clipAction(clip); });
-            model.userData.mixer = mixer;
-            
-            const anims = Object.keys(model.userData.actions);
-            if(anims.length > 0) model.userData.actions[anims[0]].play();
+            const actions = {};
+            gltf.animations.forEach(clip => { actions[clip.name] = mixer.clipAction(clip); });
+            const anims = Object.keys(actions);
+            if(anims.length > 0) actions[anims[0]].play();
 
-            this.scene.add(model); 
-            this.objects.push(model);
-            this.selectObject(model); 
-            if (this.onSceneChange) this.onSceneChange();
+            model.userData = { id: 'char_' + Date.now(), type: 'character', physics: { enabled: false }, actions, currentAction: anims[0], logic: [], mixer };
+            this.scene.add(model); this.objects.push(model);
+            this.selectObject(model); if (this.onSceneChange) this.onSceneChange();
         }, undefined, (err) => { 
-            // Fallback Character
             const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 0.9, 4, 8), new THREE.MeshStandardMaterial({color: 0x00e5ff}));
             body.position.y = 0.75; body.castShadow = true;
-            body.userData = { id: 'char_' + Date.now(), type: 'character', physics: { enabled: false }, actions: {} };
+            body.userData = { id: 'char_' + Date.now(), type: 'character', physics: { enabled: false }, actions: {}, logic: [] };
             this.scene.add(body); this.objects.push(body);
             this.selectObject(body); if (this.onSceneChange) this.onSceneChange();
         });
     }
 
-    selectObject(obj) {
-        this.selected = obj;
-        if (this.onSelect) this.onSelect(obj);
-    }
-
+    selectObject(obj) { this.selected = obj; if (this.onSelect) this.onSelect(obj); }
     removeObject(obj) {
-        this.scene.remove(obj);
-        this.objects = this.objects.filter(o => o !== obj);
-        if (this.selected === obj) this.selectObject(null);
-        if (this.onSceneChange) this.onSceneChange();
+        this.scene.remove(obj); this.objects = this.objects.filter(o => o !== obj);
+        if (this.selected === obj) this.selectObject(null); if (this.onSceneChange) this.onSceneChange();
     }
-
-    toggleGrid(visible) { if(this.grid) this.grid.visible = visible; }
+    toggleGrid(v) { if(this.grid) this.grid.visible = v; }
+    toggleRain(v) { this.isRaining = v; if(this.rain) this.rain.visible = v; }
+    
+    toggleNightMode(isNight) {
+        this.isNightMode = isNight;
+        if (isNight) {
+            this.scene.background.setHex(0x050510); this.scene.fog.color.setHex(0x050510);
+            this.sun.intensity = 0; this.hemiLight.intensity = 0.2;
+        } else {
+            this.scene.background.setHex(0x87CEEB); this.scene.fog.color.setHex(0x87CEEB);
+            this.sun.intensity = 2.0; this.hemiLight.intensity = 0.8;
+        }
+    }
 
     update(dt) {
         this.controls.update();
         this.objects.forEach(o => {
             if(o.userData.mixer) o.userData.mixer.update(dt);
+            if(o.userData.physics && o.userData.physics.enabled && o.isMesh) {
+                o.position.y -= 9.8 * dt;
+                if(o.position.y < 0.5) o.position.y = 0.5;
+            }
         });
+        if(this.isRaining) {
+            const pos = this.rain.geometry.attributes.position.array;
+            for (let i = 1; i < pos.length; i += 3) { pos[i] -= 25 * dt; if (pos[i] < 0) pos[i] = 30; }
+            this.rain.geometry.attributes.position.needsUpdate = true;
+        }
     }
-
     render() { this.renderer.render(this.scene, this.camera); }
-
-    resize() {
-        const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
-        this.camera.aspect = w / h;
-        this.camera.updateProjectionMatrix();
-        this.renderer.setSize(w, h, false);
-    }
+    resize() { const w = this.canvas.clientWidth, h = this.canvas.clientHeight; this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); this.renderer.setSize(w, h, false); }
 }

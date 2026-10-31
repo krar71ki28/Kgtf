@@ -6,7 +6,10 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>KGTF ENGINE</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20">
+<link rel="stylesheet" href="style.css?v=18">
+<script>
+    if (window.location.search.includes("reset")) { localStorage.clear(); window.location.href = window.location.pathname; }
+</script>
 </head>
 <body>
     <header id="header">
@@ -26,10 +29,15 @@
                     <button id="btn-sphere">🔴 كرة</button>
                     <button id="btn-cylinder">🛢️ أسطوانة</button>
                     <button id="btn-tree">🌲 شجرة</button>
+                    <button id="btn-bush">🌿 شجيرة</button>
+                    <button id="btn-mountain">⛰️ جبل</button>
                     <button id="btn-rock">🪨 صخرة</button>
+                    <button id="btn-building">🏢 مبنى</button>
                     <button id="btn-light">💡 ضوء</button>
                     <button id="btn-character">🏃 شخصية</button>
                     <button id="btn-camera">📷 كاميرا</button>
+                    <button id="btn-vfx-fire" style="color:#ffaa00;">🔥 نار</button>
+                    <button id="btn-vfx-smoke" style="color:#aaa;">☁️ دخان</button>
                 </div>
             </div>
             <button class="icon-btn" id="btn-upload-model" style="color:#00e5ff;">📁</button>
@@ -55,16 +63,28 @@
         <div id="panel-tabs">
             <button class="tab-btn active" data-target="tab-outliner">Outliner</button>
             <button class="tab-btn" data-target="tab-details">Details</button>
+            <button class="tab-btn" data-target="tab-logic">Logic</button>
+            <button class="tab-btn" data-target="tab-world">World</button>
         </div>
         <div class="panel-content-wrapper">
+            <!-- Outliner -->
             <div class="panel-section tab-pane active" id="tab-outliner">
                 <div class="panel-header"><span class="panel-title">OBJECTS</span><button class="btn-small" id="btn-clear-scene" style="color:#ff5577;">مسح</button></div>
                 <div id="object-list"></div>
             </div>
+            
+            <!-- Details -->
             <div class="panel-section tab-pane" id="tab-details">
-                <div class="panel-header"><span class="panel-title" style="color:#00e5ff;">PROPERTIES</span><div id="object-actions" style="display:none;"><button class="btn-small" id="btn-delete" style="color:#ff5577;">🗑️</button></div></div>
+                <div class="panel-header">
+                    <span class="panel-title" style="color:#00e5ff;">PROPERTIES</span>
+                    <div id="object-actions" style="display:none;"><button class="btn-small" id="btn-delete" style="color:#ff5577;">🗑️</button></div>
+                </div>
                 <div id="no-selection-msg" style="text-align:center; color:#666; font-size:12px; margin-top:20px;">لم يتم تحديد مجسم.</div>
                 <div id="inspector" style="display:none; padding: 15px; overflow-y: auto;">
+                    <div class="prop-group" id="animation-properties" style="display:none; background: #25252b; padding: 8px; border-radius: 4px; margin-bottom:8px;">
+                        <div class="prop-title" style="color:#00e5ff;">ANIMATIONS</div>
+                        <div class="prop-row"><label>الحركة</label><select id="anim-select" style="flex:1; background:#121215; color:#fff; padding:4px; border-radius:4px;"></select></div>
+                    </div>
                     <div class="prop-group">
                         <div class="prop-row"><label>اللون</label><input type="color" id="prop-color" value="#00e5ff"></div>
                         <div class="prop-row"><label>X</label><input type="range" id="prop-x" min="-20" max="20" step="0.1" value="0"></div>
@@ -79,6 +99,38 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Logic (البرمجة المرئية) -->
+            <div class="panel-section tab-pane" id="tab-logic">
+                <div class="panel-header"><span class="panel-title" style="color:#4ade80;">VISUAL SCRIPTING</span></div>
+                <div style="padding: 15px;">
+                    <div class="prop-row" style="margin-bottom:10px;">
+                        <label style="width:70px;">الحدث</label>
+                        <select id="logic-event" style="flex:1; background:#121215; color:#fff; padding:6px; border-radius:4px; border:1px solid #333;">
+                            <option value="onCollide">عند الاصطدام</option>
+                            <option value="onStart">عند البدء</option>
+                        </select>
+                    </div>
+                    <div class="prop-row" style="margin-bottom:15px;">
+                        <label style="width:70px;">الإجراء</label>
+                        <select id="logic-action" style="flex:1; background:#121215; color:#fff; padding:6px; border-radius:4px; border:1px solid #333;">
+                            <option value="addScore">إضافة نقاط</option>
+                            <option value="destroySelf">تدمير الذات</option>
+                        </select>
+                    </div>
+                    <button class="btn-small" id="btn-add-logic" style="width:100%; background:#4ade80; color:#000; font-weight:bold; padding:8px;">ربط</button>
+                    <div id="active-logic-list" style="margin-top:15px; display:flex; flex-direction:column; gap:5px;"></div>
+                </div>
+            </div>
+
+            <!-- World -->
+            <div class="panel-section tab-pane" id="tab-world">
+                <div class="panel-header"><span class="panel-title">WORLD</span></div>
+                <div style="padding:15px;">
+                    <div class="prop-row"><label>الليل</label><input type="checkbox" id="env-night-mode"></div>
+                    <div class="prop-row"><label>المطر</label><input type="checkbox" id="env-rain-toggle"></div>
+                </div>
+            </div>
         </div>
     </aside>
     
@@ -88,6 +140,6 @@
     <script type="importmap">
     { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
-    <script type="module" src="src/main.js?v=100"></script>
+    <script type="module" src="src/main.js?v=102"></script>
 </body>
 </html>

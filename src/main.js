@@ -12,11 +12,9 @@ function animate(now) {
     requestAnimationFrame(animate);
     const dt = Math.min((now - lastTime) / 1000, 0.1);
     lastTime = now;
-    
     engine.update(dt);
     player.update(dt);
     engine.render();
-    
     const fps = document.getElementById('fps');
     if (fps) {
         if (!window._fpsAcc) { window._fpsAcc = 0; window._frames = 0; }

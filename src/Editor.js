@@ -4,12 +4,9 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js';
 export class Editor {
     constructor(engine) {
         this.engine = engine;
-        
-        // إعداد أداة التحكم (Gizmo)
         this.gizmo = new TransformControls(this.engine.camera, this.engine.renderer.domElement);
         this.gizmo.setSize(0.8);
         this.engine.scene.add(this.gizmo);
-        
         this.gizmo.addEventListener('dragging-changed', (event) => { this.engine.controls.enabled = !event.value; });
         this.gizmo.addEventListener('objectChange', () => this.updateUIValues());
 
@@ -18,13 +15,11 @@ export class Editor {
         
         this.engine.onSelect = (obj) => this.updateInspector(obj);
         this.engine.onSceneChange = () => this.updateList();
-        
         if (this.engine.objects.length > 0) this.engine.selectObject(this.engine.objects[0]);
         this.updateList();
     }
 
     setupUI() {
-        // التبويبات
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.onclick = () => {
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -35,7 +30,6 @@ export class Editor {
             };
         });
 
-        // القائمة المنسدلة
         const addMenu = document.getElementById('add-menu');
         const addBtn = document.getElementById('btn-add-menu');
         if (addBtn && addMenu) {
@@ -43,13 +37,14 @@ export class Editor {
             document.body.onclick = (e) => { if (!addMenu.contains(e.target) && e.target !== addBtn) addMenu.classList.remove('show'); };
         }
 
-        // أزرار الإضافة
-        ['cube','sphere','tree','character','light','camera'].forEach(t => {
+        ['cube','sphere','tree','rock','light','character','camera'].forEach(t => {
             const el = document.getElementById(`btn-${t}`);
             if(el) el.onclick = () => { this.engine.addObject(t); if(addMenu) addMenu.classList.remove('show'); };
         });
 
-        // أدوات التحكم (Gizmo)
+        const vfxFire = document.getElementById('btn-vfx-fire');
+        if(vfxFire) vfxFire.onclick = () => { this.engine.addObject('vfx'); if(addMenu) addMenu.classList.remove('show'); };
+
         const gTrans = document.getElementById('btn-gizmo-translate');
         if(gTrans) gTrans.onclick = () => { this.gizmo.setMode('translate'); this.setActiveTool('btn-gizmo-translate'); };
         const gRot = document.getElementById('btn-gizmo-rotate');
@@ -57,26 +52,30 @@ export class Editor {
         const gScale = document.getElementById('btn-gizmo-scale');
         if(gScale) gScale.onclick = () => { this.gizmo.setMode('scale'); this.setActiveTool('btn-gizmo-scale'); };
 
-        // أزرار عامة
         const gridBtn = document.getElementById('btn-toggle-grid');
         if(gridBtn) gridBtn.onclick = () => this.engine.toggleGrid(gridBtn.classList.toggle('active'));
-        
         const clearBtn = document.getElementById('btn-clear-scene');
-        if(clearBtn) clearBtn.onclick = () => { 
-            if(confirm('مسح الكل؟')) { 
-                this.engine.objects.forEach(o=>this.engine.scene.remove(o)); 
-                this.engine.objects = []; 
-                this.updateList(); 
-            } 
-        };
-
+        if(clearBtn) clearBtn.onclick = () => { if(confirm('مسح الكل؟')) { this.engine.objects.forEach(o=>this.engine.scene.remove(o)); this.engine.objects = []; this.updateList(); } };
         const delBtn = document.getElementById('btn-delete');
         if(delBtn) delBtn.onclick = () => { if(this.engine.selected) this.engine.removeObject(this.engine.selected); };
-
         const dragHandle = document.getElementById('panel-drag-handle');
         if(dragHandle) dragHandle.onclick = () => document.getElementById('inspector-panel').classList.toggle('collapsed');
 
-        // ربط الخصائص (Sliders & Colors)
+        const rainTog = document.getElementById('env-rain-toggle');
+        if(rainTog) rainTog.onchange = (e) => this.engine.toggleRain(e.target.checked);
+        const nightTog = document.getElementById('env-night-mode');
+        if(nightTog) nightTog.onchange = (e) => this.engine.toggleNightMode(e.target.checked);
+
+        const addLogicBtn = document.getElementById('btn-add-logic');
+        if(addLogicBtn) addLogicBtn.onclick = () => {
+            if (!this.engine.selected) return alert('اختر مجسماً أولاً!');
+            const ev = document.getElementById('logic-event').value;
+            const act = document.getElementById('logic-action').value;
+            if (!this.engine.selected.userData.logic) this.engine.selected.userData.logic = [];
+            this.engine.selected.userData.logic.push({ event: ev, action: act });
+            this.renderLogicList();
+        };
+
         const bindProp = (id, callback) => {
             const el = document.getElementById(id);
             if(!el) return;
@@ -107,25 +106,18 @@ export class Editor {
         canvas.addEventListener('pointerup', (e) => {
             if (document.body.classList.contains('play-mode') || this.gizmo.dragging) return;
             if (Math.hypot(e.clientX - this.pointerDown.x, e.clientY - this.pointerDown.y) > 5) return;
-            
             const rect = canvas.getBoundingClientRect(); 
             const mouse = new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
             const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(mouse, this.engine.camera);
-            
             const hits = raycaster.intersectObjects(this.engine.objects, true);
-            if (hits.length > 0) { 
-                let root = hits[0].object; 
-                while (root && root.parent !== this.engine.scene) root = root.parent; 
-                if (root) this.engine.selectObject(root); 
-            }
+            if (hits.length > 0) { let root = hits[0].object; while (root && root.parent !== this.engine.scene) root = root.parent; if (root) this.engine.selectObject(root); }
             else this.engine.selectObject(null);
         });
     }
 
     updateList() {
-        const list = document.getElementById('object-list');
-        if(!list) return;
+        const list = document.getElementById('object-list'); if(!list) return;
         list.innerHTML = '';
         this.engine.objects.forEach(obj => {
             const div = document.createElement('div');
@@ -133,6 +125,20 @@ export class Editor {
             div.innerText = obj.userData.type;
             div.onclick = () => this.engine.selectObject(obj);
             list.appendChild(div);
+        });
+    }
+
+    renderLogicList() {
+        const list = document.getElementById('active-logic-list'); if(!list) return;
+        list.innerHTML = '';
+        if (!this.engine.selected || !this.engine.selected.userData.logic) return;
+        this.engine.selected.userData.logic.forEach((item, index) => {
+            const div = document.createElement('div');
+            div.style.cssText = 'background:#1e1e24; padding:8px; border-radius:4px; font-size:11px; display:flex; justify-content:space-between; border:1px solid #333;';
+            div.innerHTML = `<span>${item.event} ← ${item.action}</span>`;
+            const del = document.createElement('span'); del.innerText = '✕'; del.style.cssText = 'color:#ff5577; cursor:pointer;';
+            del.onclick = () => { this.engine.selected.userData.logic.splice(index, 1); this.renderLogicList(); };
+            div.appendChild(del); list.appendChild(div);
         });
     }
 
@@ -150,21 +156,12 @@ export class Editor {
         const inspector = document.getElementById('inspector');
         const noMsg = document.getElementById('no-selection-msg');
         const actions = document.getElementById('object-actions');
-        
         if (!obj) { 
-            if(inspector) inspector.style.display = 'none'; 
-            if(noMsg) noMsg.style.display = 'block'; 
-            if(actions) actions.style.display = 'none';
-            this.gizmo.detach(); 
-            return; 
+            if(inspector) inspector.style.display = 'none'; if(noMsg) noMsg.style.display = 'block'; if(actions) actions.style.display = 'none'; this.gizmo.detach(); this.renderLogicList(); return; 
         }
-        
-        if(inspector) inspector.style.display = 'block'; 
-        if(noMsg) noMsg.style.display = 'none'; 
-        if(actions) actions.style.display = 'flex'; 
-        this.gizmo.attach(obj);
-        
+        if(inspector) inspector.style.display = 'block'; if(noMsg) noMsg.style.display = 'none'; if(actions) actions.style.display = 'flex'; this.gizmo.attach(obj);
         this.updateUIValues();
         if (obj.isMesh && obj.material) document.getElementById('prop-color').value = '#' + obj.material.color.getHexString();
+        this.renderLogicList();
     }
 }
