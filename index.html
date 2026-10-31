@@ -6,11 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>KGTF ENGINE</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-<!-- ربط ملف التصميم -->
-<link rel="stylesheet" href="style.css?v=200">
-<script>
-    if (window.location.search.includes("reset")) { localStorage.clear(); alert("تم مسح البيانات!"); window.location.href = window.location.pathname; }
-</script>
+<link rel="stylesheet" href="style.css?v=1.1.0">
 </head>
 <body>
     <header id="header">
@@ -25,12 +21,15 @@
                 <div class="dropdown-content" id="add-menu">
                     <button class="add-btn" data-type="cube">📦 مكعب</button>
                     <button class="add-btn" data-type="sphere">🔴 كرة</button>
-                    <button class="add-btn" data-type="character">🏃 شخصية</button>
                     <button class="add-btn" data-type="tree">🌲 شجرة</button>
+                    <button class="add-btn" data-type="character">🏃 شخصية</button>
                     <button class="add-btn" data-type="light">💡 ضوء</button>
                 </div>
             </div>
             <button class="icon-btn" id="btn-save" title="حفظ">💾</button>
+            <button class="icon-btn" id="btn-export" title="تصدير">📤</button>
+            <button class="icon-btn" id="btn-import" title="استيراد">📥</button>
+            <input type="file" id="file-import" accept=".json" style="display:none;">
             <button class="play-btn" id="btn-play" title="تشغيل">▶</button>
         </div>
     </header>
@@ -38,7 +37,6 @@
     <main id="viewport-container">
         <canvas id="viewport"></canvas>
         <div id="status-bar">FPS: <span id="fps">--</span></div>
-
         <div id="play-ui">
             <button id="exit-play">✕ إيقاف</button>
             <div id="joystick-zone"><div id="joystick-knob"></div></div>
@@ -47,18 +45,51 @@
     </main>
 
     <aside id="inspector-panel">
-        <div class="panel-header">
-            <span class="panel-title">OUTLINER</span>
-            <button class="btn-small" id="btn-clear-scene" style="color:#ff5577;">مسح الكل</button>
+        <div id="panel-tabs">
+            <button class="tab-btn active" data-target="tab-outliner">Outliner</button>
+            <button class="tab-btn" data-target="tab-details">Details</button>
+            <button class="tab-btn" data-target="tab-world">World</button>
+            <button class="tab-btn" data-target="tab-logic">Logic</button>
         </div>
-        <div id="object-list"></div>
-        
-        <div id="inspector">
-            <div class="prop-grid">
-                <div class="prop-row"><label>X</label><input type="range" id="prop-x" min="-50" max="50" step="0.1"></div>
-                <div class="prop-row"><label>Y</label><input type="range" id="prop-y" min="-5" max="30" step="0.1"></div>
-                <div class="prop-row"><label>Z</label><input type="range" id="prop-z" min="-50" max="50" step="0.1"></div>
-                <div class="prop-row"><label>🎨</label><input type="color" id="prop-color" value="#00e5ff"></div>
+        <div class="panel-content-wrapper">
+            <!-- Outliner -->
+            <div class="panel-section tab-pane active" id="tab-outliner">
+                <div class="panel-header">
+                    <span class="panel-title">OUTLINER</span>
+                    <button class="btn-small" id="btn-clear-scene" style="color:#ff5577;">مسح الكل</button>
+                </div>
+                <div id="object-list"></div>
+            </div>
+            
+            <!-- Details -->
+            <div class="panel-section tab-pane" id="tab-details">
+                <div class="panel-header"><span class="panel-title" style="color:#00e5ff;">DETAILS</span></div>
+                <div id="no-selection-msg" style="text-align:center; color:#666; font-size:12px; margin-top:10px;">لم يتم تحديد مجسم.</div>
+                <div id="inspector">
+                    <div class="prop-grid">
+                        <div class="prop-row"><label>X</label><input type="range" id="prop-x" min="-50" max="50" step="0.1"></div>
+                        <div class="prop-row"><label>Y</label><input type="range" id="prop-y" min="-5" max="30" step="0.1"></div>
+                        <div class="prop-row"><label>Z</label><input type="range" id="prop-z" min="-50" max="50" step="0.1"></div>
+                        <div class="prop-row"><label>🎨</label><input type="color" id="prop-color" value="#00e5ff"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- World -->
+            <div class="panel-section tab-pane" id="tab-world">
+                <div class="panel-header"><span class="panel-title">WORLD</span></div>
+                <div style="padding:10px;">
+                    <div class="prop-row" style="margin-bottom:10px;"><label style="width:80px;">الوضع الليلي</label><input type="checkbox" id="env-night-mode"></div>
+                    <div class="prop-row"><label style="width:80px;">المطر</label><input type="checkbox" id="env-rain-toggle"></div>
+                </div>
+            </div>
+
+            <!-- Logic -->
+            <div class="panel-section tab-pane" id="tab-logic">
+                <div class="panel-header"><span class="panel-title" style="color:#4ade80;">LOGIC</span></div>
+                <div style="padding:10px; text-align:center; color:#888; font-size:12px;">
+                    قريباً... (نظام البرمجة المرئية)
+                </div>
             </div>
         </div>
     </aside>
@@ -66,8 +97,6 @@
     <script type="importmap">
     { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
-
-    <!-- ربط ملف الجافاسكربت فقط -->
-    <script type="module" src="src/app.js?v=200"></script>
+    <script type="module" src="src/main.js?v=1.1.0"></script>
 </body>
 </html>
