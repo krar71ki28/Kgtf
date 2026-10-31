@@ -140,3 +140,15 @@ body.play-mode #header, body.play-mode #inspector-panel { display: none !importa
     overflow-y: auto;
     padding-right: 5px;
 }
+
+/* إصلاح طبقات واجهة اللعب لضمان عمل الكاميرا من الشاشة مباشرة */
+#viewport-container {
+    touch-action: none; /* منع المتصفح من التمرير */
+}
+#play-ui {
+    z-index: 10;
+    pointer-events: none; /* تعطيل التفاعل مع الحاوية */
+}
+#play-ui button, #play-ui #joystick-zone, #play-ui #score-display, #play-ui #custom-hud {
+    pointer-events: auto; /* تفعيل التفاعل للأزرار فقط */
+}

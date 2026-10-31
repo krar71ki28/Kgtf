@@ -10,12 +10,13 @@ import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 
-import { VFXManager } from './VFX.js?v=25.0.0';
-import { Physics } from './Physics.js?v=25.0.0';
-import { LogicManager } from './Logic.js?v=25.0.0';
-import { UIManager } from './UI.js?v=25.0.0';
-import { AssetManager } from './AssetManager.js?v=25.0.0';
-import { KGTFNode } from './KGTFNode.js?v=25.0.0';
+import { VFXManager } from './VFX.js?v=26.0.0';
+import { Physics } from './Physics.js?v=26.0.0';
+import { LogicManager } from './Logic.js?v=26.0.0';
+import { UIManager } from './UI.js?v=26.0.0';
+import { AssetManager } from './AssetManager.js?v=26.0.0';
+import { KGTFNode } from './KGTFNode.js?v=26.0.0';
+import { Animator } from './Animator.js?v=26.0.0';
 
 export class Engine {
     constructor(canvas) {
@@ -214,13 +215,8 @@ export class Engine {
                     } 
                 });
                 group.add(model);
-                if (gltf.animations && gltf.animations.length > 0) {
-                    group.userData.mixer = new THREE.AnimationMixer(model);
-                    group.userData.actions = {};
-                    gltf.animations.forEach(clip => { group.userData.actions[clip.name] = group.userData.mixer.clipAction(clip); });
-                    const idleKey = Object.keys(group.userData.actions).find(k => k.toLowerCase().includes('idle'));
-                    if (idleKey) { group.userData.actions[idleKey].play(); group.userData.currentAction = idleKey; }
-                }
+                group.userData.animator = new Animator(model, gltf.animations);
+                group.userData.animator.play('idle', 0);
             }, undefined, (err) => console.warn('فشل تحميل GLB'));
         } else if (type === 'vfx-fire') {
             this.vfxManager.createFire(new THREE.Vector3(0, 0.5, 0));
@@ -347,7 +343,7 @@ export class Engine {
                 }
             });
         }
-        this.objects.forEach(o => { if (o.userData.mixer) o.userData.mixer.update(dt); });
+        this.objects.forEach(o => { if (o.userData.animator) o.userData.animator.update(dt); });
         this.vfxManager.update(dt);
 
         if (this.rainSystem) {

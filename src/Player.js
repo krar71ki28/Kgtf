@@ -10,7 +10,6 @@ export class Player {
         this.playerBoxSize = new THREE.Vector3(0.6, 1.5, 0.6);
         this.raycaster = new THREE.Raycaster();
         
-        // متغيرات الكاميرا (Spring Arm)
         this.cameraYaw = 0; 
         this.cameraPitch = 0.3; 
         this.targetDist = 4.5; 
@@ -55,64 +54,60 @@ export class Player {
             if(this.isPlaying && this.isGrounded) { this.velocityY = 8; this.isGrounded = false; } 
         });
 
-        const dragZone = document.getElementById('camera-drag-zone');
+        // ✅ التحكم بالكاميرا من خلال الشاشة مباشرة (Unreal Style)
+        const canvas = this.engine.renderer.domElement;
         let isDraggingCam = false;
         let lastCamPos = { x: 0, y: 0 };
         let initialPinchDist = 0;
 
-        if (dragZone) {
-            dragZone.addEventListener('touchstart', (e) => {
-                if (!this.isPlaying) return;
-                e.stopPropagation();
-                if (e.touches.length === 2) {
-                    initialPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-                } else if (e.touches.length === 1) {
-                    isDraggingCam = true;
-                    lastCamPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-                }
-            });
-            
-            dragZone.addEventListener('touchmove', (e) => {
-                if (!this.isPlaying) return;
-                e.stopPropagation();
-                if (e.touches.length === 2 && initialPinchDist > 0) {
-                    const currentPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-                    const delta = initialPinchDist - currentPinchDist;
-                    this.targetDist = Math.max(0.1, Math.min(8, this.targetDist + delta * 0.05));
-                    initialPinchDist = currentPinchDist;
-                } else if (e.touches.length === 1 && isDraggingCam) {
-                    const touch = e.touches[0];
-                    this.updateCameraRotation(touch.clientX - lastCamPos.x, touch.clientY - lastCamPos.y);
-                    lastCamPos = { x: touch.clientX, y: touch.clientY };
-                }
-            });
-            dragZone.addEventListener('touchend', () => { isDraggingCam = false; initialPinchDist = 0; });
-
-            dragZone.addEventListener('mousedown', (e) => {
-                if (!this.isPlaying) return;
-                e.preventDefault();
+        canvas.addEventListener('touchstart', (e) => {
+            if (!this.isPlaying) return;
+            if (e.touches.length === 2) {
+                initialPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            } else if (e.touches.length === 1) {
                 isDraggingCam = true;
-                lastCamPos = { x: e.clientX, y: e.clientY };
-            });
-            dragZone.addEventListener('mousemove', (e) => {
-                if (!isDraggingCam || !this.isPlaying) return;
-                this.updateCameraRotation(e.clientX - lastCamPos.x, e.clientY - lastCamPos.y);
-                lastCamPos = { x: e.clientX, y: e.clientY };
-            });
-            window.addEventListener('mouseup', () => isDraggingCam = false);
-            dragZone.addEventListener('wheel', (e) => {
-                if (!this.isPlaying) return;
-                e.preventDefault();
-                this.targetDist = Math.max(0.1, Math.min(8, this.targetDist + e.deltaY * 0.01));
-            }, { passive: false });
-        }
+                lastCamPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+        });
+        
+        canvas.addEventListener('touchmove', (e) => {
+            if (!this.isPlaying) return;
+            if (e.touches.length === 2 && initialPinchDist > 0) {
+                const currentPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                const delta = initialPinchDist - currentPinchDist;
+                this.targetDist = Math.max(0.1, Math.min(8, this.targetDist + delta * 0.05));
+                initialPinchDist = currentPinchDist;
+            } else if (e.touches.length === 1 && isDraggingCam) {
+                const touch = e.touches[0];
+                this.updateCameraRotation(touch.clientX - lastCamPos.x, touch.clientY - lastCamPos.y);
+                lastCamPos = { x: touch.clientX, y: touch.clientY };
+            }
+        });
+        canvas.addEventListener('touchend', () => { isDraggingCam = false; initialPinchDist = 0; });
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (!this.isPlaying) return;
+            e.preventDefault();
+            isDraggingCam = true;
+            lastCamPos = { x: e.clientX, y: e.clientY };
+        });
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDraggingCam || !this.isPlaying) return;
+            this.updateCameraRotation(e.clientX - lastCamPos.x, e.clientY - lastCamPos.y);
+            lastCamPos = { x: e.clientX, y: e.clientY };
+        });
+        window.addEventListener('mouseup', () => isDraggingCam = false);
+        canvas.addEventListener('wheel', (e) => {
+            if (!this.isPlaying) return;
+            e.preventDefault();
+            this.targetDist = Math.max(0.1, Math.min(8, this.targetDist + e.deltaY * 0.01));
+        }, { passive: false });
 
         this.getJoyDir = () => joyActive ? joyDir : {x:0, y:0};
     }
 
     updateCameraRotation(dx, dy) {
         this.cameraYaw -= dx * 0.01; 
-        // ✅ حدود دوران الكاميرا (لا تنزل تحت الأرض ولا تنقلب فوق الرأس)
         this.cameraPitch = Math.max(0.1, Math.min(1.4, this.cameraPitch + dy * 0.01));
     }
 
@@ -143,12 +138,6 @@ export class Player {
         this.engine.orbit.target.set(0, 1, 0);
         
         if (this.playerModel) this.playerModel.visible = true;
-
-        if (this.playerModel && this.playerModel.userData.mixer) {
-            this.playerModel.userData.mixer.stopAllAction();
-            const idleKey = Object.keys(this.playerModel.userData.actions).find(k => k.toLowerCase().includes('idle'));
-            if (idleKey) this.playerModel.userData.actions[idleKey].play();
-        }
     }
 
     update(dt) {
@@ -183,6 +172,7 @@ export class Player {
             const nextPos = this.playerModel.position.clone();
             nextPos.addScaledVector(moveVector, speed * dt);
 
+            // استخدام الفيزياء للتحقق من التصادم (Cannon Raycast)
             if (!this.engine.physics.checkPlayerCollision(nextPos, this.playerBoxSize)) {
                 this.playerModel.position.copy(nextPos);
                 if (!isFirstPerson) {
@@ -195,9 +185,7 @@ export class Player {
             }
         }
 
-        if (isFirstPerson) {
-            this.playerModel.rotation.y = this.cameraYaw;
-        }
+        if (isFirstPerson) this.playerModel.rotation.y = this.cameraYaw;
 
         this.velocityY -= 24 * dt; 
         this.playerModel.position.y += this.velocityY * dt;
@@ -205,9 +193,7 @@ export class Player {
             this.playerModel.position.y = 0; this.velocityY = 0; this.isGrounded = true; 
         }
 
-        // ==========================================
-        // تحديث الكاميرا (Spring Arm مع تصادم)
-        // ==========================================
+        // تحديث الكاميرا (Spring Arm)
         const camHeight = 1.5; 
         const anchorPos = this.playerModel.position.clone().add(new THREE.Vector3(0, camHeight, 0));
         
@@ -217,7 +203,6 @@ export class Player {
         
         let targetCamPos = anchorPos.clone().add(new THREE.Vector3(offsetX, offsetY, offsetZ));
 
-        // ✅ تصادم الكاميرا (لا تخترق الجدران)
         if (!isFirstPerson) {
             const dirToCam = targetCamPos.clone().sub(anchorPos).normalize();
             this.raycaster.set(anchorPos, dirToCam);
@@ -245,6 +230,7 @@ export class Player {
             this.engine.camera.lookAt(anchorPos);
         }
 
+        // فحص الاصطدام بالمجسمات (Logic Events)
         const pBox = new THREE.Box3().setFromCenterAndSize(
             this.playerModel.position.clone().add(new THREE.Vector3(0, 0.75, 0)), 
             this.playerBoxSize
@@ -259,24 +245,13 @@ export class Player {
             }
         });
 
-        if (this.playerModel.userData.actions && !isFirstPerson) {
-            const actions = this.playerModel.userData.actions; 
-            let targetActionName = null;
+        // ✅ إدارة الأنميشن باستخدام Animator
+        if (this.playerModel.userData.animator && !isFirstPerson) {
+            let targetState = 'idle';
+            if (!this.isGrounded) targetState = 'jump';
+            else if (isMoving) targetState = 'walk';
             
-            if (!this.isGrounded) {
-                targetActionName = Object.keys(actions).find(k => k.toLowerCase().includes('jump') || k.toLowerCase().includes('fall'));
-            } else if (isMoving) {
-                targetActionName = Object.keys(actions).find(k => k.toLowerCase().includes('walk') || k.toLowerCase().includes('run'));
-            } else {
-                targetActionName = Object.keys(actions).find(k => k.toLowerCase().includes('idle'));
-            }
-
-            if (targetActionName && targetActionName !== this.playerModel.userData.currentAction) {
-                const current = this.playerModel.userData.currentAction;
-                if (current && actions[current]) actions[current].fadeOut(0.2);
-                actions[targetActionName].reset().fadeIn(0.2).play();
-                this.playerModel.userData.currentAction = targetActionName;
-            }
+            this.playerModel.userData.animator.play(targetState, 0.2);
         }
     }
 }
