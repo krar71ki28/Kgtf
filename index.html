@@ -3,25 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>KGTF ENGINE</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=2.0.0">
+<link rel="stylesheet" href="style.css?v=3.0.0">
 </head>
 <body>
-    <!-- شاشة الأخطاء -->
-    <div id="error-log" style="display:none; position:absolute; top:0; left:0; width:100%; background:rgba(255,0,0,0.9); color:#fff; z-index:9999; padding:10px; font-family:monospace; font-size:12px; pointer-events:none;"></div>
-
     <header id="header">
         <div class="header-tools">
-            <!-- مجموعة أدوات التحريك (Gizmo) -->
             <div class="tool-group">
                 <button class="icon-btn active" id="btn-gizmo-translate" title="تحريك">✥</button>
                 <button class="icon-btn" id="btn-gizmo-rotate" title="تدوير">↻</button>
                 <button class="icon-btn" id="btn-gizmo-scale" title="تكبير">⤢</button>
             </div>
-
-            <!-- زر الإضافة -->
+            
             <div class="dropdown">
                 <button class="icon-btn" id="btn-add-menu" style="color:#4ade80;" title="إضافة">➕</button>
                 <div class="dropdown-content" id="add-menu">
@@ -35,7 +29,6 @@
                 </div>
             </div>
 
-            <!-- مجموعة الملفات -->
             <div class="tool-group">
                 <button class="icon-btn" id="btn-save" title="حفظ">💾</button>
                 <button class="icon-btn" id="btn-export" title="تصدير">📤</button>
@@ -43,7 +36,6 @@
                 <input type="file" id="file-import" accept=".json" style="display:none;">
             </div>
 
-            <!-- زر التشغيل -->
             <button class="play-btn" id="btn-play" title="تشغيل">▶</button>
         </div>
     </header>
@@ -61,7 +53,6 @@
         </div>
     </main>
 
-    <!-- اللوحة السفلية (احترافية) -->
     <aside id="inspector-panel">
         <div id="panel-tabs">
             <button class="tab-btn active" data-target="tab-outliner">Outliner</button>
@@ -151,6 +142,6 @@
     <script type="importmap">
     { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
-    <script type="module" src="src/main.js?v=2.0.0"></script>
+    <script type="module" src="src/main.js?v=3.0.0"></script>
 </body>
 </html>

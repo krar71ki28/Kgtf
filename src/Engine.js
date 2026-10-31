@@ -2,11 +2,11 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { VFXManager } from './VFX.js?v=1.5.0';
-import { Physics } from './Physics.js?v=1.5.0';
-import { LogicManager } from './Logic.js?v=1.5.0';
-import { UIManager } from './UI.js?v=1.5.0';
-import { AssetManager } from './AssetManager.js?v=1.5.0';
+import { VFXManager } from './VFX.js?v=3.0.0';
+import { Physics } from './Physics.js?v=3.0.0';
+import { LogicManager } from './Logic.js?v=3.0.0';
+import { UIManager } from './UI.js?v=3.0.0';
+import { AssetManager } from './AssetManager.js?v=3.0.0';
 
 export class Engine {
     constructor(canvas) {

@@ -36,7 +36,7 @@ export class Editor {
 
     setupTabs() {
         document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('pointerdown', () => {
+            btn.addEventListener('click', () => {
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                 document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
                 btn.classList.add('active');
@@ -51,7 +51,7 @@ export class Editor {
         const addMenu = document.getElementById('add-menu');
         const btnAddMenu = document.getElementById('btn-add-menu');
         
-        // ✅ إصلاح زر الزائد: استخدام click بدلاً من pointerdown
+        // ✅ إصلاح نهائي لزر الزائد: الاستجابة للماوس واللمس
         if(btnAddMenu && addMenu) {
             btnAddMenu.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -59,7 +59,6 @@ export class Editor {
                 addMenu.classList.toggle('show');
             });
             
-            // إغلاق القائمة عند الضغط في أي مكان آخر
             document.addEventListener('click', (e) => {
                 if (addMenu.classList.contains('show') && !addMenu.contains(e.target) && e.target !== btnAddMenu) {
                     addMenu.classList.remove('show');
@@ -67,7 +66,6 @@ export class Editor {
             });
         }
 
-        // أزرار الإضافة داخل القائمة
         document.querySelectorAll('.add-btn').forEach(btn => {
             btn.addEventListener('click', (e) => { 
                 e.preventDefault();
@@ -77,14 +75,14 @@ export class Editor {
         });
 
         const btnClear = document.getElementById('btn-clear-scene');
-        if(btnClear) btnClear.addEventListener('pointerdown', () => this.engine.clearScene());
+        if(btnClear) btnClear.addEventListener('click', () => this.engine.clearScene());
         
         const gT = document.getElementById('btn-gizmo-translate');
-        if(gT) gT.addEventListener('pointerdown', () => this.engine.transform.setMode('translate'));
+        if(gT) gT.addEventListener('click', () => this.engine.transform.setMode('translate'));
         const gR = document.getElementById('btn-gizmo-rotate');
-        if(gR) gR.addEventListener('pointerdown', () => this.engine.transform.setMode('rotate'));
+        if(gR) gR.addEventListener('click', () => this.engine.transform.setMode('rotate'));
         const gS = document.getElementById('btn-gizmo-scale');
-        if(gS) gS.addEventListener('pointerdown', () => this.engine.transform.setMode('scale'));
+        if(gS) gS.addEventListener('click', () => this.engine.transform.setMode('scale'));
 
         const nightEl = document.getElementById('env-night-mode');
         if(nightEl) nightEl.addEventListener('change', (e) => this.engine.toggleNightMode(e.target.checked));
@@ -92,7 +90,7 @@ export class Editor {
         if(rainEl) rainEl.addEventListener('change', (e) => this.engine.toggleRain(e.target.checked));
 
         const btnAddText = document.getElementById('btn-add-text');
-        if(btnAddText) btnAddText.addEventListener('pointerdown', () => {
+        if(btnAddText) btnAddText.addEventListener('click', () => {
             const textInput = document.getElementById('ui-text-input');
             if(textInput) {
                 this.engine.ui.addText(textInput.value);
@@ -100,10 +98,10 @@ export class Editor {
             }
         });
         const btnClearUi = document.getElementById('btn-clear-ui');
-        if(btnClearUi) btnClearUi.addEventListener('pointerdown', () => this.engine.ui.clearUI());
+        if(btnClearUi) btnClearUi.addEventListener('click', () => this.engine.ui.clearUI());
 
         const btnAddLogic = document.getElementById('btn-add-logic');
-        if(btnAddLogic) btnAddLogic.addEventListener('pointerdown', () => {
+        if(btnAddLogic) btnAddLogic.addEventListener('click', () => {
             if (!this.engine.selectedObj) return;
             const ev = document.getElementById('logic-event').value;
             const ac = document.getElementById('logic-action').value;
@@ -114,23 +112,23 @@ export class Editor {
         });
 
         const btnSave = document.getElementById('btn-save');
-        if(btnSave) btnSave.addEventListener('pointerdown', () => {
+        if(btnSave) btnSave.addEventListener('click', () => {
             const data = this.engine.objects.map(o => {
                 let color = '#00e5ff';
                 o.traverse(c => { if(c.isMesh && c.material && c.material.color) color = '#' + c.material.color.getHexString(); });
                 return { type: o.userData.type, pos: o.position.toArray(), color: color, logic: o.userData.logic };
             });
             localStorage.setItem('kgtf_scene_modular', JSON.stringify(data));
-            alert('تم الحفظ المحلي! يمكنك تحديث الصفحة، لكن تأكد من إزالة ?reset من الرابط.');
+            alert('تم الحفظ المحلي!');
         });
 
         const btnExport = document.getElementById('btn-export');
-        if(btnExport) btnExport.addEventListener('pointerdown', () => this.engine.assetManager.exportScene());
+        if(btnExport) btnExport.addEventListener('click', () => this.engine.assetManager.exportScene());
         
         const fileImport = document.getElementById('file-import');
         const btnImport = document.getElementById('btn-import');
         if(btnImport && fileImport) {
-            btnImport.addEventListener('pointerdown', () => fileImport.click());
+            btnImport.addEventListener('click', () => fileImport.click());
             fileImport.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
@@ -147,7 +145,7 @@ export class Editor {
 
         const btnSaveAsset = document.getElementById('btn-save-asset');
         if(btnSaveAsset) {
-            btnSaveAsset.addEventListener('pointerdown', () => {
+            btnSaveAsset.addEventListener('click', () => {
                 if(!this.engine.selectedObj) return;
                 if(this.engine.assetManager.savePrefab(this.engine.selectedObj)) {
                     alert('تم حفظ الأصل في المكتبة!');
@@ -224,7 +222,7 @@ export class Editor {
                 <div class="asset-name">${p.type}</div>
             `;
             
-            card.addEventListener('pointerdown', (e) => {
+            card.addEventListener('click', (e) => {
                 if(e.target.classList.contains('asset-delete')) return;
                 const obj = this.engine.createObject(p.type);
                 if (obj) {
@@ -235,7 +233,7 @@ export class Editor {
 
             const delBtn = card.querySelector('.asset-delete');
             if(delBtn) {
-                delBtn.addEventListener('pointerdown', (e) => {
+                delBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     this.engine.assetManager.deletePrefab(p.id);
                     this.renderAssetGrid();
@@ -254,7 +252,7 @@ export class Editor {
             const div = document.createElement('div');
             div.className = 'obj-item' + (o === this.engine.selectedObj ? ' selected' : '');
             div.innerText = o.userData.type;
-            div.addEventListener('pointerdown', () => this.engine.selectObject(o));
+            div.addEventListener('click', () => this.engine.selectObject(o));
             list.appendChild(div);
         });
     }

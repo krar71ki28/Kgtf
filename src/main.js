@@ -1,6 +1,6 @@
-import { Engine } from './Engine.js?v=2.0.0';
-import { Editor } from './Editor.js?v=2.0.0';
-import { Player } from './Player.js?v=2.0.0';
+import { Engine } from './Engine.js?v=3.0.0';
+import { Editor } from './Editor.js?v=3.0.0';
+import { Player } from './Player.js?v=3.0.0';
 
 const canvas = document.getElementById('viewport');
 const engine = new Engine(canvas);
@@ -22,11 +22,10 @@ function animate() {
         player.update(dt);
         engine.render();
     } catch (e) {
-        console.error("Frame Error:", e);
+        console.error(e);
     }
 
     fpsAcc += dt; frames++; 
     if (fpsAcc >= 0.5) { fpsEl.innerText = Math.round(frames / fpsAcc); fpsAcc = 0; frames = 0; }
 }
-
 animate();
