@@ -10,35 +10,36 @@ import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 
-import { VFXManager } from './VFX.js?v=23.0.0';
-import { Physics } from './Physics.js?v=23.0.0';
-import { LogicManager } from './Logic.js?v=23.0.0';
-import { UIManager } from './UI.js?v=23.0.0';
-import { AssetManager } from './AssetManager.js?v=23.0.0';
-import { KGTFNode } from './KGTFNode.js?v=23.0.0'; // ✅ الاستيراد الصحيح هنا
+import { VFXManager } from './VFX.js?v=24.0.0';
+import { Physics } from './Physics.js?v=24.0.0';
+import { LogicManager } from './Logic.js?v=24.0.0';
+import { UIManager } from './UI.js?v=24.0.0';
+import { AssetManager } from './AssetManager.js?v=24.0.0';
+import { KGTFNode } from './KGTFNode.js?v=24.0.0';
 
 export class Engine {
     constructor(canvas) {
         this.canvas = canvas;
         this.scene = new THREE.Scene();
         
-        this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+        // ✅ زيادة مسافة الرسم لمنع قص السماء
+        this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 20000);
         this.camera.position.set(6, 6, 8);
 
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 1.0; 
+        this.renderer.toneMappingExposure = 0.5; // ✅ تعرض متوازن للسماء
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
         this.renderer.shadowMap.enabled = false; 
 
         this.sky = new Sky();
-        this.sky.scale.setScalar(450000); 
+        this.sky.scale.setScalar(5000); // ✅ حجم مناسب لمنع المثلثات
         this.scene.add(this.sky);
         
         this.skyParams = {
             turbidity: 10, rayleigh: 3, mieCoefficient: 0.005,
-            mieDirectionalG: 0.7, elevation: 45, azimuth: 180 
+            mieDirectionalG: 0.7, elevation: 30, azimuth: 180 
         };
 
         this.sky.material.uniforms['turbidity'].value = this.skyParams.turbidity;
@@ -46,7 +47,7 @@ export class Engine {
         this.sky.material.uniforms['mieCoefficient'].value = this.skyParams.mieCoefficient;
         this.sky.material.uniforms['mieDirectionalG'].value = this.skyParams.mieDirectionalG;
 
-        this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5);
+        this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
         this.scene.add(this.hemiLight);
 
         this.sun = new THREE.DirectionalLight(0xfff5e6, 2.0);
@@ -126,10 +127,10 @@ export class Engine {
             this.hemiLight.intensity = 0.3;
         } else if (timeOfDay < 8 || timeOfDay > 16) {
             this.sun.color.setHex(0xffaa00);
-            this.hemiLight.intensity = 0.8;
+            this.hemiLight.intensity = 0.6;
         } else {
             this.sun.color.setHex(0xffffff);
-            this.hemiLight.intensity = 1.5;
+            this.hemiLight.intensity = 1.0;
         }
     }
 
@@ -180,7 +181,7 @@ export class Engine {
     }
 
     createObject(type, select = true) {
-        let group = new KGTFNode(type); // ✅ استخدام الكلاس الجديد
+        let group = new KGTFNode(type);
         
         if (type === 'cube') {
             const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), this.getMaterial('default', 0x00e5ff));
@@ -241,7 +242,7 @@ export class Engine {
         const url = URL.createObjectURL(file);
         this.loader.load(url, (gltf) => {
             URL.revokeObjectURL(url);
-            const group = new KGTFNode('glb'); // ✅ استخدام الكلاس الجديد
+            const group = new KGTFNode('glb');
             const model = gltf.scene;
             model.traverse(c => { if (c.isMesh) { c.castShadow = false; c.receiveShadow = false; } });
             const box = new THREE.Box3().setFromObject(model);
@@ -281,7 +282,7 @@ export class Engine {
     duplicateObject(obj) {
         if (!obj) return null;
         if (obj.userData.isCharacter) {
-            alert("لا يمكن تكرار الشخصية (GLB) حالياً لتجنب مشاكل الأنميشن.");
+            alert("لا يمكن تكرار الشخصية (GLB) حالياً.");
             return null;
         }
         const clone = obj.clone(true);

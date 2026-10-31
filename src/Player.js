@@ -8,12 +8,13 @@ export class Player {
         this.isGrounded = true;
         this.keys = {};
         this.playerBoxSize = new THREE.Vector3(0.6, 1.5, 0.6);
+        this.raycaster = new THREE.Raycaster();
         
-        // ✅ متغيرات الكاميرا الموحدة (Spring Arm)
+        // متغيرات الكاميرا (Spring Arm)
         this.cameraYaw = 0; 
         this.cameraPitch = 0.3; 
-        this.targetDist = 4.5; // المسافة المستهدفة (التي يتحكم بها المستخدم)
-        this.currentDist = 4.5; // المسافة الحالية (تتحرك بسلاسة)
+        this.targetDist = 4.5; 
+        this.currentDist = 4.5; 
         
         this.setupControls();
     }
@@ -22,14 +23,12 @@ export class Player {
         document.getElementById('btn-play').addEventListener('click', () => this.startPlay());
         document.getElementById('exit-play').addEventListener('click', () => this.stopPlay());
 
-        // --- دعم الكيبورد (للـ PC) ---
         window.addEventListener('keydown', (e) => { 
             this.keys[e.code] = true; 
             if (e.code === 'Space' && this.isPlaying && this.isGrounded) { this.velocityY = 8; this.isGrounded = false; } 
         });
         window.addEventListener('keyup', (e) => this.keys[e.code] = false);
 
-        // --- دعم الجويستيك (للموبايل) ---
         let joyActive = false, joyDir = {x:0, y:0};
         const joyZone = document.getElementById('joystick-zone'), joyKnob = document.getElementById('joystick-knob');
         
@@ -50,33 +49,24 @@ export class Player {
             });
         }
         
-        // --- زر القفز ---
         const btnJump = document.getElementById('btn-jump');
         if(btnJump) btnJump.addEventListener('pointerdown', (e) => { 
             e.preventDefault(); e.stopPropagation(); 
             if(this.isPlaying && this.isGrounded) { this.velocityY = 8; this.isGrounded = false; } 
         });
 
-        // --- التحكم بالكاميرا والزوم (ماوس للكمبيوتر + لمس للموبايل) ---
         const dragZone = document.getElementById('camera-drag-zone');
         let isDraggingCam = false;
         let lastCamPos = { x: 0, y: 0 };
         let initialPinchDist = 0;
 
         if (dragZone) {
-            // لمس (للموبايل)
             dragZone.addEventListener('touchstart', (e) => {
                 if (!this.isPlaying) return;
                 e.stopPropagation();
-                
                 if (e.touches.length === 2) {
-                    // إصبعين = زوم
-                    initialPinchDist = Math.hypot(
-                        e.touches[0].clientX - e.touches[1].clientX,
-                        e.touches[0].clientY - e.touches[1].clientY
-                    );
+                    initialPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                 } else if (e.touches.length === 1) {
-                    // إصبع واحد = تدوير
                     isDraggingCam = true;
                     lastCamPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
                 }
@@ -85,27 +75,19 @@ export class Player {
             dragZone.addEventListener('touchmove', (e) => {
                 if (!this.isPlaying) return;
                 e.stopPropagation();
-                
                 if (e.touches.length === 2 && initialPinchDist > 0) {
-                    // حساب الزوم
-                    const currentPinchDist = Math.hypot(
-                        e.touches[0].clientX - e.touches[1].clientX,
-                        e.touches[0].clientY - e.touches[1].clientY
-                    );
+                    const currentPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                     const delta = initialPinchDist - currentPinchDist;
-                    this.targetDist = Math.max(0, Math.min(10, this.targetDist + delta * 0.05));
+                    this.targetDist = Math.max(0.1, Math.min(8, this.targetDist + delta * 0.05));
                     initialPinchDist = currentPinchDist;
                 } else if (e.touches.length === 1 && isDraggingCam) {
-                    // تدوير الكاميرا
                     const touch = e.touches[0];
                     this.updateCameraRotation(touch.clientX - lastCamPos.x, touch.clientY - lastCamPos.y);
                     lastCamPos = { x: touch.clientX, y: touch.clientY };
                 }
             });
-            
             dragZone.addEventListener('touchend', () => { isDraggingCam = false; initialPinchDist = 0; });
 
-            // ماوس (للكمبيوتر)
             dragZone.addEventListener('mousedown', (e) => {
                 if (!this.isPlaying) return;
                 e.preventDefault();
@@ -118,12 +100,10 @@ export class Player {
                 lastCamPos = { x: e.clientX, y: e.clientY };
             });
             window.addEventListener('mouseup', () => isDraggingCam = false);
-
-            // عجلة الماوس للزوم (للكمبيوتر)
             dragZone.addEventListener('wheel', (e) => {
                 if (!this.isPlaying) return;
                 e.preventDefault();
-                this.targetDist = Math.max(0, Math.min(10, this.targetDist + e.deltaY * 0.01));
+                this.targetDist = Math.max(0.1, Math.min(8, this.targetDist + e.deltaY * 0.01));
             }, { passive: false });
         }
 
@@ -132,7 +112,8 @@ export class Player {
 
     updateCameraRotation(dx, dy) {
         this.cameraYaw -= dx * 0.01; 
-        this.cameraPitch = Math.max(0.05, Math.min(1.2, this.cameraPitch + dy * 0.01));
+        // ✅ حدود دوران الكاميرا (لا تنزل تحت الأرض ولا تنقلب فوق الرأس)
+        this.cameraPitch = Math.max(0.1, Math.min(1.4, this.cameraPitch + dy * 0.01));
     }
 
     startPlay() {
@@ -148,7 +129,7 @@ export class Player {
         
         this.cameraYaw = this.playerModel.rotation.y + Math.PI; 
         this.cameraPitch = 0.3;
-        this.targetDist = 4.5; // إعادة المسافة للوضع الافتراضي عند البدء
+        this.targetDist = 4.5;
         
         this.engine.startGameLogic();
     }
@@ -175,19 +156,16 @@ export class Player {
         
         const speed = 5;
         
-        // حساب اتجاهات الحركة بناءً على زاوية الكاميرا
         const forward = new THREE.Vector3(-Math.sin(this.cameraYaw), 0, -Math.cos(this.cameraYaw)).normalize();
         const right = new THREE.Vector3(Math.cos(this.cameraYaw), 0, -Math.sin(this.cameraYaw)).normalize();
 
         let moveVector = new THREE.Vector3();
 
-        // كيبورد
         if (this.keys['KeyW'] || this.keys['ArrowUp']) moveVector.add(forward);
         if (this.keys['KeyS'] || this.keys['ArrowDown']) moveVector.sub(forward);
         if (this.keys['KeyA'] || this.keys['ArrowLeft']) moveVector.sub(right); 
         if (this.keys['KeyD'] || this.keys['ArrowRight']) moveVector.add(right); 
 
-        // جويستيك
         const joy = this.getJoyDir();
         if (joy.x !== 0 || joy.y !== 0) {
             moveVector.add(right.clone().multiplyScalar(joy.x));
@@ -195,11 +173,8 @@ export class Player {
         }
 
         const isMoving = moveVector.lengthSq() > 0;
-
-        // تحديث المسافة بسلاسة (Lerp)
         this.currentDist += (this.targetDist - this.currentDist) * 15 * dt;
 
-        // إخفاء الشخصية إذا كانت الكاميرا قريبة جداً (أقل من 0.8) لتصبح كاميرا شخص أول
         const isFirstPerson = this.currentDist < 0.8;
         this.playerModel.visible = !isFirstPerson;
 
@@ -210,10 +185,7 @@ export class Player {
 
             if (!this.engine.physics.checkPlayerCollision(nextPos, this.playerBoxSize)) {
                 this.playerModel.position.copy(nextPos);
-                
-                // تدوير الشخصية
                 if (!isFirstPerson) {
-                    // في وضع الشخص الثالث: تلتفت بسلاسة نحو الحركة
                     const targetRot = Math.atan2(moveVector.x, moveVector.z); 
                     let diff = targetRot - this.playerModel.rotation.y;
                     while (diff < -Math.PI) diff += Math.PI * 2;
@@ -223,12 +195,10 @@ export class Player {
             }
         }
 
-        // في وضع الشخص الأول، جسم الشخصية يلتفت مع الكاميرا (عشان الحركة تظل صحيحة)
         if (isFirstPerson) {
             this.playerModel.rotation.y = this.cameraYaw;
         }
 
-        // الجاذبية
         this.velocityY -= 24 * dt; 
         this.playerModel.position.y += this.velocityY * dt;
         if (this.playerModel.position.y <= 0) { 
@@ -236,40 +206,45 @@ export class Player {
         }
 
         // ==========================================
-        // تحديث الكاميرا الموحدة (Spring Arm)
+        // تحديث الكاميرا (Spring Arm مع تصادم)
         // ==========================================
-        const camHeight = 1.5; // ارتفاع نقطة النظر (الرأس)
+        const camHeight = 1.5; 
         const anchorPos = this.playerModel.position.clone().add(new THREE.Vector3(0, camHeight, 0));
         
-        // حساب موقع الكاميرا بناءً على الزوايا والمسافة
         const offsetX = Math.sin(this.cameraYaw) * this.currentDist * Math.cos(this.cameraPitch);
         const offsetZ = Math.cos(this.cameraYaw) * this.currentDist * Math.cos(this.cameraPitch);
         const offsetY = Math.sin(this.cameraPitch) * this.currentDist;
         
-        let targetCamPos;
-        
-        if (isFirstPerson) {
-            // في الشخص الأول، الكاميرا تكون في الرأس بالضبط وتنظر للأمام
-            targetCamPos = anchorPos;
-            this.engine.camera.position.lerp(targetCamPos, 20 * dt);
+        let targetCamPos = anchorPos.clone().add(new THREE.Vector3(offsetX, offsetY, offsetZ));
+
+        // ✅ تصادم الكاميرا (لا تخترق الجدران)
+        if (!isFirstPerson) {
+            const dirToCam = targetCamPos.clone().sub(anchorPos).normalize();
+            this.raycaster.set(anchorPos, dirToCam);
+            this.raycaster.far = this.currentDist;
             
+            const obstacles = this.engine.objects.filter(o => o !== this.playerModel && o.userData.type !== 'vfx' && o.userData.type !== 'light');
+            const hits = this.raycaster.intersectObjects(obstacles, true);
+            
+            if (hits.length > 0) {
+                const safeDist = Math.max(0.5, hits[0].distance - 0.2);
+                targetCamPos = anchorPos.clone().add(dirToCam.multiplyScalar(safeDist));
+            }
+        }
+
+        if (isFirstPerson) {
+            this.engine.camera.position.lerp(anchorPos, 20 * dt);
             const lookDir = new THREE.Vector3(
                 -Math.sin(this.cameraYaw) * Math.cos(this.cameraPitch),
                 -Math.sin(this.cameraPitch),
                 -Math.cos(this.cameraYaw) * Math.cos(this.cameraPitch)
             );
             this.engine.camera.lookAt(anchorPos.clone().add(lookDir));
-            
         } else {
-            // في الشخص الثالث، الكاميرا تبعد بناءً على المسافة
-            targetCamPos = anchorPos.clone().add(new THREE.Vector3(offsetX, offsetY, offsetZ));
-            this.engine.camera.position.lerp(targetCamPos, 10 * dt);
+            this.engine.camera.position.lerp(targetCamPos, 12 * dt);
             this.engine.camera.lookAt(anchorPos);
         }
 
-        // ==========================================
-        // فحص الاصطدام بالمجسمات (Logic Events)
-        // ==========================================
         const pBox = new THREE.Box3().setFromCenterAndSize(
             this.playerModel.position.clone().add(new THREE.Vector3(0, 0.75, 0)), 
             this.playerBoxSize
@@ -284,9 +259,6 @@ export class Player {
             }
         });
 
-        // ==========================================
-        // إدارة الأنميشن
-        // ==========================================
         if (this.playerModel.userData.actions && !isFirstPerson) {
             const actions = this.playerModel.userData.actions; 
             let targetActionName = null;
