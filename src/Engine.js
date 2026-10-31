@@ -24,9 +24,9 @@ export const BEHAVIORS = {
     rotate: { name: 'دوران مستمر', defaultParams: { speed: 1.5 }, update: (obj, params, state, dt) => { obj.rotation.y += params.speed * dt; } },
     float: { name: 'طيران/تذبذب', defaultParams: { amplitude: 0.5, speed: 2 }, update: (obj, params, state, dt, time) => { if (state.baseY === undefined) state.baseY = obj.position.y; obj.position.y = state.baseY + Math.sin(time * params.speed) * params.amplitude; } },
     follow: { name: 'مطاردة اللاعب', defaultParams: { speed: 2, stopDistance: 1.5 }, update: (obj, params, state, dt, time, engine) => { const player = engine.objects.find(o => o.userData.type === 'character'); if (!player) return; const dir = new THREE.Vector3().subVectors(player.position, obj.position); dir.y = 0; if (dir.length() > params.stopDistance) { dir.normalize(); obj.position.add(dir.multiplyScalar(params.speed * dt)); } } },
-    patrol: { name: 'دورية (يمين/يسار)', defaultParams: { speed: 2, distance: 4, axis: 'x' }, init: (obj, state) => { state.startPos = obj.position.clone(); state.direction = 1; }, update: (obj, params, state, dt) => { const axis = params.axis; obj.position[axis] += state.direction * params.speed * dt; const currentDist = obj.position[axis] - state.startPos[axis]; if (Math.abs(currentDist) >= params.distance / 2) state.direction *= -1; } },
+    patrol: { name: 'دورية', defaultParams: { speed: 2, distance: 4, axis: 'x' }, init: (obj, state) => { state.startPos = obj.position.clone(); state.direction = 1; }, update: (obj, params, state, dt) => { const axis = params.axis; obj.position[axis] += state.direction * params.speed * dt; const currentDist = obj.position[axis] - state.startPos[axis]; if (Math.abs(currentDist) >= params.distance / 2) state.direction *= -1; } },
     shoot: { name: 'إطلاق مقذوفات', defaultParams: { interval: 2, speed: 15 }, update: (obj, params, state, dt, time, engine) => { const player = engine.objects.find(o => o.userData.type === 'character'); if (!player) return; state.timer = (state.timer || 0) + dt; if (state.timer >= params.interval) { state.timer = 0; const dir = new THREE.Vector3().subVectors(player.position, obj.position).normalize(); engine.createProjectile(obj.position.clone().add(new THREE.Vector3(0, 1, 0)), dir, params.speed); } } },
-    collect: { name: 'جمع (اختفاء ونقاط)', defaultParams: { distance: 1.5, points: 10 }, update: (obj, params, state, dt, time, engine) => { const player = engine.objects.find(o => o.userData.type === 'character'); if (!player) return; if (player.position.distanceTo(obj.position) < params.distance) { engine.score += params.points; if (engine.onScoreChanged) engine.onScoreChanged(engine.score); engine.removeObject(obj); } } }
+    collect: { name: 'جمع', defaultParams: { distance: 1.5, points: 10 }, update: (obj, params, state, dt, time, engine) => { const player = engine.objects.find(o => o.userData.type === 'character'); if (!player) return; if (player.position.distanceTo(obj.position) < params.distance) { engine.score += params.points; if (engine.onScoreChanged) engine.onScoreChanged(engine.score); engine.removeObject(obj); } } }
 };
 
 export class Engine {
@@ -164,24 +164,12 @@ export class Engine {
             obj.add(trunk, leaves);
             obj.position.y = 0;
         }
-        else if (type === 'rock') {
-            obj = new THREE.Mesh(new THREE.DodecahedronGeometry(0.6, 0), this.makeMaterial('metal', 0x666666));
-            obj.position.y = 0.4;
-        }
-        else if (type === 'building') {
-            obj = new THREE.Mesh(new THREE.BoxGeometry(2, 4, 2), this.makeMaterial('glass', 0x88ccff));
-            obj.position.y = 2;
-        }
-        else if (type === 'vfx') {
-            return this.createParticleSystem(opts.vfxType || 'fire', new THREE.Vector3(0, 0.5, 0));
-        }
-        else if (type === 'audio') {
-            return this.createAudioEmitter(new THREE.Vector3(0, 1, 0));
-        }
+        else if (type === 'rock') { obj = new THREE.Mesh(new THREE.DodecahedronGeometry(0.6, 0), this.makeMaterial('metal', 0x666666)); obj.position.y = 0.4; }
+        else if (type === 'building') { obj = new THREE.Mesh(new THREE.BoxGeometry(2, 4, 2), this.makeMaterial('glass', 0x88ccff)); obj.position.y = 2; }
+        else if (type === 'vfx') { return this.createParticleSystem(opts.vfxType || 'fire', new THREE.Vector3(0, 0.5, 0)); }
+        else if (type === 'audio') { return this.createAudioEmitter(new THREE.Vector3(0, 1, 0)); }
 
-        if (obj.isMesh || obj.isGroup) {
-            obj.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
-        }
+        if (obj.isMesh || obj.isGroup) { obj.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } }); }
         
         if (!obj.userData || Object.keys(obj.userData).length === 0) {
             obj.userData = { id: 'obj_' + (this.idCounter++), type: type, material: 'default', physics: { enabled: false, vy: 0, bounce: 0.5 }, behaviors: {}, behaviorStates: {} };
@@ -190,16 +178,11 @@ export class Engine {
         if (opts.position) obj.position.fromArray(opts.position);
         if (opts.rotation) obj.rotation.set(opts.rotation[0] || 0, opts.rotation[1] || 0, opts.rotation[2] || 0);
         if (opts.scale) obj.scale.fromArray(opts.scale);
-        if (opts.behaviors) {
-            obj.userData.behaviors = JSON.parse(JSON.stringify(opts.behaviors));
-            obj.userData.behaviorStates = {};
-        }
-        
+        if (opts.behaviors) { obj.userData.behaviors = JSON.parse(JSON.stringify(opts.behaviors)); obj.userData.behaviorStates = {}; }
         obj.userData.baseY = obj.position.y;
 
         if (opts.material && obj.isMesh) { obj.material.dispose(); obj.material = this.makeMaterial(opts.material, opts.color); obj.userData.material = opts.material; }
         else if (opts.color && obj.isMesh) obj.material.color.set(opts.color);
-        
         if (opts.color && obj.isLight) obj.color.set(opts.color);
         if (opts.intensity && obj.isLight) obj.intensity = opts.intensity;
         if (opts.physics) obj.userData.physics = { ...obj.userData.physics, ...opts.physics };
@@ -218,11 +201,8 @@ export class Engine {
             const model = gltf.scene;
             model.position.set(0, 0, 0);
             model.scale.set(1, 1, 1);
-            
             model.traverse(o => { if(o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-
             model.userData = { id: 'model_' + (this.idCounter++), type: 'model', material: 'custom', physics: { enabled: false, vy: 0, bounce: 0 }, behaviors: {}, behaviorStates: {} };
-
             this.scene.add(model);
             this.objects.push(model);
             this.selectObject(model);
@@ -247,14 +227,8 @@ export class Engine {
         this.controls.update();
     }
 
-    setTimeOfDay(hours) {
-        this.timeOfDay = hours / 24;
-    }
-
-    toggleRain(isRaining) {
-        this.isRaining = isRaining;
-        if (this.rain) this.rain.visible = isRaining;
-    }
+    setTimeOfDay(hours) { this.timeOfDay = hours / 24; }
+    toggleRain(isRaining) { this.isRaining = isRaining; if (this.rain) this.rain.visible = isRaining; }
 
     createParticleSystem(type, position) {
         const count = 100;
@@ -264,9 +238,7 @@ export class Engine {
         const colors = new Float32Array(count * 3);
 
         for (let i = 0; i < count; i++) {
-            positions[i * 3] = (Math.random() - 0.5) * 0.5;
-            positions[i * 3 + 1] = Math.random() * 0.5;
-            positions[i * 3 + 2] = (Math.random() - 0.5) * 0.5;
+            positions[i * 3] = (Math.random() - 0.5) * 0.5; positions[i * 3 + 1] = Math.random() * 0.5; positions[i * 3 + 2] = (Math.random() - 0.5) * 0.5;
             velocities.push({ x: (Math.random() - 0.5) * 0.5, y: Math.random() * 1.5 + 0.5, z: (Math.random() - 0.5) * 0.5 });
             if (type === 'fire') { colors[i*3] = 1.0; colors[i*3+1] = Math.random() * 0.5 + 0.2; colors[i*3+2] = 0; }
             else if (type === 'sparks') { colors[i*3] = 1.0; colors[i*3+1] = 1.0; colors[i*3+2] = 0; }
@@ -275,19 +247,12 @@ export class Engine {
 
         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-        const material = new THREE.PointsMaterial({
-            size: type === 'smoke' ? 0.5 : 0.2, vertexColors: true, transparent: true, opacity: 0.8,
-            blending: type === 'fire' || type === 'sparks' ? THREE.AdditiveBlending : THREE.NormalBlending, depthWrite: false
-        });
-
+        const material = new THREE.PointsMaterial({ size: type === 'smoke' ? 0.5 : 0.2, vertexColors: true, transparent: true, opacity: 0.8, blending: type === 'fire' || type === 'sparks' ? THREE.AdditiveBlending : THREE.NormalBlending, depthWrite: false });
         const points = new THREE.Points(geometry, material);
         points.position.copy(position);
         points.userData = { id: 'vfx_' + (this.idCounter++), type: 'vfx', vfxType: type, velocities, count, life: 0, physics: { enabled: false } };
 
-        this.scene.add(points);
-        this.objects.push(points);
-        this.selectObject(points);
+        this.scene.add(points); this.objects.push(points); this.selectObject(points);
         if (this.onSceneChange) this.onSceneChange();
         return points;
     }
@@ -297,30 +262,19 @@ export class Engine {
         this.camera.add(listener);
         const sound = new THREE.PositionalAudio(listener);
         const audioLoader = new THREE.AudioLoader();
-        audioLoader.load('https://actions.google.com/sounds/v1/alarms/beep_short.ogg', (buffer) => {
-            sound.setBuffer(buffer); sound.setRefDistance(5); sound.setLoop(true); sound.play();
-        });
+        audioLoader.load('https://actions.google.com/sounds/v1/alarms/beep_short.ogg', (buffer) => { sound.setBuffer(buffer); sound.setRefDistance(5); sound.setLoop(true); sound.play(); });
         const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), new THREE.MeshBasicMaterial({ color: 0xff5577, wireframe: true }));
-        mesh.position.copy(position);
-        mesh.add(sound);
+        mesh.position.copy(position); mesh.add(sound);
         mesh.userData = { id: 'audio_' + (this.idCounter++), type: 'audio', physics: { enabled: false } };
-        this.scene.add(mesh);
-        this.objects.push(mesh);
-        this.selectObject(mesh);
+        this.scene.add(mesh); this.objects.push(mesh); this.selectObject(mesh);
         if (this.onSceneChange) this.onSceneChange();
         return mesh;
     }
 
     saveAsAsset(obj) {
         if (!obj) return;
-        const assetData = {
-            id: 'asset_' + Date.now(), name: obj.userData.type + '_' + (this.assets.length + 1), type: obj.userData.type,
-            material: obj.userData.material, color: obj.isMesh ? obj.material.color.getHex() : (obj.isLight ? obj.color.getHex() : 0xffffff),
-            intensity: obj.isLight ? obj.intensity : undefined, scale: obj.scale.toArray(), physics: obj.userData.physics, behaviors: JSON.parse(JSON.stringify(obj.userData.behaviors || {}))
-        };
-        this.assets.push(assetData);
-        localStorage.setItem('kgtf_assets', JSON.stringify(this.assets));
-        return assetData;
+        const assetData = { id: 'asset_' + Date.now(), name: obj.userData.type + '_' + (this.assets.length + 1), type: obj.userData.type, material: obj.userData.material, color: obj.isMesh ? obj.material.color.getHex() : (obj.isLight ? obj.color.getHex() : 0xffffff), intensity: obj.isLight ? obj.intensity : undefined, scale: obj.scale.toArray(), physics: obj.userData.physics, behaviors: JSON.parse(JSON.stringify(obj.userData.behaviors || {})) };
+        this.assets.push(assetData); localStorage.setItem('kgtf_assets', JSON.stringify(this.assets)); return assetData;
     }
 
     spawnAsset(assetId) {
@@ -329,27 +283,15 @@ export class Engine {
         this.addObject(asset.type, { position: [0, 1, 0], material: asset.material, color: asset.color, intensity: asset.intensity, scale: asset.scale, physics: asset.physics, behaviors: asset.behaviors });
     }
 
-    removeAsset(assetId) {
-        this.assets = this.assets.filter(a => a.id !== assetId);
-        localStorage.setItem('kgtf_assets', JSON.stringify(this.assets));
-    }
-
+    removeAsset(assetId) { this.assets = this.assets.filter(a => a.id !== assetId); localStorage.setItem('kgtf_assets', JSON.stringify(this.assets)); }
     removeObject(obj) {
         const idx = this.objects.indexOf(obj);
-        if (idx !== -1) {
-            this.scene.remove(obj);
-            if (obj.material) obj.material.dispose();
-            this.objects.splice(idx, 1);
-            if (this.onSceneChange) this.onSceneChange();
-            if (this.selected === obj) this.selectObject(null);
-        }
+        if (idx !== -1) { this.scene.remove(obj); if (obj.material) obj.material.dispose(); this.objects.splice(idx, 1); if (this.onSceneChange) this.onSceneChange(); if (this.selected === obj) this.selectObject(null); }
     }
 
     createProjectile(pos, dir, speed) {
         const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
-        mesh.position.copy(pos);
-        this.scene.add(mesh);
-        this.projectiles.push({ mesh, direction: dir, speed: speed, life: 3.0 });
+        mesh.position.copy(pos); this.scene.add(mesh); this.projectiles.push({ mesh, direction: dir, speed: speed, life: 3.0 });
     }
 
     checkCollision(box1, excludeObj) {
@@ -365,24 +307,13 @@ export class Engine {
     duplicateObject() {
         if (!this.selected || this.selected.userData.type === 'character') return;
         const obj = this.selected;
-        const opts = {
-            position: [obj.position.x + 1.5, obj.position.y, obj.position.z], rotation: [obj.rotation.x, obj.rotation.y, obj.rotation.z], scale: [obj.scale.x, obj.scale.y, obj.scale.z],
-            material: obj.userData.material, color: obj.isMesh ? obj.material.color.getHex() : (obj.isLight ? obj.color.getHex() : null),
-            physics: { ...obj.userData.physics }, behaviors: JSON.parse(JSON.stringify(obj.userData.behaviors))
-        };
+        const opts = { position: [obj.position.x + 1.5, obj.position.y, obj.position.z], rotation: [obj.rotation.x, obj.rotation.y, obj.rotation.z], scale: [obj.scale.x, obj.scale.y, obj.scale.z], material: obj.userData.material, color: obj.isMesh ? obj.material.color.getHex() : (obj.isLight ? obj.color.getHex() : null), physics: { ...obj.userData.physics }, behaviors: JSON.parse(JSON.stringify(obj.userData.behaviors)) };
         if (obj.isLight) opts.intensity = obj.intensity;
         return this.addObject(obj.userData.type, opts);
     }
 
-    selectObject(obj) {
-        this.selected = obj;
-        if (this.onSelect) this.onSelect(obj);
-    }
-
-    deleteSelected() {
-        if (!this.selected || this.selected.userData.type === 'character') return;
-        this.removeObject(this.selected);
-    }
+    selectObject(obj) { this.selected = obj; if (this.onSelect) this.onSelect(obj); }
+    deleteSelected() { if (!this.selected || this.selected.userData.type === 'character') return; this.removeObject(this.selected); }
 
     clearScene() {
         this.sceneVersion++;
@@ -391,10 +322,7 @@ export class Engine {
             if (obj.traverse) { obj.traverse(child => { if (child.isMesh) { if (child.geometry) child.geometry.dispose(); if (Array.isArray(child.material)) child.material.forEach(m => m.dispose()); else if (child.material) child.material.dispose(); } }); } 
             else { if (obj.geometry) obj.geometry.dispose(); if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose()); else if (obj.material) obj.material.dispose(); }
         });
-        this.objects = [];
-        this.projectiles.forEach(p => this.scene.remove(p.mesh));
-        this.projectiles = [];
-        this.selectObject(null);
+        this.objects = []; this.projectiles.forEach(p => this.scene.remove(p.mesh)); this.projectiles = []; this.selectObject(null);
         if (this.onSceneChange) this.onSceneChange();
     }
 
@@ -413,32 +341,19 @@ export class Engine {
             gltf.animations.forEach(clip => { actions[clip.name] = mixer.clipAction(clip); });
             if (actions['Idle']) actions['Idle'].play();
             model.userData = { id: 'char_' + (this.idCounter++), type: 'character', mixer, actions, currentAction: 'Idle', material: 'n/a', physics: { enabled: false, vy: 0, bounce: 0 }, behaviors: {}, behaviorStates: {} };
-            this.scene.add(model);
-            this.objects.push(model);
-            if (!opts.isLoading) {
-                this.selectObject(model);
-                if (this.onSceneChange) this.onSceneChange();
-            }
+            this.scene.add(model); this.objects.push(model);
+            if (!opts.isLoading) { this.selectObject(model); if (this.onSceneChange) this.onSceneChange(); }
         }, undefined, (err) => { alert('تعذر تحميل الشخصية.'); });
     }
 
     getSceneData() {
-        return this.objects.map(o => ({
-            type: o.userData.type, material: o.userData.material, color: o.isMesh ? o.material.color.getHex() : (o.isLight ? o.color.getHex() : 0xffffff),
-            intensity: o.isLight ? o.intensity : undefined, position: o.position.toArray(), rotation: [o.rotation.x, o.rotation.y, o.rotation.z], scale: o.scale.toArray(), physics: o.userData.physics, behaviors: o.userData.behaviors
-        }));
+        return this.objects.map(o => ({ type: o.userData.type, material: o.userData.material, color: o.isMesh ? o.material.color.getHex() : (o.isLight ? o.color.getHex() : 0xffffff), intensity: o.isLight ? o.intensity : undefined, position: o.position.toArray(), rotation: [o.rotation.x, o.rotation.y, o.rotation.z], scale: o.scale.toArray(), physics: o.userData.physics, behaviors: o.userData.behaviors }));
     }
 
     loadSceneData(data) {
-        this.clearScene();
-        this.objects = [];
-        document.getElementById('object-list').innerHTML = '';
-        data.forEach(d => {
-            if (d.type === 'character') this.loadCharacter({ position: d.position, rotation: d.rotation, isLoading: true });
-            else this.addObject(d.type, d);
-        });
-        this.selectObject(null);
-        if (this.onSceneChange) this.onSceneChange();
+        this.clearScene(); this.objects = []; document.getElementById('object-list').innerHTML = '';
+        data.forEach(d => { if (d.type === 'character') this.loadCharacter({ position: d.position, rotation: d.rotation, isLoading: true }); else this.addObject(d.type, d); });
+        this.selectObject(null); if (this.onSceneChange) this.onSceneChange();
     }
 
     saveSceneAs(name) {
@@ -451,39 +366,28 @@ export class Engine {
 
     loadSceneByName(name) {
         const allScenes = JSON.parse(localStorage.getItem('kgtf_all_scenes') || '{}');
-        if (allScenes[name]) {
-            this.loadSceneData(allScenes[name]);
-        }
+        if (allScenes[name]) this.loadSceneData(allScenes[name]);
     }
 
     deleteSceneByName(name) {
         const allScenes = JSON.parse(localStorage.getItem('kgtf_all_scenes') || '{}');
-        delete allScenes[name];
-        localStorage.setItem('kgtf_all_scenes', JSON.stringify(allScenes));
+        delete allScenes[name]; localStorage.setItem('kgtf_all_scenes', JSON.stringify(allScenes));
     }
 
-    saveScene() {
-        const data = this.getSceneData();
-        localStorage.setItem('kgtf_scene_final', JSON.stringify(data));
-        alert('تم حفظ المشهد الحالي بنجاح!');
-    }
+    saveScene() { const data = this.getSceneData(); localStorage.setItem('kgtf_scene_final', JSON.stringify(data)); alert('تم حفظ المشهد الحالي بنجاح!'); }
 
     exportScene() {
         const data = this.getSceneData();
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = 'kgtf_scene.json'; a.click(); URL.revokeObjectURL(url);
+        const a = document.createElement('a'); a.href = url; a.download = 'kgtf_scene.json'; a.click(); URL.revokeObjectURL(url);
     }
 
     importScene(file) {
         const reader = new FileReader();
         reader.onload = (e) => {
-            try {
-                const data = JSON.parse(e.target.result);
-                this.loadSceneData(data);
-                alert('تم استيراد المشهد بنجاح!');
-            } catch (err) { alert('عذراً، هذا الملف غير صالح أو تالف.'); }
+            try { const data = JSON.parse(e.target.result); this.loadSceneData(data); alert('تم استيراد المشهد بنجاح!'); } 
+            catch (err) { alert('عذراً، هذا الملف غير صالح أو تالف.'); }
         };
         reader.readAsText(file);
     }
@@ -491,57 +395,39 @@ export class Engine {
     loadScene() {
         const saved = localStorage.getItem('kgtf_scene_final');
         if (!saved) { this.addObject('cube'); return; }
-        try {
-            const data = JSON.parse(saved);
-            this.loadSceneData(data);
-        } catch(e) { this.addObject('cube'); }
+        try { const data = JSON.parse(saved); this.loadSceneData(data); } catch(e) { this.addObject('cube'); }
     }
 
     update(dt) {
         this.totalTime += dt;
-        
-        if (this.autoTime) {
-            this.timeOfDay = (this.timeOfDay + dt * this.daySpeed) % 1;
-        }
+        if (this.autoTime) { this.timeOfDay = (this.timeOfDay + dt * this.daySpeed) % 1; }
         
         const angle = this.timeOfDay * Math.PI * 2;
-        this.sun.position.x = Math.cos(angle) * 50;
-        this.sun.position.y = Math.sin(angle) * 50;
-        this.sun.position.z = Math.sin(angle) * 20;
+        this.sun.position.x = Math.cos(angle) * 50; this.sun.position.y = Math.sin(angle) * 50; this.sun.position.z = Math.sin(angle) * 20;
         
         const sunHeight = this.sun.position.y;
-        const dayColor = new THREE.Color(0x87CEEB);
-        const nightColor = new THREE.Color(0x050510);
-        const sunsetColor = new THREE.Color(0xff5500);
+        const dayColor = new THREE.Color(0x87CEEB); const nightColor = new THREE.Color(0x050510); const sunsetColor = new THREE.Color(0xff5500);
         let currentSkyColor = new THREE.Color();
 
         if (sunHeight > 0) {
             const t = Math.min(sunHeight / 30, 1);
             currentSkyColor.lerpColors(sunsetColor, dayColor, t);
             if (!this.isManualSun) this.sun.intensity = t * 2.0;
-            this.stars.material.opacity = 0;
-            this.moon.visible = false;
+            this.stars.material.opacity = 0; this.moon.visible = false;
         } else {
             const t = Math.min(Math.abs(sunHeight) / 30, 1);
             currentSkyColor.lerpColors(sunsetColor, nightColor, t);
             if (!this.isManualSun) this.sun.intensity = 0;
-            this.stars.material.opacity = t;
-            this.moon.visible = true;
+            this.stars.material.opacity = t; this.moon.visible = true;
         }
 
-        this.scene.background.copy(currentSkyColor);
-        this.scene.fog.color.copy(currentSkyColor);
-        this.moon.position.x = Math.cos(angle + Math.PI) * 50;
-        this.moon.position.y = Math.sin(angle + Math.PI) * 50;
-        this.moon.position.z = Math.sin(angle + Math.PI) * 20;
+        this.scene.background.copy(currentSkyColor); this.scene.fog.color.copy(currentSkyColor);
+        this.moon.position.x = Math.cos(angle + Math.PI) * 50; this.moon.position.y = Math.sin(angle + Math.PI) * 50; this.moon.position.z = Math.sin(angle + Math.PI) * 20;
         this.stars.rotation.y += 0.01 * dt;
 
         if (this.isRaining && this.rain) {
             const positions = this.rain.geometry.attributes.position.array;
-            for (let i = 1; i < positions.length; i += 3) {
-                positions[i] -= 25 * dt;
-                if (positions[i] < 0) positions[i] = 30;
-            }
+            for (let i = 1; i < positions.length; i += 3) { positions[i] -= 25 * dt; if (positions[i] < 0) positions[i] = 30; }
             this.rain.geometry.attributes.position.needsUpdate = true;
         }
 
@@ -553,10 +439,7 @@ export class Engine {
                 p.vy -= 9.8 * dt; o.position.y += p.vy * dt;
                 box.setFromObject(o); box.getSize(size);
                 const groundLevel = size.y / 2;
-                if (o.position.y < groundLevel) {
-                    o.position.y = groundLevel;
-                    if (Math.abs(p.vy) > 0.5) p.vy = -p.vy * p.bounce; else p.vy = 0;
-                }
+                if (o.position.y < groundLevel) { o.position.y = groundLevel; if (Math.abs(p.vy) > 0.5) p.vy = -p.vy * p.bounce; else p.vy = 0; }
             }
 
             if (o.userData.behaviors) {
@@ -565,8 +448,7 @@ export class Engine {
                         if (!o.userData.behaviorStates) o.userData.behaviorStates = {};
                         if (!o.userData.behaviorStates[bName]) o.userData.behaviorStates[bName] = {};
                         if (BEHAVIORS[bName].init && !o.userData.behaviorStates[bName]._inited) {
-                            BEHAVIORS[bName].init(o, o.userData.behaviorStates[bName], this);
-                            o.userData.behaviorStates[bName]._inited = true;
+                            BEHAVIORS[bName].init(o, o.userData.behaviorStates[bName], this); o.userData.behaviorStates[bName]._inited = true;
                         }
                         BEHAVIORS[bName].update(o, o.userData.behaviors[bName], o.userData.behaviorStates[bName], dt, this.totalTime, this);
                     }
@@ -576,35 +458,20 @@ export class Engine {
             if (o.userData.type === "vfx" && o.geometry) {
                 const positions = o.geometry.attributes.position.array;
                 for (let i = 0; i < o.userData.count; i++) {
-                    positions[i * 3] += o.userData.velocities[i].x * dt;
-                    positions[i * 3 + 1] += o.userData.velocities[i].y * dt;
-                    positions[i * 3 + 2] += o.userData.velocities[i].z * dt;
-                    if (positions[i * 3 + 1] > 3) {
-                        positions[i * 3] = (Math.random() - 0.5) * 0.5; positions[i * 3 + 1] = 0; positions[i * 3 + 2] = (Math.random() - 0.5) * 0.5;
-                    }
+                    positions[i * 3] += o.userData.velocities[i].x * dt; positions[i * 3 + 1] += o.userData.velocities[i].y * dt; positions[i * 3 + 2] += o.userData.velocities[i].z * dt;
+                    if (positions[i * 3 + 1] > 3) { positions[i * 3] = (Math.random() - 0.5) * 0.5; positions[i * 3 + 1] = 0; positions[i * 3 + 2] = (Math.random() - 0.5) * 0.5; }
                 }
                 o.geometry.attributes.position.needsUpdate = true;
             }
         });
 
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
-            const p = this.projectiles[i];
-            p.mesh.position.addScaledVector(p.direction, p.speed * dt);
-            p.life -= dt;
+            const p = this.projectiles[i]; p.mesh.position.addScaledVector(p.direction, p.speed * dt); p.life -= dt;
             if (p.life <= 0) { this.scene.remove(p.mesh); p.mesh.geometry.dispose(); p.mesh.material.dispose(); this.projectiles.splice(i, 1); }
         }
-        
         if (!document.body.classList.contains('play-mode')) this.controls.update();
     }
 
     render() { this.composer.render(); }
-    
-    resize() { 
-        const c = document.getElementById('viewport-container'); 
-        const w = c.clientWidth, h = c.clientHeight; 
-        this.camera.aspect = w / h; 
-        this.camera.updateProjectionMatrix(); 
-        this.renderer.setSize(w, h, false);
-        this.composer.setSize(w, h); 
-    }
+    resize() { const c = document.getElementById('viewport-container'); const w = c.clientWidth, h = c.clientHeight; this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); this.renderer.setSize(w, h, false); this.composer.setSize(w, h); }
 }

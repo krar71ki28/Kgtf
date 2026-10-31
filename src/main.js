@@ -13,7 +13,6 @@ if (window.location.search.includes('reset')) {
 const canvas = document.getElementById('viewport');
 const engine = new Engine(canvas);
 window.engine = engine;
-
 const editor = new Editor(engine);
 const player = new Player(engine);
 
@@ -22,18 +21,13 @@ function animate(now) {
     requestAnimationFrame(animate);
     const dt = Math.min((now - lastTime) / 1000, 0.1);
     lastTime = now;
-
     engine.update(dt);
     player.update(dt);
     engine.render();
-
     const fps = document.getElementById('fps');
     if (!window._fpsAcc) window._fpsAcc = 0;
     if (!window._frames) window._frames = 0;
     window._fpsAcc += dt; window._frames++;
-    if (window._fpsAcc >= 0.5) {
-        fps.innerText = Math.round(window._frames / window._fpsAcc);
-        window._fpsAcc = 0; window._frames = 0;
-    }
+    if (window._fpsAcc >= 0.5) { fps.innerText = Math.round(window._frames / window._fpsAcc); window._fpsAcc = 0; window._frames = 0; }
 }
 requestAnimationFrame(animate);
