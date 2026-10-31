@@ -12,57 +12,101 @@ export class Player {
         this.joystickDir = { x: 0, y: 0 };
         this.velocityY = 0;
         this.isGrounded = true;
-
-        this.cameraYaw = 0; 
-        this.cameraPitch = 0.4; 
+        this.cameraYaw = 0;
+        this.cameraPitch = 0.4;
         this.lastTouch = { x: 0, y: 0 };
-        this.playerBoxSize = new THREE.Vector3(0.6, 1.5, 0.6);
-        this.raycaster = new THREE.Raycaster(); // لفحص اصطدام الكاميرا
+        this.raycaster = new THREE.Raycaster();
 
         this.bgm = document.getElementById('bgm');
         this.jumpSfx = document.getElementById('jump-sfx');
-        this.bgm.volume = 0.3;
-        this.jumpSfx.volume = 0.5;
+        if (this.bgm) this.bgm.volume = 0.3;
+        if (this.jumpSfx) this.jumpSfx.volume = 0.5;
 
         window.playerInstance = this;
         this.setupControls();
     }
 
     setupControls() {
-        window.addEventListener('keydown', (e) => this.keys[e.code] = true);
+        // لوحة المفاتيح + مسافة للقفز
+        window.addEventListener('keydown', (e) => {
+            this.keys[e.code] = true;
+            if (e.code === 'Space' && this.isPlaying && this.isGrounded) {
+                this.velocityY = 8;
+                this.isGrounded = false;
+                this.playJumpSound();
+                e.preventDefault();
+            }
+        });
         window.addEventListener('keyup', (e) => this.keys[e.code] = false);
 
-        document.getElementById('btn-play').onclick = () => this.startPlay();
-        document.getElementById('exit-play').onclick = () => this.stopPlay();
+        const btnPlay = document.getElementById('btn-play');
+        if (btnPlay) btnPlay.onclick = () => this.startPlay();
+        const btnExit = document.getElementById('exit-play');
+        if (btnExit) btnExit.onclick = () => this.stopPlay();
 
+        // الأزرار العائمة
+        const btnPlayFab = document.getElementById('btn-play-fab');
+        if (btnPlayFab) btnPlayFab.onclick = () => this.startPlay();
+        const btnSaveFab = document.getElementById('btn-save-fab');
+        if (btnSaveFab) btnSaveFab.onclick = () => {
+            this.engine.saveScene();
+            const old = btnSaveFab.innerHTML;
+            btnSaveFab.innerHTML = '✓ تم';
+            setTimeout(() => btnSaveFab.innerHTML = old, 800);
+        };
+
+        // Joystick
         const zone = document.getElementById('joystick-zone');
         const knob = document.getElementById('joystick-knob');
         const base = document.getElementById('joystick-base');
         let touchStart = null;
         const maxDist = 40;
 
-        zone.addEventListener('touchstart', (e) => { e.stopPropagation(); const touch = e.touches[0]; const rect = base.getBoundingClientRect(); touchStart = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 }; this.joystickActive = true; });
-        zone.addEventListener('touchmove', (e) => {
-            e.stopPropagation();
-            if (!this.joystickActive) return;
-            const touch = e.touches[0];
-            let dx = touch.clientX - touchStart.x;
-            let dy = touch.clientY - touchStart.y;
-            const dist = Math.sqrt(dx*dx + dy*dy);
-            if (dist > maxDist) { dx = (dx / dist) * maxDist; dy = (dy / dist) * maxDist; }
-            knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-            this.joystickDir.x = dx / maxDist;
-            this.joystickDir.y = dy / maxDist;
-        });
-        zone.addEventListener('touchend', () => { this.joystickActive = false; knob.style.transform = `translate(-50%, -50%)`; this.joystickDir = { x: 0, y: 0 }; });
+        if (zone && knob && base) {
+            zone.addEventListener('touchstart', (e) => {
+                e.stopPropagation();
+                const rect = base.getBoundingClientRect();
+                touchStart = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+                this.joystickActive = true;
+            });
+            zone.addEventListener('touchmove', (e) => {
+                e.stopPropagation();
+                if (!this.joystickActive) return;
+                const touch = e.touches[0];
+                let dx = touch.clientX - touchStart.x;
+                let dy = touch.clientY - touchStart.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > maxDist) { dx = (dx / dist) * maxDist; dy = (dy / dist) * maxDist; }
+                knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+                this.joystickDir.x = dx / maxDist;
+                this.joystickDir.y = dy / maxDist;
+            });
+            zone.addEventListener('touchend', () => {
+                this.joystickActive = false;
+                knob.style.transform = `translate(-50%, -50%)`;
+                this.joystickDir = { x: 0, y: 0 };
+            });
+        }
 
-        document.getElementById('btn-jump').addEventListener('touchstart', (e) => {
-            e.preventDefault(); e.stopPropagation();
-            if (this.isGrounded) { this.velocityY = 8; this.isGrounded = false; this.playJumpSound(); }
-        });
+        // زر القفز (يعمل باللمس والماوس)
+        const jumpBtn = document.getElementById('btn-jump');
+        if (jumpBtn) {
+            jumpBtn.addEventListener('pointerdown', (e) => {
+                e.preventDefault(); e.stopPropagation();
+                if (this.isPlaying && this.isGrounded) {
+                    this.velocityY = 8;
+                    this.isGrounded = false;
+                    this.playJumpSound();
+                }
+            });
+        }
 
+        // تحريك الكاميرا باللمس على الشاشة
         const canvas = document.getElementById('viewport');
-        canvas.addEventListener('touchstart', (e) => { if (!this.isPlaying) return; this.lastTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY }; });
+        canvas.addEventListener('touchstart', (e) => {
+            if (!this.isPlaying) return;
+            this.lastTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        });
         canvas.addEventListener('touchmove', (e) => {
             if (!this.isPlaying) return;
             if (this.engine.activeCamera !== this.engine.editorCamera) return;
@@ -75,7 +119,12 @@ export class Player {
         });
     }
 
-    playJumpSound() { this.jumpSfx.currentTime = 0; this.jumpSfx.play().catch(e => {}); }
+    playJumpSound() {
+        if (this.jumpSfx) {
+            this.jumpSfx.currentTime = 0;
+            this.jumpSfx.play().catch(() => {});
+        }
+    }
 
     startPlay() {
         const playerObj = this.engine.objects.find(o => o.userData.type === 'character');
@@ -83,60 +132,67 @@ export class Player {
         this.isPlaying = true;
         this.playerModel = playerObj;
         document.body.classList.add('play-mode');
-        document.getElementById('play-ui').style.display = 'block';
+        const playUI = document.getElementById('play-ui');
+        if (playUI) playUI.style.display = 'block';
         this.engine.selectObject(null);
         this.engine.controls.enabled = false;
-        
         this.cameraYaw = this.playerModel.rotation.y;
         this.cameraPitch = 0.4;
-        
-        this.bgm.play().catch(e => {});
-        this.updateCamera(1); 
+        if (this.bgm) this.bgm.play().catch(() => {});
+        this.updateCamera(1);
         this.engine.resize();
     }
 
     stopPlay() {
         this.isPlaying = false;
         document.body.classList.remove('play-mode');
-        document.getElementById('play-ui').style.display = 'none';
+        const playUI = document.getElementById('play-ui');
+        if (playUI) playUI.style.display = 'none';
         this.engine.controls.enabled = true;
         this.engine.editorCamera.position.set(8, 6, 10);
         this.engine.controls.target.set(0, 2, 0);
         this.engine.resize();
-        this.bgm.pause();
+        if (this.bgm) this.bgm.pause();
     }
 
     updateCamera(dt) {
-        if (this.engine.activeCamera !== this.engine.editorCamera) return; 
-        
-        const dist = 4.5; // مسافة مريحة
-        const h = 2.0;  
-        
+        if (this.engine.activeCamera !== this.engine.editorCamera) return;
+
+        const dist = 4.5;
+        const h = 2.0;
         const offsetX = Math.sin(this.cameraYaw) * dist * Math.cos(this.cameraPitch);
         const offsetZ = Math.cos(this.cameraYaw) * dist * Math.cos(this.cameraPitch);
         const offsetY = h + Math.sin(this.cameraPitch) * dist;
 
+        const anchor = this.playerModel.position.clone().add(new THREE.Vector3(0, 1, 0));
         const desiredCamPos = this.playerModel.position.clone().add(new THREE.Vector3(offsetX, offsetY, offsetZ));
-        
-        // فحص اصطدام الكاميرا (عشان ما تدخل بالأرض أو الجدران)
-        const dirToCam = desiredCamPos.clone().sub(this.playerModel.position).normalize();
-        const distToCam = desiredCamPos.distanceTo(this.playerModel.position);
-        
-        this.raycaster.set(this.playerModel.position.clone().add(new THREE.Vector3(0, 1, 0)), dirToCam);
-        const intersects = this.raycaster.intersectObjects(this.engine.objects, true);
-        
+        const dirToCam = desiredCamPos.clone().sub(anchor).normalize();
+        const distToCam = desiredCamPos.distanceTo(anchor);
+
+        this.raycaster.set(anchor, dirToCam);
+        this.raycaster.far = distToCam;
+
+        // استبعاد اللاعب و VFX من الفحص
+        const obstacles = this.engine.objects.filter(o =>
+            o !== this.playerModel && o.userData.type !== 'vfx' && o.userData.type !== 'light'
+        );
+        const intersects = this.raycaster.intersectObjects(obstacles, true);
+
         let finalCamPos = desiredCamPos;
-        if (intersects.length > 0 && intersects[0].distance < distToCam) {
-            // إذا في جدار، نوقف الكاميرا قبله
-            finalCamPos = this.playerModel.position.clone().add(new THREE.Vector3(0, 1, 0)).add(dirToCam.multiplyScalar(intersects[0].distance - 0.2));
+        if (intersects.length > 0 && intersects[0].distance > 0.3) {
+            const safeDist = Math.max(0.3, intersects[0].distance - 0.2);
+            finalCamPos = anchor.clone().add(dirToCam.clone().multiplyScalar(safeDist));
         }
 
         if (this.engine.editorCamera.position.distanceTo(finalCamPos) > 0.05) {
-             this.engine.editorCamera.position.lerp(finalCamPos, 8 * dt);
+            this.engine.editorCamera.position.lerp(finalCamPos, Math.min(8 * dt, 1));
         }
-        
         if (this.engine.editorCamera.position.y < 0.5) this.engine.editorCamera.position.y = 0.5;
-        this.engine.editorCamera.lookAt(this.playerModel.position.x, this.playerModel.position.y + 1.5, this.playerModel.position.z);
+        this.engine.editorCamera.lookAt(
+            this.playerModel.position.x,
+            this.playerModel.position.y + 1.5,
+            this.playerModel.position.z
+        );
     }
 
     update(dt) {
@@ -156,7 +212,7 @@ export class Player {
 
         let joystickMagnitude = 0;
         if (this.joystickActive) {
-            joystickMagnitude = Math.min(Math.sqrt(this.joystickDir.x**2 + this.joystickDir.y**2), 1);
+            joystickMagnitude = Math.min(Math.sqrt(this.joystickDir.x ** 2 + this.joystickDir.y ** 2), 1);
             if (joystickMagnitude > 0.1) {
                 this.direction.add(camForward.clone().multiplyScalar(-this.joystickDir.y));
                 this.direction.add(camRight.clone().multiplyScalar(this.joystickDir.x));
@@ -169,7 +225,7 @@ export class Player {
         } else {
             const targetSpeed = maxSpeed * (this.joystickActive ? joystickMagnitude : 1);
             this.targetVelocity.copy(this.direction.normalize()).multiplyScalar(targetSpeed);
-            this.currentVelocity.lerp(this.targetVelocity, 15 * dt); 
+            this.currentVelocity.lerp(this.targetVelocity, 15 * dt);
         }
 
         if (this.currentVelocity.lengthSq() > 0.1) {
@@ -180,45 +236,26 @@ export class Player {
             this.playerModel.rotation.y += diff * 10 * dt;
         }
 
-        // نظام الأنميشن الذكي
+        // الأنميشن
         const isMoving = this.currentVelocity.lengthSq() > 0.1;
         const actions = this.playerModel.userData.actions;
         if (actions && Object.keys(actions).length > 0) {
             const actionKeys = Object.keys(actions);
-            
-            // أنميشن السقوط (إذا في الهواء)
-            if (!this.isGrounded) {
-                const jumpKey = actionKeys.find(k => k.toLowerCase().includes('jump') || k.toLowerCase().includes('fall'));
-                if (jumpKey && this.playerModel.userData.currentAction !== jumpKey) {
-                    if (this.playerModel.userData.currentAction && actions[this.playerModel.userData.currentAction]) actions[this.playerModel.userData.currentAction].fadeOut(0.1);
-                    actions[jumpKey].reset().fadeIn(0.1).play();
-                    this.playerModel.userData.currentAction = jumpKey;
-                }
-            }
-            // أنميشن المشي/الجري
-            else if (isMoving) {
-                const walkKey = actionKeys.find(k => k.toLowerCase().includes('walk') || k.toLowerCase().includes('run'));
-                if (walkKey && this.playerModel.userData.currentAction !== walkKey) {
-                    if (this.playerModel.userData.currentAction && actions[this.playerModel.userData.currentAction]) actions[this.playerModel.userData.currentAction].fadeOut(0.2);
-                    actions[walkKey].reset().fadeIn(0.2).play();
-                    this.playerModel.userData.currentAction = walkKey;
-                }
-            }
-            // أنميشن الوقوف
-            else {
-                const idleKey = actionKeys.find(k => k.toLowerCase().includes('idle'));
-                if (idleKey && this.playerModel.userData.currentAction !== idleKey) {
-                    if (this.playerModel.userData.currentAction && actions[this.playerModel.userData.currentAction]) actions[this.playerModel.userData.currentAction].fadeOut(0.2);
-                    actions[idleKey].reset().fadeIn(0.2).play();
-                    this.playerModel.userData.currentAction = idleKey;
-                }
-            }
+            const switchTo = (key, fade) => {
+                if (!key || this.playerModel.userData.currentAction === key) return;
+                const prev = this.playerModel.userData.currentAction;
+                if (prev && actions[prev]) actions[prev].fadeOut(fade);
+                actions[key].reset().fadeIn(fade).play();
+                this.playerModel.userData.currentAction = key;
+            };
+            if (!this.isGrounded) switchTo(actionKeys.find(k => /jump|fall/i.test(k)), 0.1);
+            else if (isMoving) switchTo(actionKeys.find(k => /walk|run/i.test(k)), 0.2);
+            else switchTo(actionKeys.find(k => /idle/i.test(k)), 0.2);
         }
 
-        // فيزياء (نسخة مبسطة)
+        // حركة وفيزياء
         this.playerModel.position.x += this.currentVelocity.x * dt;
         this.playerModel.position.z += this.currentVelocity.z * dt;
-        
         this.velocityY -= 24 * dt;
         this.playerModel.position.y += this.velocityY * dt;
         if (this.playerModel.position.y <= 0) {
