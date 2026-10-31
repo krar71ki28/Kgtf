@@ -12,11 +12,11 @@ import { VignetteShader } from 'three/addons/shaders/VignetteShader.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 
-import { VFXManager } from './VFX.js?v=16.0.0';
-import { Physics } from './Physics.js?v=16.0.0';
-import { LogicManager } from './Logic.js?v=16.0.0';
-import { UIManager } from './UI.js?v=16.0.0';
-import { AssetManager } from './AssetManager.js?v=16.0.0';
+import { VFXManager } from './VFX.js?v=17.0.0';
+import { Physics } from './Physics.js?v=17.0.0';
+import { LogicManager } from './Logic.js?v=17.0.0';
+import { UIManager } from './UI.js?v=17.0.0';
+import { AssetManager } from './AssetManager.js?v=17.0.0';
 
 export class Engine {
     constructor(canvas) {
@@ -61,9 +61,6 @@ export class Engine {
         this.scene.add(this.sun);
         this.scene.add(this.sun.target);
 
-        // ==========================================
-        // Post-Processing (المؤثرات السينمائية)
-        // ==========================================
         this.composer = new EffectComposer(this.renderer);
         this.composer.addPass(new RenderPass(this.scene, this.camera));
         
@@ -72,7 +69,6 @@ export class Engine {
         );
         this.composer.addPass(this.bloomPass);
 
-        // Vignette (تعتيم الحواف)
         this.vignettePass = new ShaderPass(VignetteShader);
         this.vignettePass.uniforms["offset"].value = 0.8;
         this.vignettePass.uniforms["darkness"].value = 1.5;
@@ -124,14 +120,17 @@ export class Engine {
         window.addEventListener('resize', () => this.resize());
         this.resize();
         
-        // تطبيق وقت اليوم الافتراضي
+        // تحديث الشمس أول مرة
         this.updateSun(14);
     }
 
-    // ✅ دالة تحديث الشمس (ترجع لتشتغل من شريط الوقت)
+    // ✅ إصلاح معادلة الشمس
     updateSun(timeOfDay) {
-        const angle = (timeOfDay / 24) * 360 - 90; 
-        const phi = THREE.MathUtils.degToRad(90 - angle);
+        // تحويل الوقت (0-24) إلى زاوية ارتفاع (0 في الفجر، 90 في الظهر، 0 في الغروب)
+        const elevation = Math.sin((timeOfDay - 6) / 12 * Math.PI) * 90;
+        this.skyParams.elevation = elevation;
+        
+        const phi = THREE.MathUtils.degToRad(90 - elevation);
         const theta = THREE.MathUtils.degToRad(this.skyParams.azimuth);
 
         const sunPos = new THREE.Vector3();
@@ -152,7 +151,7 @@ export class Engine {
             this.hemiLight.intensity = 0.1;
         } else {
             this.sun.color.setHex(0xffffff);
-            this.hemiLight.intensity = 0.3;
+            this.hemiLight.intensity = 0.4;
         }
     }
 
@@ -204,7 +203,8 @@ export class Engine {
         return new THREE.MeshStandardMaterial(params);
     }
 
-    createObject(type) {
+    // ✅ إضافة خيار select (عشان نمنع تحديد المكعب الجديد أثناء توليده)
+    createObject(type, select = true) {
         let group = new THREE.Group();
         group.userData.type = type;
         group.userData.physics = { vy: 0, enabled: false };
@@ -261,7 +261,7 @@ export class Engine {
         group.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
         this.scene.add(group);
         this.objects.push(group);
-        this.selectObject(group);
+        if (select) this.selectObject(group);
         if (this.onSceneChangeCallback) this.onSceneChangeCallback();
         return group;
     }
@@ -372,6 +372,8 @@ export class Engine {
                     obj.userData.logic.forEach(l => {
                         if (l.event === 'onTimer') {
                             const now = performance.now();
+                            if (!obj.userData.lastTimerAction) obj.userData.lastTimerAction = now;
+                            
                             if (now - obj.userData.lastTimerAction > 3000) { // كل 3 ثواني
                                 this.logic.executeAction(obj, l.action);
                                 obj.userData.lastTimerAction = now;

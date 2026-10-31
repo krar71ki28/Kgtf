@@ -133,3 +133,10 @@ body.play-mode #header, body.play-mode #inspector-panel { display: none !importa
 #exit-play, #btn-camera-toggle, #btn-jump, #joystick-zone, #score-display {
     z-index: 20 !important; 
 }
+
+/* إصلاح قائمة المنطق لتكون قابلة للتمرير */
+#active-logic-list {
+    max-height: 80px;
+    overflow-y: auto;
+    padding-right: 5px;
+}

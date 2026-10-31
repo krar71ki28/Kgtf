@@ -144,13 +144,23 @@ export class Editor {
 
         const btnAddLogic = document.getElementById('btn-add-logic');
         if(btnAddLogic) btnAddLogic.addEventListener('click', () => {
-            if (!this.engine.selectedObj) return;
+            if (!this.engine.selectedObj) { alert('الرجاء تحديد مجسم أولاً!'); return; }
             const ev = document.getElementById('logic-event').value;
             const ac = document.getElementById('logic-action').value;
             
             if (!this.engine.selectedObj.userData.logic) this.engine.selectedObj.userData.logic = [];
             this.engine.selectedObj.userData.logic.push({ event: ev, action: ac });
             this.renderLogicList();
+            
+            // ✅ إشعار تأكيد
+            const list = document.getElementById('active-logic-list');
+            if (list) {
+                const div = document.createElement('div');
+                div.style.cssText = 'color: #4ade80; text-align: center; font-size: 12px; margin-top: 5px; font-weight:bold;';
+                div.innerText = '✓ تمت الإضافة بنجاح';
+                list.appendChild(div);
+                setTimeout(() => div.remove(), 2000);
+            }
         });
 
         const btnSave = document.getElementById('btn-save');
