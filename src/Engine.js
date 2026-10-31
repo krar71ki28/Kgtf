@@ -206,11 +206,7 @@ export class Engine {
     }
 
     createObject(type, select = true) {
-        let group = new THREE.Group();
-        group.userData.type = type;
-        group.userData.physics = { vy: 0, enabled: false };
-        group.userData.logic = [];
-        group.userData.lastTimerAction = 0;
+        let group = new KGTFNode(type);
         
         if (type === 'cube') {
             const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), this.getMaterial('default', 0x00e5ff));
@@ -271,7 +267,7 @@ export class Engine {
         const url = URL.createObjectURL(file);
         this.loader.load(url, (gltf) => {
             URL.revokeObjectURL(url);
-            const group = new THREE.Group();
+            const group = new KGTFNode("glb");
             const model = gltf.scene;
             
             model.traverse(c => { if (c.isMesh) { c.castShadow = false; c.receiveShadow = false; } });
@@ -282,7 +278,6 @@ export class Engine {
             model.position.y += (box.max.y - box.min.y) / 2; 
 
             group.add(model);
-            group.userData = { type: 'glb', physics: { vy: 0, enabled: false }, logic: [], lastTimerAction: 0 };
             
             if (gltf.animations && gltf.animations.length > 0) {
                 group.userData.mixer = new THREE.AnimationMixer(model);
