@@ -111,3 +111,31 @@ body.play-mode #header, body.play-mode #left-panel, body.play-mode #right-panel,
     #joystick-knob { width: 45px; height: 45px; }
     #btn-jump { bottom: 40px; right: 30px; width: 70px; height: 70px; }
 }
+
+/* إضافة لمسة Godot/Unreal للوحة السفلية */
+#panel-drag-handle {
+    height: 12px;
+    background: #1e1e24;
+    border-bottom: 1px solid #2d2d35;
+    cursor: ns-resize;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+#panel-drag-handle::after {
+    content: '';
+    width: 40px;
+    height: 4px;
+    background: #444;
+    border-radius: 2px;
+}
+#inspector-panel {
+    transition: height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+#inspector-panel.collapsed {
+    height: 45px !important; /* يخلي بس التبويبات تبان */
+    flex: 0 0 45px !important;
+}
+#inspector-panel.collapsed .panel-content-wrapper {
+    display: none;
+}

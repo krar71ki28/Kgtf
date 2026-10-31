@@ -407,3 +407,12 @@ export class Engine {
         if (this.smaaPass) this.smaaPass.setSize(w, h);
     }
 }
+
+// دالة إخفاء/إظهار الشبكة (Grid)
+Engine.prototype.toggleGrid = function(visible) {
+    this.scene.traverse((child) => {
+        if (child.isGridHelper) {
+            child.visible = visible;
+        }
+    });
+};

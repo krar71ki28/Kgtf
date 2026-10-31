@@ -95,3 +95,28 @@ export class Editor {
     updateInspector(obj) { /* ... */ }
     updateList() { /* ... */ }
 }
+
+// دالة لربط الأدوات الجديدة (Grid & Panel Collapse)
+const originalBindButtons = Editor.prototype.bindButtons;
+Editor.prototype.bindButtons = function() {
+    originalBindButtons.call(this);
+    
+    // زر إخفاء الشبكة
+    const gridBtn = document.getElementById('btn-toggle-grid');
+    if (gridBtn) {
+        gridBtn.onclick = () => {
+            gridBtn.classList.toggle('active');
+            const isVisible = gridBtn.classList.contains('active');
+            this.engine.toggleGrid(isVisible);
+        };
+    }
+
+    // زر تصغير اللوحة السفلية
+    const dragHandle = document.getElementById('panel-drag-handle');
+    const panel = document.getElementById('inspector-panel');
+    if (dragHandle && panel) {
+        dragHandle.onclick = () => {
+            panel.classList.toggle('collapsed');
+        };
+    }
+};
