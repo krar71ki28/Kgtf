@@ -7,16 +7,14 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
-import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { VignetteShader } from 'three/addons/shaders/VignetteShader.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 
-import { VFXManager } from './VFX.js?v=18.0.0';
-import { Physics } from './Physics.js?v=18.0.0';
-import { LogicManager } from './Logic.js?v=18.0.0';
-import { UIManager } from './UI.js?v=18.0.0';
-import { AssetManager } from './AssetManager.js?v=18.0.0';
+import { VFXManager } from './VFX.js?v=19.0.0';
+import { Physics } from './Physics.js?v=19.0.0';
+import { LogicManager } from './Logic.js?v=19.0.0';
+import { UIManager } from './UI.js?v=19.0.0';
+import { AssetManager } from './AssetManager.js?v=19.0.0';
 
 export class Engine {
     constructor(canvas) {
@@ -29,71 +27,56 @@ export class Engine {
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
         
-        // ✅ إعدادات Tone Mapping الاحترافية (مثل Unreal)
+        // ✅ إعدادات إضاءة نظيفة (نمط Godot)
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 0.5; 
+        this.renderer.toneMappingExposure = 1.0; // تعرض طبيعي
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-        this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
+        
+        // ✅ إلغاء الظلال نهائياً كما طلبت
+        this.renderer.shadowMap.enabled = false; 
 
-        // ==========================================
-        // إعداد السماء (Three.js Sky)
-        // ==========================================
+        // ✅ إعداد السماء
         this.sky = new Sky();
         this.sky.scale.setScalar(450000); 
         this.scene.add(this.sky);
         
-        // القيم الموصى بها لمحاكاة سماء Unreal
         this.skyParams = {
-            turbidity: 10,       // غيوم خفيفة
-            rayleigh: 3,         // تشتت الضوء الأزرق
+            turbidity: 10,       
+            rayleigh: 3,         
             mieCoefficient: 0.005,
             mieDirectionalG: 0.7,
-            elevation: 45,       // سيتم تحديثها ديناميكياً
+            elevation: 45,       
             azimuth: 180 
         };
 
-        // تطبيق القيم على الـ Shader
         this.sky.material.uniforms['turbidity'].value = this.skyParams.turbidity;
         this.sky.material.uniforms['rayleigh'].value = this.skyParams.rayleigh;
         this.sky.material.uniforms['mieCoefficient'].value = this.skyParams.mieCoefficient;
         this.sky.material.uniforms['mieDirectionalG'].value = this.skyParams.mieDirectionalG;
 
-        // إضاءة محيطة (Hemisphere)
-        this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x333333, 0.4);
+        // ✅ إضاءة محيطة قوية (عشان الأرضية ما تكون سودة)
+        this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5);
         this.scene.add(this.hemiLight);
 
-        // ضوء الشمس (Directional)
-        this.sun = new THREE.DirectionalLight(0xfff5e6, 3.0);
-        this.sun.castShadow = true;
-        this.sun.shadow.mapSize.width = 2048;
-        this.sun.shadow.mapSize.height = 2048;
-        this.sun.shadow.camera.near = 1;
-        this.sun.shadow.camera.far = 50;
-        this.sun.shadow.camera.left = -20;
-        this.sun.shadow.camera.right = 20;
-        this.sun.shadow.camera.top = 20;
-        this.sun.shadow.camera.bottom = -20;
-        this.sun.shadow.bias = -0.0005;
+        // ✅ ضوء الشمس (بدون ظلال)
+        this.sun = new THREE.DirectionalLight(0xfff5e6, 2.0);
+        this.sun.castShadow = false; // إلغاء ظل الشمس
         this.scene.add(this.sun);
         this.scene.add(this.sun.target);
 
         // ==========================================
-        // Post-Processing
+        // Post-Processing (بدون Vignette)
         // ==========================================
         this.composer = new EffectComposer(this.renderer);
         this.composer.addPass(new RenderPass(this.scene, this.camera));
         
+        // Bloom خفيف جداً
         this.bloomPass = new UnrealBloomPass(
-            new THREE.Vector2(window.innerWidth, window.innerHeight), 0.2, 0.4, 0.95 
+            new THREE.Vector2(window.innerWidth, window.innerHeight), 0.1, 0.4, 1.0 
         );
         this.composer.addPass(this.bloomPass);
 
-        this.vignettePass = new ShaderPass(VignetteShader);
-        this.vignettePass.uniforms["offset"].value = 0.8;
-        this.vignettePass.uniforms["darkness"].value = 1.5;
-        this.composer.addPass(this.vignettePass);
-
+        // تحديد المجسمات
         this.outlinePass = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), this.scene, this.camera);
         this.outlinePass.edgeStrength = 3.0;
         this.outlinePass.visibleEdgeColor.set('#ffaa00');
@@ -144,12 +127,9 @@ export class Engine {
         this.updateSun(14);
     }
 
-    // ✅ دالة تحديث الشمس (محاكاة دقيقة لـ Unreal)
+    // ✅ تحديث الشمس
     updateSun(timeOfDay) {
-        // تحويل الوقت إلى زاوية ارتفاع (0-90 درجة)
         const elevation = Math.sin((timeOfDay - 6) / 12 * Math.PI) * 90;
-        
-        // تحديث متغير الارتفاع في الـ Shader
         this.skyParams.elevation = elevation;
         
         const phi = THREE.MathUtils.degToRad(90 - elevation);
@@ -158,37 +138,35 @@ export class Engine {
         const sunPos = new THREE.Vector3();
         sunPos.setFromSphericalCoords(1, phi, theta);
 
-        // تحديث موقع الشمس في السماء
         this.sky.material.uniforms['sunPosition'].value.copy(sunPos);
 
-        // تحديث موقع ضوء الشمس (للظلال)
         this.sun.position.copy(sunPos).multiplyScalar(30);
         this.sun.target.position.set(0, 0, 0);
         this.sun.target.updateMatrixWorld();
 
-        // تغيير لون الشمس حسب الوقت (برتقالي عند الغروب)
         if (timeOfDay < 6 || timeOfDay > 18) {
             this.sun.color.setHex(0xff6600);
-            this.hemiLight.intensity = 0.1;
+            this.hemiLight.intensity = 0.3;
         } else if (timeOfDay < 8 || timeOfDay > 16) {
             this.sun.color.setHex(0xffaa00);
-            this.hemiLight.intensity = 0.2;
+            this.hemiLight.intensity = 0.8;
         } else {
             this.sun.color.setHex(0xffffff);
-            this.hemiLight.intensity = 0.4;
+            this.hemiLight.intensity = 1.5;
         }
     }
 
     setupGround() {
-        const groundMat = new THREE.MeshStandardMaterial({ color: 0x1e2e1e, roughness: 0.9, metalness: 0.1 });
+        // ✅ أرضية خضراء جميلة مثل Godot
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x4a6e52, roughness: 1.0, metalness: 0.0 });
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), groundMat);
         ground.rotation.x = -Math.PI / 2;
-        ground.receiveShadow = true;
+        ground.receiveShadow = false; // إلغاء استقبال الظل
         this.scene.add(ground);
 
-        const grid = new THREE.GridHelper(200, 100, 0x00e5ff, 0x111111);
+        const grid = new THREE.GridHelper(200, 100, 0x00e5ff, 0x222222);
         grid.position.y = 0.01;
-        grid.material.opacity = 0.1;
+        grid.material.opacity = 0.2;
         grid.material.transparent = true;
         this.scene.add(grid);
     }
@@ -260,7 +238,7 @@ export class Engine {
                 const model = gltf.scene;
                 model.traverse(c => { 
                     if (c.isMesh) { 
-                        c.castShadow = true; c.receiveShadow = true; 
+                        c.castShadow = false; c.receiveShadow = false; 
                         if(c.material) { c.material.roughness = 0.7; c.material.metalness = 0.1; }
                     } 
                 });
@@ -281,7 +259,7 @@ export class Engine {
             return null;
         }
 
-        group.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+        group.traverse(c => { if (c.isMesh) { c.castShadow = false; c.receiveShadow = false; } });
         this.scene.add(group);
         this.objects.push(group);
         if (select) this.selectObject(group);
@@ -296,7 +274,7 @@ export class Engine {
             const group = new THREE.Group();
             const model = gltf.scene;
             
-            model.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+            model.traverse(c => { if (c.isMesh) { c.castShadow = false; c.receiveShadow = false; } });
             
             const box = new THREE.Box3().setFromObject(model);
             const center = box.getCenter(new THREE.Vector3());
