@@ -30,12 +30,21 @@ export class Editor {
             };
         });
 
+        
         const addMenu = document.getElementById('add-menu');
         const addBtn = document.getElementById('btn-add-menu');
         if (addBtn && addMenu) {
-            addBtn.onclick = (e) => { e.stopPropagation(); addMenu.classList.toggle('show'); };
-            document.body.onclick = (e) => { if (!addMenu.contains(e.target) && e.target !== addBtn) addMenu.classList.remove('show'); };
+            addBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                addMenu.classList.toggle('show');
+            });
+            document.addEventListener('click', (e) => {
+                    menu.classList.remove('show');
+                }
+            });
         }
+
 
         ['cube','sphere','tree','rock','light','character','camera'].forEach(t => {
             const el = document.getElementById(`btn-${t}`);
