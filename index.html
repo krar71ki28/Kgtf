@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>KGTF ENGINE</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=13">
+<link rel="stylesheet" href="style.css?v=14">
 <script>
     if (window.location.search.includes("reset")) { localStorage.removeItem("kgtf_scene_final"); localStorage.removeItem("kgtf_assets"); localStorage.removeItem("kgtf_all_scenes"); window.location.href = window.location.pathname; }
 </script>
@@ -24,13 +24,15 @@
                     <button id="btn-cube">📦 مكعب</button><button id="btn-sphere">🔴 كرة</button><button id="btn-cylinder">🛢️ أسطوانة</button><button id="btn-cone">🔺 مخروط</button><button id="btn-torus">🍩 حلقة</button>
                     <button id="btn-tree">🌲 شجرة</button><button id="btn-bush">🌿 شجيرة</button><button id="btn-mountain">⛰️ جبل</button><button id="btn-rock">🪨 صخرة</button><button id="btn-building">🏢 مبنى</button>
                     <button id="btn-camera">📷 كاميرا</button>
-                    <button id="btn-light">💡 ضوء</button><button id="btn-spotlight">🔦 كشاف</button><button id="btn-character">🏃 شخصية</button>
+                    <button id="btn-light">💡 ضوء</button><button id="btn-character">🏃 شخصية</button>
                     <button id="btn-vfx-fire" style="color:#ffaa00;">🔥 نار</button><button id="btn-vfx-smoke" style="color:#aaa;">☁️ دخان</button>
                 </div>
             </div>
             <button class="icon-btn" id="btn-upload-model" title="رفع مجسم" style="color:#00e5ff;">📁</button>
             <input type="file" id="model-upload-input" accept=".glb,.gltf" style="display:none;">
-            <button class="icon-btn" id="btn-save" title="حفظ">💾</button><button class="icon-btn" id="btn-export" title="تصدير">📤</button><button class="icon-btn" id="btn-import" title="استيراد">📥</button>
+            <button class="icon-btn" id="btn-save" title="حفظ">💾</button>
+            <button class="icon-btn" id="btn-export" title="تصدير">📤</button>
+            <button class="icon-btn" id="btn-import" title="استيراد">📥</button>
             <input type="file" id="file-import" accept=".json" style="display:none;">
             <button class="play-btn" id="btn-play">▶</button>
         </div>
@@ -45,7 +47,6 @@
             <button id="exit-play"><span>✕</span> إيقاف</button>
             <div id="joystick-zone"><div id="joystick-base"><div id="joystick-knob"></div></div></div>
             <button id="btn-jump"><span class="jump-icon">⬆</span><span class="jump-text">قفز</span></button>
-            <!-- واجهة مخصصة يتم إضافتها من المحرر -->
             <div id="custom-hud" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;"></div>
         </div>
     </main>
@@ -65,11 +66,14 @@
             <div class="panel-section tab-pane active" id="tab-outliner"><div class="panel-header"><span class="panel-title">OUTLINER</span><button class="btn-small" id="btn-clear-scene" style="color:#ff5577;">مسح</button></div><div id="object-list"></div></div>
             
             <!-- Details -->
-            <div class="panel-section tab-pane" id="tab-details"><div class="panel-header"><span class="panel-title" style="color:#00e5ff;">DETAILS</span><div id="object-actions" style="display:none; gap:5px;"><button class="btn-small" id="btn-save-asset" style="color:#ffaa00;">💾</button><button class="btn-small" id="btn-duplicate" style="color:#4ade80;">📑</button><button class="btn-small" id="btn-delete" style="color:#ff5577;">🗑️</button></div></div>
+            <div class="panel-section tab-pane" id="tab-details">
+                <div class="panel-header"><span class="panel-title" style="color:#00e5ff;">DETAILS</span><div id="object-actions" style="display:none; gap:5px;"><button class="btn-small" id="btn-save-asset" style="color:#ffaa00;">💾</button><button class="btn-small" id="btn-duplicate" style="color:#4ade80;">📑</button><button class="btn-small" id="btn-delete" style="color:#ff5577;">🗑️</button></div></div>
                 <div id="no-selection-msg" style="text-align:center; color:#666; font-size:12px; margin-top:20px;">لم يتم تحديد مجسم.</div>
                 <div id="inspector" style="display:none; overflow-y: auto; flex: 1; padding: 10px;">
                     <div class="prop-group" id="animation-properties" style="display:none; background: #25252b; padding: 8px; border-radius: 4px; margin-bottom:8px;"><div class="prop-title" style="color:#00e5ff;">ANIMATIONS</div><div class="prop-row"><label>الحركة</label><select id="anim-select"></select></div></div>
-                    <div class="prop-group"><div class="prop-title">TRANSFORM</div><div class="prop-row"><label>X</label><input type="range" id="prop-x" min="-20" max="20" step="0.1" value="0"></div><div class="prop-row"><label>Y</label><input type="range" id="prop-y" min="-5" max="15" step="0.1" value="0.5"></div><div class="prop-row"><label>Z</label><input type="range" id="prop-z" min="-20" max="20" step="0.1" value="0"></div><div class="prop-row"><label>دوران</label><input type="range" id="prop-rot-y" min="0" max="6.28" step="0.1" value="0"></div><div class="prop-row"><label>حجم</label><input type="range" id="prop-scale" min="0.1" max="4" step="0.1" value="1"></div></div>
+                    <div class="prop-group" id="light-properties" style="display:none;"><div class="prop-title" style="color:#ffaa00;">LIGHT</div><div class="prop-row"><label>القوة</label><input type="range" id="prop-light-intensity" min="0" max="100" step="1" value="10"></div></div>
+                    <div class="prop-group"><div class="prop-title">TRANSFORM</div><div class="prop-row"><label>المادة</label><select id="prop-material"><option value="default">عادي</option><option value="wood">خشب</option><option value="metal">معدن</option><option value="gold">ذهب</option><option value="glass">زجاج</option><option value="rubber">مطاط</option><option value="marble">رخام</option><option value="emissive">مضيء</option></select></div><div class="prop-row"><label>اللون</label><input type="color" id="prop-color" value="#00e5ff"></div><div class="prop-row"><label>X</label><input type="range" id="prop-x" min="-20" max="20" step="0.1" value="0"></div><div class="prop-row"><label>Y</label><input type="range" id="prop-y" min="-5" max="15" step="0.1" value="0.5"></div><div class="prop-row"><label>Z</label><input type="range" id="prop-z" min="-20" max="20" step="0.1" value="0"></div><div class="prop-row"><label>دوران</label><input type="range" id="prop-rot-y" min="0" max="6.28" step="0.1" value="0"></div><div class="prop-row"><label>حجم</label><input type="range" id="prop-scale" min="0.1" max="4" step="0.1" value="1"></div></div>
+                    <div class="prop-group"><div class="prop-title" style="color:#ffaa00;">PHYSICS</div><div class="prop-row"><label>جاذبية</label><input type="checkbox" id="prop-physics"></div></div>
                 </div>
             </div>
 
@@ -79,33 +83,22 @@
                 <div style="padding: 15px;">
                     <div class="prop-row"><label>نص جديد</label><input type="text" id="ui-text-input" placeholder="اكتب النص..." style="flex:1; padding:6px; background:#121215; border:1px solid #333; color:#fff;"></div>
                     <button class="btn-small" id="btn-add-text" style="width:100%; background:#3b82f6; color:#fff; margin-bottom:15px;">إضافة نص للشاشة</button>
-                    
-                    <div class="prop-row"><label>شريط صحة</label><button class="btn-small" id="btn-add-health" style="flex:1; background:#ff5577; color:#fff;">إضافة شريط صحة</button></div>
-                    
-                    <div class="prop-row" style="margin-top:15px;"><label>حجم النص</label><input type="range" id="ui-text-size" min="10" max="50" value="20"></div>
-                    <div class="prop-row"><label>لون النص</label><input type="color" id="ui-text-color" value="#ffffff"></div>
                 </div>
             </div>
 
-            <!-- Logic (Visual Scripting) -->
+            <!-- Logic -->
             <div class="panel-section tab-pane" id="tab-logic">
                 <div class="panel-header"><span class="panel-title" style="color:#4ade80;">VISUAL SCRIPTING</span></div>
                 <div style="padding: 15px;">
-                    <div class="prop-row" style="margin-bottom:10px;">
-                        <label style="width:80px;">الحدث (Event)</label>
-                        <select id="logic-event" style="flex:1; background:#121215; color:#fff; padding:6px;"><option value="onCollide">عند الاصطدام</option><option value="onStart">عند البدء</option><option value="onTimer">بعد 5 ثواني</option></select>
-                    </div>
-                    <div class="prop-row" style="margin-bottom:15px;">
-                        <label style="width:80px;">الإجراء (Action)</label>
-                        <select id="logic-action" style="flex:1; background:#121215; color:#fff; padding:6px;"><option value="playSound">تشغيل صوت</option><option value="addScore">إضافة نقاط</option><option value="destroy">تدمير المجسم</option><option value="showText">إظهار نص</option></select>
-                    </div>
+                    <div class="prop-row" style="margin-bottom:10px;"><label style="width:80px;">الحدث</label><select id="logic-event" style="flex:1; background:#121215; color:#fff; padding:6px;"><option value="onCollide">عند الاصطدام</option><option value="onStart">عند البدء</option></select></div>
+                    <div class="prop-row" style="margin-bottom:15px;"><label style="width:80px;">الإجراء</label><select id="logic-action" style="flex:1; background:#121215; color:#fff; padding:6px;"><option value="playSound">صوت</option><option value="addScore">نقاط</option><option value="destroy">تدمير</option></select></div>
                     <button class="btn-small" id="btn-add-logic" style="width:100%; background:#4ade80; color:#000; font-weight:bold;">ربط الحدث بالإجراء</button>
                     <div id="active-logic-list" style="margin-top:15px; font-size:12px;"></div>
                 </div>
             </div>
 
-            <!-- Assets & World (Mukhtasar) -->
-            <div class="panel-section tab-pane" id="tab-content"><div class="panel-header"><span class="panel-title">LIBRARY</span></div><div id="asset-grid"></div></div>
+            <!-- Assets & World -->
+            <div class="panel-section tab-pane" id="tab-content"><div class="panel-header"><span class="panel-title">LIBRARY</span></div><div id="asset-grid" style="padding:10px; display:grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap:10px;"></div></div>
             <div class="panel-section tab-pane" id="tab-world"><div class="panel-header"><span class="panel-title">WORLD</span></div><div style="padding:15px;"><div class="prop-row"><label>الوضع الليلي</label><input type="checkbox" id="env-night-mode"></div><div class="prop-row"><label>المطر</label><input type="checkbox" id="env-rain-toggle"></div></div></div>
         </div>
     </aside>
@@ -116,6 +109,6 @@
     <script type="importmap">
     { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
-    <script type="module" src="src/main.js?v=82"></script>
+    <script type="module" src="src/main.js?v=83"></script>
 </body>
 </html>

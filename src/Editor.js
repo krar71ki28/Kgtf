@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
+import { BEHAVIORS } from './Engine.js';
 
 export class Editor {
     constructor(engine) {
@@ -16,6 +17,7 @@ export class Editor {
         this.gizmo.addEventListener('objectChange', () => this.updateUIValues());
 
         this.bindButtons();
+        this.bindInspector();
         this.setupRaycaster();
         this.setupTabs();
         
@@ -31,8 +33,7 @@ export class Editor {
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                 document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
                 btn.classList.add('active');
-                const target = document.getElementById(btn.dataset.target);
-                if(target) target.classList.add('active');
+                document.getElementById(btn.dataset.target).classList.add('active');
             });
         });
     }
@@ -53,10 +54,8 @@ export class Editor {
 
     bindButtons() {
         const addMenu = document.getElementById('add-menu');
-        if(document.getElementById('btn-add-menu')) {
-            document.getElementById('btn-add-menu').onclick = (e) => { e.stopPropagation(); addMenu.classList.toggle('show'); };
-            document.addEventListener('click', (e) => { if (!addMenu.contains(e.target) && e.target.id !== 'btn-add-menu') addMenu.classList.remove('show'); });
-        }
+        document.getElementById('btn-add-menu').onclick = (e) => { e.stopPropagation(); addMenu.classList.toggle('show'); };
+        document.addEventListener('click', (e) => { if (!addMenu.contains(e.target) && e.target.id !== 'btn-add-menu') addMenu.classList.remove('show'); });
         
         ['cube','sphere','cylinder','cone','torus','tree','rock','light','character','camera'].forEach(t => {
             const el = document.getElementById(`btn-${t}`); 
@@ -67,53 +66,58 @@ export class Editor {
             }; 
         });
 
-        // إضافة النار
-        const fireBtn = document.getElementById('btn-vfx-fire');
-        if(fireBtn) fireBtn.onclick = () => { this.engine.createFireVFX(new THREE.Vector3(0, 0, 0)); addMenu.classList.remove('show'); };
+        document.getElementById('btn-vfx-fire').onclick = () => { this.engine.createFireVFX(new THREE.Vector3(0, 0, 0)); addMenu.classList.remove('show'); };
 
-        // الأدوات
-        if(document.getElementById('btn-gizmo-translate')) document.getElementById('btn-gizmo-translate').onclick = () => this.gizmo.setMode('translate');
-        if(document.getElementById('btn-gizmo-rotate')) document.getElementById('btn-gizmo-rotate').onclick = () => this.gizmo.setMode('rotate');
-        if(document.getElementById('btn-gizmo-scale')) document.getElementById('btn-gizmo-scale').onclick = () => this.gizmo.setMode('scale');
+        document.getElementById('btn-gizmo-translate').onclick = () => this.gizmo.setMode('translate');
+        document.getElementById('btn-gizmo-rotate').onclick = () => this.gizmo.setMode('rotate');
+        document.getElementById('btn-gizmo-scale').onclick = () => this.gizmo.setMode('scale');
         
-        // UI Editor
-        if(document.getElementById('btn-add-text')) {
-            document.getElementById('btn-add-text').onclick = () => {
-                const txt = document.getElementById('ui-text-input').value || 'نص جديد';
-                const size = document.getElementById('ui-text-size').value + 'px';
-                const color = document.getElementById('ui-text-color').value;
-                const div = document.createElement('div');
-                div.innerText = txt;
-                div.style.cssText = `position:absolute; top:50px; left:50px; font-size:${size}; color:${color}; font-weight:bold; pointer-events:auto; font-family:Cairo;`;
-                document.getElementById('custom-hud').appendChild(div);
-            };
-        }
-        
-        if(document.getElementById('btn-add-health')) {
-            document.getElementById('btn-add-health').onclick = () => {
-                const div = document.createElement('div');
-                div.innerHTML = `<div style="width:200px; height:20px; background:#333; border:2px solid #fff; border-radius:10px; position:absolute; top:20px; left:20px;"><div style="width:100%; height:100%; background:#ff5577; border-radius:8px;"></div></div>`;
-                document.getElementById('custom-hud').appendChild(div);
-            };
-        }
+        document.getElementById('btn-add-text').onclick = () => {
+            const txt = document.getElementById('ui-text-input').value || 'نص جديد';
+            const div = document.createElement('div');
+            div.innerText = txt;
+            div.style.cssText = `position:absolute; top:50px; left:50px; font-size:20px; color:#fff; font-weight:bold; pointer-events:auto; font-family:Cairo;`;
+            document.getElementById('custom-hud').appendChild(div);
+        };
 
-        // Logic System
-        if(document.getElementById('btn-add-logic')) {
-            document.getElementById('btn-add-logic').onclick = () => {
-                if(!this.engine.selected) return alert('اختر مجسم أولاً');
-                const ev = document.getElementById('logic-event').value;
-                const act = document.getElementById('logic-action').value;
-                if(!this.engine.selected.userData.logic) this.engine.selected.userData.logic = [];
-                this.engine.selected.userData.logic.push({ event: ev, action: act });
-                
-                const list = document.getElementById('active-logic-list');
-                list.innerHTML += `<div style="background:#25252b; padding:5px; margin-bottom:5px; border-radius:4px;">إذا: ${ev} -> أفعل: ${act}</div>`;
-            };
-        }
+        document.getElementById('btn-toggle-grid').onclick = () => {
+            const isVis = document.getElementById('btn-toggle-grid').classList.toggle('active');
+            this.engine.toggleGrid(isVis);
+        };
+
+        const dragHandle = document.getElementById('panel-drag-handle');
+        dragHandle.onclick = () => document.getElementById('inspector-panel').classList.toggle('collapsed');
+
+        document.getElementById('env-night-mode').addEventListener('change', (e) => this.engine.toggleNightMode(e.target.checked));
+    }
+
+    bindInspector() {
+        const bindProp = (id, callback) => { 
+            const el = document.getElementById(id); 
+            if(!el) return; 
+            el.addEventListener('input', (e) => { 
+                if (!this.engine.selected) return; 
+                callback(this.engine.selected, el.type === 'checkbox' ? el.checked : (el.type === 'range' ? parseFloat(el.value) : el.value)); 
+                this.gizmo.attach(this.engine.selected); 
+            }); 
+        };
+        bindProp('prop-x', (obj, v) => obj.position.x = v); 
+        bindProp('prop-y', (obj, v) => obj.position.y = v); 
+        bindProp('prop-z', (obj, v) => obj.position.z = v);
+        bindProp('prop-rot-y', (obj, v) => obj.rotation.y = v);
+        bindProp('prop-scale', (obj, v) => obj.scale.set(v, v, v)); 
+        bindProp('prop-color', (obj, v) => { if (obj.isMesh) obj.material.color.set(v); else if (obj.isLight) obj.color.set(v); });
+        bindProp('prop-physics', (obj, v) => { if(obj.userData.physics) obj.userData.physics.enabled = v; });
+        bindProp('prop-light-intensity', (obj, v) => { if(obj.isLight) obj.intensity = v; });
+        bindProp('prop-material', (obj, v) => { 
+            if (obj.isMesh && obj.userData.type !== 'character') { 
+                obj.material.dispose(); obj.material = this.engine.makeMaterial(v); obj.userData.material = v; 
+            } 
+        });
     }
 
     updateList() {
-        const list = document.getElementById('object-list'); if(!list) return; list.innerHTML = '';
+        const list = document.getElementById('object-list'); list.innerHTML = '';
         this.engine.objects.forEach(obj => { 
             const div = document.createElement('div'); 
             div.className = 'obj-item' + (obj === this.engine.selected ? ' selected' : ''); 
@@ -124,19 +128,37 @@ export class Editor {
     }
 
     updateInspector(obj) {
-        if (!obj) { this.inspector.style.display = 'none'; document.getElementById('no-selection-msg').style.display = 'block'; this.gizmo.detach(); return; }
-        this.inspector.style.display = 'block'; document.getElementById('no-selection-msg').style.display = 'none'; this.gizmo.attach(obj);
-        if(document.getElementById('prop-x')) document.getElementById('prop-x').value = obj.position.x.toFixed(2);
-        if(document.getElementById('prop-y')) document.getElementById('prop-y').value = obj.position.y.toFixed(2);
-        if(document.getElementById('prop-z')) document.getElementById('prop-z').value = obj.position.z.toFixed(2);
-        if(document.getElementById('prop-rot-y')) document.getElementById('prop-rot-y').value = obj.rotation.y;
-        if(document.getElementById('prop-scale')) document.getElementById('prop-scale').value = obj.scale.x;
+        if (!obj) { 
+            this.inspector.style.display = 'none'; 
+            document.getElementById('no-selection-msg').style.display = 'block'; 
+            document.getElementById('object-actions').style.display = 'none';
+            this.gizmo.detach(); 
+            return; 
+        }
+        this.inspector.style.display = 'block'; 
+        document.getElementById('no-selection-msg').style.display = 'none'; 
+        document.getElementById('object-actions').style.display = 'flex';
+        this.gizmo.attach(obj);
+        
+        document.getElementById('prop-x').value = obj.position.x.toFixed(2);
+        document.getElementById('prop-y').value = obj.position.y.toFixed(2);
+        document.getElementById('prop-z').value = obj.position.z.toFixed(2);
+        document.getElementById('prop-rot-y').value = obj.rotation.y;
+        document.getElementById('prop-scale').value = obj.scale.x;
+        if (obj.isMesh && obj.material) document.getElementById('prop-color').value = '#' + obj.material.color.getHexString();
+        
+        const lightProps = document.getElementById('light-properties');
+        if (obj.isLight) {
+            lightProps.style.display = 'block';
+            document.getElementById('prop-light-intensity').value = obj.intensity;
+        } else { lightProps.style.display = 'none'; }
     }
     
     updateUIValues() {
         if(!this.engine.selected) return;
-        if(document.getElementById('prop-x')) document.getElementById('prop-x').value = this.engine.selected.position.x.toFixed(2);
-        if(document.getElementById('prop-y')) document.getElementById('prop-y').value = this.engine.selected.position.y.toFixed(2);
-        if(document.getElementById('prop-z')) document.getElementById('prop-z').value = this.engine.selected.position.z.toFixed(2);
+        document.getElementById('prop-x').value = this.engine.selected.position.x.toFixed(2);
+        document.getElementById('prop-y').value = this.engine.selected.position.y.toFixed(2);
+        document.getElementById('prop-z').value = this.engine.selected.position.z.toFixed(2);
+        document.getElementById('prop-rot-y').value = this.engine.selected.rotation.y;
     }
 }

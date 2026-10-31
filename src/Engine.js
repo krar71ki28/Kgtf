@@ -9,25 +9,23 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js'; 
 import { VignetteShader } from 'three/addons/shaders/VignetteShader.js';
-import { Sky } from 'three/addons/objects/Sky.js';
 
 export const MATERIALS = {
     default:  { color: 0x00e5ff, roughness: 0.4, metalness: 0.1 },
-    wood:     { color: 0x5c3a21, roughness: 0.95, metalness: 0.0 }, // خشب محسن
+    wood:     { color: 0x5c3a21, roughness: 0.95, metalness: 0.0 },
     metal:    { color: 0x888888, roughness: 0.2,  metalness: 0.9 },
     gold:     { color: 0xffaa00, roughness: 0.3,  metalness: 0.95 },
     glass:    { color: 0xaaddff, roughness: 0.05, metalness: 0.0, transparent: true, opacity: 0.3 },
-    rock:     { color: 0x666666, roughness: 0.9,  metalness: 0.2 }, // صخر محسن
+    rock:     { color: 0x666666, roughness: 0.9,  metalness: 0.2 },
     grass:    { color: 0x2d5a27, roughness: 0.9,  metalness: 0.0 },
-    fire:     { color: 0xff6600, emissive: 0xff2200, emissiveIntensity: 2.0 }
+    emissive: { color: 0x00e5ff, emissive: 0x00e5ff, emissiveIntensity: 1.0 }
 };
 
 export const BEHAVIORS = {
     rotate: { name: 'دوران مستمر', defaultParams: { speed: 1.5 }, update: (obj, params, state, dt) => { obj.rotation.y += params.speed * dt; } },
     float: { name: 'طيران', defaultParams: { amplitude: 0.5, speed: 2 }, update: (obj, params, state, dt, time) => { if (state.baseY === undefined) state.baseY = obj.position.y; obj.position.y = state.baseY + Math.sin(time * params.speed) * params.amplitude; } },
     follow: { 
-        name: 'مطاردة ذكية (تتجنب العوائق)', 
-        defaultParams: { speed: 3, stopDistance: 1.5 }, 
+        name: 'مطاردة', defaultParams: { speed: 3, stopDistance: 1.5 }, 
         update: (obj, params, state, dt, time, engine) => { 
             const player = engine.objects.find(o => o.userData.type === 'character'); 
             if (!player) return; 
@@ -35,15 +33,10 @@ export const BEHAVIORS = {
             dir.y = 0; 
             if (dir.length() > params.stopDistance) { 
                 dir.normalize(); 
-                // نظام تجنب العوائق (Raycast)
                 const raycaster = new THREE.Raycaster(obj.position, dir, 0, 1.5);
                 const obstacles = engine.objects.filter(o => o !== obj && o.userData.type !== 'character' && o.userData.type !== 'light' && o.userData.type !== 'vfx');
                 const intersects = raycaster.intersectObjects(obstacles, true);
-                
-                if (intersects.length > 0) {
-                    // إذا في عائق، يلف يمين أو يسار
-                    dir.applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
-                }
+                if (intersects.length > 0) dir.applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
                 obj.position.add(dir.multiplyScalar(params.speed * dt)); 
             } 
         } 
@@ -54,23 +47,17 @@ export class Engine {
     constructor(canvas) {
         this.canvas = canvas;
         this.scene = new THREE.Scene();
-        
-        // سماء واقعية
-        this.sky = new Sky();
-        this.sky.scale.setScalar(450000);
-        this.scene.add(this.sky);
-        const uniforms = this.sky.material.uniforms;
-        uniforms['turbidity'].value = 10; uniforms['rayleigh'].value = 2;
-        uniforms['mieCoefficient'].value = 0.005; uniforms['mieDirectionalG'].value = 0.8;
-        
-        this.scene.fog = new THREE.Fog(0xaabbcc, 50, 250);
+        // سماء بسيطة وواضحة
+        this.scene.background = new THREE.Color(0x87CEEB); 
+        // ضباب خفيف جداً
+        this.scene.fog = new THREE.Fog(0x87CEEB, 50, 200);
 
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 1.2;
+        this.renderer.toneMappingExposure = 1.0;
         
         this.editorCamera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
         this.editorCamera.position.set(8, 6, 10);
@@ -80,12 +67,12 @@ export class Engine {
         this.composer.addPass(new RenderPass(this.scene, this.activeCamera));
         this.smaaPass = new SMAAPass(window.innerWidth, window.innerHeight);
         this.composer.addPass(this.smaaPass);
-        this.bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.4, 0.5, 0.8); 
+        this.bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.3, 0.4, 0.8); 
         this.composer.addPass(this.bloomPass);
         this.vignettePass = new ShaderPass(VignetteShader);
         this.vignettePass.uniforms["offset"].value = 1.0;
-        this.vignettePass.uniforms["darkness"].value = 1.2;
-        this.vignettePass.enabled = true;
+        this.vignettePass.uniforms["darkness"].value = 1.0;
+        this.vignettePass.enabled = false;
         this.composer.addPass(this.vignettePass);
         this.composer.addPass(new OutputPass());
 
@@ -98,21 +85,19 @@ export class Engine {
         this.controls.target.set(0, 2, 0);
         this.controls.maxPolarAngle = Math.PI / 2.05;
 
-        this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.7);
+        this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8);
         this.scene.add(this.hemiLight);
 
-        this.sun = new THREE.DirectionalLight(0xfff5e6, 2.5);
+        this.sun = new THREE.DirectionalLight(0xfff5e6, 2.0);
         this.sun.castShadow = true;
         this.sun.shadow.mapSize.width = 2048;
         this.sun.shadow.mapSize.height = 2048;
         this.sun.shadow.camera.left = -40; this.sun.shadow.camera.right = 40;
         this.sun.shadow.camera.top = 40; this.sun.shadow.camera.bottom = -40;
         this.sun.shadow.bias = -0.0005;
-        this.sun.shadow.radius = 4;
         this.scene.add(this.sun);
         this.scene.add(this.sun.target);
 
-        // أرضية احترافية
         const groundGeo = new THREE.PlaneGeometry(200, 200);
         const groundMat = new THREE.MeshStandardMaterial({ color: 0x4a6e52, roughness: 1.0, metalness: 0.0 });
         const ground = new THREE.Mesh(groundGeo, groundMat);
@@ -120,8 +105,13 @@ export class Engine {
         ground.receiveShadow = true;
         this.scene.add(ground);
 
+        this.grid = new THREE.GridHelper(200, 100, 0x00e5ff, 0x556677);
+        this.grid.position.y = 0.05; 
+        this.grid.material.opacity = 0.3;
+        this.grid.material.transparent = true;
+        this.scene.add(this.grid);
+
         this.objects = [];
-        this.customCameras = []; 
         this.assets = JSON.parse(localStorage.getItem('kgtf_assets') || '[]'); 
         this.score = 0;
         this.onScoreChanged = null;
@@ -133,46 +123,11 @@ export class Engine {
         this.onSceneChange = null;
         this.sceneVersion = 0;
         this.totalTime = 0;
-
-        this.timeOfDay = 10 / 24; 
-        this.autoTime = false;
         this.isNightMode = false;
-        this.isRaining = false;
-
-        // مطر
-        const rainGeo = new THREE.BufferGeometry();
-        const rainCount = 3000;
-        const rainPos = new Float32Array(rainCount * 3);
-        for(let i=0; i<rainCount*3; i+=3) {
-            rainPos[i] = (Math.random() - 0.5) * 100;
-            rainPos[i+1] = Math.random() * 40;
-            rainPos[i+2] = (Math.random() - 0.5) * 100;
-        }
-        rainGeo.setAttribute("position", new THREE.BufferAttribute(rainPos, 3));
-        const rainMat = new THREE.PointsMaterial({ color: 0xaaccff, size: 0.15, transparent: true, opacity: 0.6 });
-        this.rain = new THREE.Points(rainGeo, rainMat);
-        this.rain.visible = false;
-        this.scene.add(this.rain);
 
         this.loadScene();
         this.resize();
         window.addEventListener('resize', () => this.resize());
-        this.updateSunPosition();
-    }
-
-    updateSunPosition() {
-        const phi = THREE.MathUtils.degToRad(90 - (this.timeOfDay * 360 - 90));
-        const theta = THREE.MathUtils.degToRad(0);
-        const sunPos = new THREE.Vector3().setFromSphericalCoords(1, phi, theta);
-        this.sky.material.uniforms['sunPosition'].value.copy(sunPos);
-        this.sun.position.copy(sunPos).multiplyScalar(100);
-        if (sunPos.y > 0) {
-            this.sun.intensity = Math.min(sunPos.y * 4, 2.5);
-            this.scene.fog.color.setHex(0xaabbcc); 
-        } else {
-            this.sun.intensity = 0;
-            this.scene.fog.color.setHex(0x050510);
-        }
     }
 
     makeMaterial(matName, colorHex) {
@@ -186,11 +141,14 @@ export class Engine {
         let obj;
         if (type === 'cube') { obj = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), this.makeMaterial('default')); obj.position.y = 0.5; }
         else if (type === 'sphere') { obj = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), this.makeMaterial('default')); obj.position.y = 0.5; }
+        else if (type === 'cylinder') { obj = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 1.2, 32), this.makeMaterial('default')); obj.position.y = 0.6; }
+        else if (type === 'cone') { obj = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.2, 32), this.makeMaterial('default')); obj.position.y = 0.6; }
+        else if (type === 'torus') { obj = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.2, 16, 100), this.makeMaterial('default')); obj.position.y = 0.7; }
+        else if (type === 'light') { obj = new THREE.PointLight(0xffaa00, 10, 15); obj.position.set(0, 3, 0); }
         else if (type === 'tree') {
             obj = new THREE.Group();
             const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.25, 1.5, 8), this.makeMaterial('wood'));
             trunk.position.y = 0.75;
-            // أوراق متعددة الطبقات لتبدو أكثر واقعية
             for(let i=0; i<3; i++) {
                 const leaves = new THREE.Mesh(new THREE.ConeGeometry(1.2 - (i*0.3), 1.5, 8), this.makeMaterial('grass', 0x1e5631 - (i*0x001100)));
                 leaves.position.y = 1.5 + (i*0.7);
@@ -203,7 +161,7 @@ export class Engine {
         else if (type === 'rock') { 
             obj = new THREE.Mesh(new THREE.DodecahedronGeometry(0.6, 1), this.makeMaterial('rock')); 
             obj.position.y = 0.4; 
-            obj.scale.set(1 + Math.random()*0.5, 1 + Math.random()*0.5, 1 + Math.random()*0.5); // شكل غير منتظم
+            obj.scale.set(1 + Math.random()*0.5, 1 + Math.random()*0.5, 1 + Math.random()*0.5); 
             obj.rotation.set(Math.random(), Math.random(), Math.random());
         }
         else if (type === 'vfx') { return this.createFireVFX(new THREE.Vector3(0, 0.5, 0)); }
@@ -226,13 +184,10 @@ export class Engine {
 
     createFireVFX(position) {
         const group = new THREE.Group();
-        
-        // جزيئات النار
         const count = 50;
         const geometry = new THREE.BufferGeometry();
         const positions = new Float32Array(count * 3);
         const velocities = [];
-        
         for (let i = 0; i < count; i++) {
             positions[i * 3] = (Math.random() - 0.5) * 0.4; 
             positions[i * 3 + 1] = Math.random() * 0.5; 
@@ -240,54 +195,52 @@ export class Engine {
             velocities.push({ x: (Math.random() - 0.5) * 0.2, y: Math.random() * 1.5 + 0.5, z: (Math.random() - 0.5) * 0.2 });
         }
         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        
         const material = new THREE.PointsMaterial({ color: 0xff6600, size: 0.3, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false });
         const points = new THREE.Points(geometry, material);
-        
-        // ضوء ديناميكي للنار
         const fireLight = new THREE.PointLight(0xff6600, 5, 10);
         fireLight.position.y = 0.5;
-
-        group.add(points);
-        group.add(fireLight);
+        group.add(points); group.add(fireLight);
         group.position.copy(position);
-        
         group.userData = { id: 'vfx_' + (this.idCounter++), type: 'vfx', velocities, count, physics: { enabled: false }, behaviors: {}, behaviorStates: {}, light: fireLight };
         
-        this.scene.add(group);
-        this.objects.push(group);
-        this.selectObject(group);
+        this.scene.add(group); this.objects.push(group); this.selectObject(group);
         if (this.onSceneChange) this.onSceneChange();
         return group;
     }
 
+    toggleGrid(visible) { if(this.grid) this.grid.visible = visible; }
+    
+    toggleNightMode(isNight) {
+        this.isNightMode = isNight;
+        if (isNight) {
+            this.scene.background.setHex(0x050510);
+            this.scene.fog.color.setHex(0x050510);
+            this.sun.intensity = 0;
+            this.hemiLight.intensity = 0.2;
+            this.bloomPass.strength = 1.0; 
+        } else {
+            this.scene.background.setHex(0x87CEEB);
+            this.scene.fog.color.setHex(0x87CEEB);
+            this.sun.intensity = 2.0;
+            this.hemiLight.intensity = 0.8;
+            this.bloomPass.strength = 0.3;
+        }
+    }
+
+    selectObject(obj) { this.selected = obj; if (this.onSelect) this.onSelect(obj); }
     update(dt) {
         this.totalTime += dt;
-        if (!this.isNightMode) this.updateSunPosition();
-
-        const box = new THREE.Box3(), size = new THREE.Vector3();
         this.objects.forEach(o => {
             if (o.userData.mixer) o.userData.mixer.update(dt);
-            
-            // تحديث النار
             if (o.userData.type === "vfx" && o.userData.velocities) {
                 const positions = o.children[0].geometry.attributes.position.array;
                 for (let i = 0; i < o.userData.count; i++) {
-                    positions[i * 3] += o.userData.velocities[i].x * dt; 
-                    positions[i * 3 + 1] += o.userData.velocities[i].y * dt; 
-                    positions[i * 3 + 2] += o.userData.velocities[i].z * dt;
-                    if (positions[i * 3 + 1] > 1.5) { 
-                        positions[i * 3] = (Math.random() - 0.5) * 0.4; 
-                        positions[i * 3 + 1] = 0; 
-                        positions[i * 3 + 2] = (Math.random() - 0.5) * 0.4; 
-                    }
+                    positions[i * 3] += o.userData.velocities[i].x * dt; positions[i * 3 + 1] += o.userData.velocities[i].y * dt; positions[i * 3 + 2] += o.userData.velocities[i].z * dt;
+                    if (positions[i * 3 + 1] > 1.5) { positions[i * 3] = (Math.random() - 0.5) * 0.4; positions[i * 3 + 1] = 0; positions[i * 3 + 2] = (Math.random() - 0.5) * 0.4; }
                 }
                 o.children[0].geometry.attributes.position.needsUpdate = true;
-                // وميض ضوء النار
                 if(o.userData.light) o.userData.light.intensity = 4 + Math.random() * 2;
             }
-
-            // السلوكيات والذكاء الاصطناعي
             if (o.userData.behaviors) {
                 for (const bName in o.userData.behaviors) {
                     if (BEHAVIORS[bName] && BEHAVIORS[bName].update) {
@@ -298,15 +251,9 @@ export class Engine {
                 }
             }
         });
-
         if (!document.body.classList.contains('play-mode')) this.controls.update();
     }
-
     render() { this.composer.render(); }
-    resize() { 
-        const c = document.getElementById('viewport-container'); 
-        const w = c.clientWidth, h = c.clientHeight; 
-        this.editorCamera.aspect = w / h; this.editorCamera.updateProjectionMatrix(); 
-        this.renderer.setSize(w, h, false); this.composer.setSize(w, h); 
-    }
+    resize() { const c = document.getElementById('viewport-container'); const w = c.clientWidth, h = c.clientHeight; this.editorCamera.aspect = w / h; this.editorCamera.updateProjectionMatrix(); this.renderer.setSize(w, h, false); this.composer.setSize(w, h); }
+    loadScene() { this.addObject('cube'); }
 }
