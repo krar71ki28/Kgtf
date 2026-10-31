@@ -5,45 +5,33 @@ export class Physics {
     constructor(engine) {
         this.engine = engine;
         
-        // 1. إنشاء العالم الفيزيائي
         this.world = new CANNON.World({
-            gravity: new CANNON.Vec3(0, -9.82, 0) // الجاذبية الأرضية
+            gravity: new CANNON.Vec3(0, -9.82, 0)
         });
         
-        // تحسين الأداء: استخدام Broadphase سريع
         this.world.broadphase = new CANNON.SAPBroadphase(this.world);
-        this.world.allowSleep = true; // إيقاف الحسابات للمجسمات الساكنة (توفير للمعالج)
+        this.world.allowSleep = true;
 
-        // 2. إنشاء أرضية فيزيائية
         const groundShape = new CANNON.Plane();
-        const groundBody = new CANNON.Body({ mass: 0 }); // Mass = 0 يعني جسم ساكن لا يتحرك
+        const groundBody = new CANNON.Body({ mass: 0 });
         groundBody.addShape(groundShape);
         groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
         this.world.addBody(groundBody);
     }
 
-    // ربط مجسم KGTFNode بالعالم الفيزيائي
     addNode(node) {
+        // ✅ استبعاد الشخصية من محرك الفيزياء (لأننا نتحكم بها يدوياً)
+        if (node.userData.type === 'character') return;
+
         let shape;
-        let mass = 0; // افتراضياً ساكن
+        let mass = 0; 
 
-        // تحديد شكل الاصطدام بناءً على نوع المجسم
-        if (node.userData.type === 'cube') {
-            shape = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
-        } else if (node.userData.type === 'sphere') {
-            shape = new CANNON.Sphere(0.5);
-        } else if (node.userData.type === 'tree') {
-            // الشجرة نعتبرها أسطوانة (تقريباً)
-            shape = new CANNON.Cylinder(0.2, 0.2, 1.5, 8);
-        } else {
-            // للمجسمات غير المعروفة (مثل GLB)، نستخدم صندوق افتراضي
-            shape = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
-        }
+        if (node.userData.type === 'cube') shape = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
+        else if (node.userData.type === 'sphere') shape = new CANNON.Sphere(0.5);
+        else if (node.userData.type === 'tree') shape = new CANNON.Cylinder(0.2, 0.2, 1.5, 8);
+        else shape = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
 
-        // إذا كانت الجاذبية مفعلة في المحرر، نعطيه كتلة (يتحرك)
-        if (node.userData.physics && node.userData.physics.enabled) {
-            mass = 1; 
-        }
+        if (node.userData.physics && node.userData.physics.enabled) mass = 1; 
 
         const body = new CANNON.Body({
             mass: mass,
@@ -52,7 +40,7 @@ export class Physics {
         });
 
         this.world.addBody(body);
-        node.userData.physicsBody = body; // ربط الجسم الفيزيائي بالمجسم
+        node.userData.physicsBody = body; 
     }
 
     removeNode(node) {
@@ -62,28 +50,33 @@ export class Physics {
         }
     }
 
-    // تحديث العالم الفيزيائي ومزامنة المواقع
     update(dt) {
-        // خطوة المحاكاة (نستخدم 1/60 كخطوة ثابتة لضمان الاستقرار)
         this.world.step(1 / 60, dt, 3);
 
-        // مزامنة مواقع المجسمات من الفيزياء إلى Three.js
         this.engine.objects.forEach(node => {
-            if (node.userData.physicsBody) {
+            if (node.userData.physicsBody && node.userData.type !== 'character') {
                 node.position.copy(node.userData.physicsBody.position);
                 node.quaternion.copy(node.userData.physicsBody.quaternion);
             }
         });
     }
 
-    // فحص اصطدام اللاعب (شعاع من موقع اللاعب الحالي إلى الموقع الجديد)
+    // ✅ استخدام Three.js Raycaster لفحص حركة اللاعب (أكثر أماناً)
     checkPlayerCollision(nextPos, playerBoxSize) {
-        const from = new CANNON.Vec3(this.engine.objects.find(o => o.userData.isCharacter)?.position.x || 0, 0.75, this.engine.objects.find(o => o.userData.isCharacter)?.position.z || 0);
-        const to = new CANNON.Vec3(nextPos.x, nextPos.y + 0.75, nextPos.z);
+        const playerObj = this.engine.objects.find(o => o.userData.isCharacter);
+        if (!playerObj) return false;
+
+        const raycaster = new THREE.Raycaster();
+        const from = playerObj.position.clone().add(new THREE.Vector3(0, 0.75, 0));
+        const dir = nextPos.clone().sub(playerObj.position).normalize();
         
-        const result = new CANNON.RaycastResult();
-        this.world.raycastClosest(from, to, { skipBackfaces: true }, result);
+        raycaster.set(from, dir);
+        raycaster.far = 0.8; // مسافة الفحص
+
+        // نستبعد اللاعب نفسه من الفحص
+        const obstacles = this.engine.objects.filter(o => o !== playerObj && o.userData.type !== 'vfx' && o.userData.type !== 'light');
+        const hits = raycaster.intersectObjects(obstacles, true);
         
-        return result.hasHit;
+        return hits.length > 0;
     }
 }
