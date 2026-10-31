@@ -18,19 +18,19 @@ export class Editor {
                     JSON.parse(raw).forEach(d => {
                         const obj = engine.createObject(d.type);
                         if(obj) {
-                            obj.position.fromArray(d.pos);
-                            obj.traverse(c => { if(c.isMesh && c.material && c.material.color) c.material.color.set(d.color); });
+                            if(d.pos) obj.position.fromArray(d.pos);
+                            if(d.color) obj.traverse(c => { if(c.isMesh && c.material && c.material.color) c.material.color.set(d.color); });
                             if(d.logic) obj.userData.logic = d.logic;
                         }
                     });
                     engine.selectObject(null);
-                } catch(e) { console.warn("Local storage scene error"); }
-            } else {
-                engine.createObject('cube');
+                } catch(e) { console.warn("Local storage error"); }
             }
+            if(engine.objects.length === 0) engine.createObject('cube');
+            
             this.renderAssetGrid();
         } catch(e) {
-            console.error("Editor Initialization Error:", e);
+            console.error("Editor Init Error:", e);
         }
     }
 
@@ -40,7 +40,8 @@ export class Editor {
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                 document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
                 btn.classList.add('active');
-                document.getElementById(btn.dataset.target).classList.add('active');
+                const target = document.getElementById(btn.dataset.target);
+                if(target) target.classList.add('active');
                 if(btn.dataset.target === 'tab-assets') this.renderAssetGrid();
             });
         });
@@ -48,30 +49,61 @@ export class Editor {
 
     setupUI() {
         const addMenu = document.getElementById('add-menu');
-        document.getElementById('btn-add-menu').addEventListener('pointerdown', (e) => { e.stopPropagation(); addMenu.classList.toggle('show'); });
-        document.addEventListener('pointerdown', (e) => { if (!addMenu.contains(e.target) && e.target.id !== 'btn-add-menu') addMenu.classList.remove('show'); });
-
-        document.querySelectorAll('.add-btn').forEach(btn => {
-            btn.addEventListener('pointerdown', () => { this.engine.createObject(btn.dataset.type); addMenu.classList.remove('show'); });
-        });
-
-        document.getElementById('btn-clear-scene').addEventListener('pointerdown', () => this.engine.clearScene());
+        const btnAddMenu = document.getElementById('btn-add-menu');
         
-        document.getElementById('btn-gizmo-translate').addEventListener('pointerdown', () => this.engine.transform.setMode('translate'));
-        document.getElementById('btn-gizmo-rotate').addEventListener('pointerdown', () => this.engine.transform.setMode('rotate'));
-        document.getElementById('btn-gizmo-scale').addEventListener('pointerdown', () => this.engine.transform.setMode('scale'));
+        // ✅ إصلاح زر الزائد: استخدام click بدلاً من pointerdown
+        if(btnAddMenu && addMenu) {
+            btnAddMenu.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                addMenu.classList.toggle('show');
+            });
+            
+            // إغلاق القائمة عند الضغط في أي مكان آخر
+            document.addEventListener('click', (e) => {
+                if (addMenu.classList.contains('show') && !addMenu.contains(e.target) && e.target !== btnAddMenu) {
+                    addMenu.classList.remove('show');
+                }
+            });
+        }
 
-        document.getElementById('env-night-mode').addEventListener('change', (e) => this.engine.toggleNightMode(e.target.checked));
-        document.getElementById('env-rain-toggle').addEventListener('change', (e) => this.engine.toggleRain(e.target.checked));
-
-        document.getElementById('btn-add-text').addEventListener('pointerdown', () => {
-            const text = document.getElementById('ui-text-input').value;
-            this.engine.ui.addText(text);
-            document.getElementById('ui-text-input').value = '';
+        // أزرار الإضافة داخل القائمة
+        document.querySelectorAll('.add-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => { 
+                e.preventDefault();
+                this.engine.createObject(btn.dataset.type); 
+                addMenu?.classList.remove('show'); 
+            });
         });
-        document.getElementById('btn-clear-ui').addEventListener('pointerdown', () => this.engine.ui.clearUI());
 
-        document.getElementById('btn-add-logic').addEventListener('pointerdown', () => {
+        const btnClear = document.getElementById('btn-clear-scene');
+        if(btnClear) btnClear.addEventListener('pointerdown', () => this.engine.clearScene());
+        
+        const gT = document.getElementById('btn-gizmo-translate');
+        if(gT) gT.addEventListener('pointerdown', () => this.engine.transform.setMode('translate'));
+        const gR = document.getElementById('btn-gizmo-rotate');
+        if(gR) gR.addEventListener('pointerdown', () => this.engine.transform.setMode('rotate'));
+        const gS = document.getElementById('btn-gizmo-scale');
+        if(gS) gS.addEventListener('pointerdown', () => this.engine.transform.setMode('scale'));
+
+        const nightEl = document.getElementById('env-night-mode');
+        if(nightEl) nightEl.addEventListener('change', (e) => this.engine.toggleNightMode(e.target.checked));
+        const rainEl = document.getElementById('env-rain-toggle');
+        if(rainEl) rainEl.addEventListener('change', (e) => this.engine.toggleRain(e.target.checked));
+
+        const btnAddText = document.getElementById('btn-add-text');
+        if(btnAddText) btnAddText.addEventListener('pointerdown', () => {
+            const textInput = document.getElementById('ui-text-input');
+            if(textInput) {
+                this.engine.ui.addText(textInput.value);
+                textInput.value = '';
+            }
+        });
+        const btnClearUi = document.getElementById('btn-clear-ui');
+        if(btnClearUi) btnClearUi.addEventListener('pointerdown', () => this.engine.ui.clearUI());
+
+        const btnAddLogic = document.getElementById('btn-add-logic');
+        if(btnAddLogic) btnAddLogic.addEventListener('pointerdown', () => {
             if (!this.engine.selectedObj) return;
             const ev = document.getElementById('logic-event').value;
             const ac = document.getElementById('logic-action').value;
@@ -81,14 +113,15 @@ export class Editor {
             this.renderLogicList();
         });
 
-        document.getElementById('btn-save').addEventListener('pointerdown', () => {
+        const btnSave = document.getElementById('btn-save');
+        if(btnSave) btnSave.addEventListener('pointerdown', () => {
             const data = this.engine.objects.map(o => {
                 let color = '#00e5ff';
                 o.traverse(c => { if(c.isMesh && c.material && c.material.color) color = '#' + c.material.color.getHexString(); });
                 return { type: o.userData.type, pos: o.position.toArray(), color: color, logic: o.userData.logic };
             });
             localStorage.setItem('kgtf_scene_modular', JSON.stringify(data));
-            alert('تم الحفظ المحلي!');
+            alert('تم الحفظ المحلي! يمكنك تحديث الصفحة، لكن تأكد من إزالة ?reset من الرابط.');
         });
 
         const btnExport = document.getElementById('btn-export');
@@ -160,7 +193,13 @@ export class Editor {
             const hits = raycaster.intersectObjects(this.engine.objects, true);
             
             if (hits.length > 0) {
-                let root = hits[0].object; while (root.parent !== this.engine.scene) root = root.parent; this.engine.selectObject(root);
+                let root = hits[0].object; 
+                while (root && root.parent && root.parent !== this.engine.scene) root = root.parent; 
+                if (root && root.parent === this.engine.scene) {
+                    this.engine.selectObject(root);
+                } else {
+                    this.engine.selectObject(null);
+                }
             } else { this.engine.selectObject(null); }
         });
     }
