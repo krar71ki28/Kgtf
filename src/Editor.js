@@ -21,9 +21,10 @@ export class Editor {
     }
 
     setupUI() {
-        // 1. التبويبات (Tabs)
+        // 1. التبويبات (Tabs) - نستخدم click بدل pointerdown عشان نمنع التداخل
         document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('pointerdown', () => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                 document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
                 btn.classList.add('active');
@@ -32,20 +33,18 @@ export class Editor {
             });
         });
 
-        // 2. قائمة الإضافة (+) - إصلاح مشكلة الموبايل
+        // 2. قائمة الإضافة (+)
         const addMenu = document.getElementById('add-menu');
         const addBtn = document.getElementById('btn-add-menu');
         
         if (addBtn && addMenu) {
-            // نستخدم pointerdown بدل click عشان يستجيب فوراً للمس
-            addBtn.addEventListener('pointerdown', (e) => {
+            addBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                e.stopPropagation(); // توقف الحدث عشان ما ينغلق فوراً
+                e.stopPropagation();
                 addMenu.classList.toggle('show');
             });
 
-            // إغلاق القائمة لما نضغط براها
-            document.addEventListener('pointerdown', (e) => {
+            document.addEventListener('click', (e) => {
                 if (addMenu.classList.contains('show') && !addMenu.contains(e.target) && e.target !== addBtn) {
                     addMenu.classList.remove('show');
                 }
@@ -57,8 +56,9 @@ export class Editor {
         types.forEach(t => {
             const el = document.getElementById(`btn-${t}`);
             if(el) {
-                el.addEventListener('pointerdown', (e) => { 
+                el.addEventListener('click', (e) => { 
                     e.preventDefault();
+                    e.stopPropagation(); // نمنع اللمسة من الانتقال للعناصر الثانية
                     this.engine.addObject(t); 
                     if(addMenu) addMenu.classList.remove('show'); 
                 });
@@ -67,32 +67,39 @@ export class Editor {
 
         // 4. أدوات التحكم (Gizmo)
         const gTrans = document.getElementById('btn-gizmo-translate');
-        if(gTrans) gTrans.addEventListener('pointerdown', () => { this.gizmo.setMode('translate'); this.setActiveTool('btn-gizmo-translate'); });
+        if(gTrans) gTrans.addEventListener('click', () => { this.gizmo.setMode('translate'); this.setActiveTool('btn-gizmo-translate'); });
         const gRot = document.getElementById('btn-gizmo-rotate');
-        if(gRot) gRot.addEventListener('pointerdown', () => { this.gizmo.setMode('rotate'); this.setActiveTool('btn-gizmo-rotate'); });
+        if(gRot) gRot.addEventListener('click', () => { this.gizmo.setMode('rotate'); this.setActiveTool('btn-gizmo-rotate'); });
         const gScale = document.getElementById('btn-gizmo-scale');
-        if(gScale) gScale.addEventListener('pointerdown', () => { this.gizmo.setMode('scale'); this.setActiveTool('btn-gizmo-scale'); });
+        if(gScale) gScale.addEventListener('click', () => { this.gizmo.setMode('scale'); this.setActiveTool('btn-gizmo-scale'); });
 
-        // 5. باقي الأزرار
-        const gridBtn = document.getElementById('btn-toggle-grid');
-        if(gridBtn) gridBtn.addEventListener('pointerdown', () => this.engine.toggleGrid(gridBtn.classList.toggle('active')));
-        
+        // 5. زر المسح (مع حماية إضافية لمنع التداخل)
         const clearBtn = document.getElementById('btn-clear-scene');
-        if(clearBtn) clearBtn.addEventListener('pointerdown', () => { 
-            if(confirm('مسح الكل؟')) { 
+        if(clearBtn) clearBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // يمنع أي تداخل
+            // نتحقق إذا كانت القائمة مفتوحة، نغلقها وما نمسح
+            if (addMenu && addMenu.classList.contains('show')) {
+                addMenu.classList.remove('show');
+                return;
+            }
+            if(confirm('هل أنت متأكد من مسح المشهد بالكامل؟')) { 
                 this.engine.objects.forEach(o=>this.engine.scene.remove(o)); 
                 this.engine.objects = []; 
                 this.updateList(); 
             } 
         });
 
+        // 6. باقي الأزرار
+        const gridBtn = document.getElementById('btn-toggle-grid');
+        if(gridBtn) gridBtn.addEventListener('click', (e) => { e.stopPropagation(); this.engine.toggleGrid(gridBtn.classList.toggle('active')); });
+        
         const delBtn = document.getElementById('btn-delete');
-        if(delBtn) delBtn.addEventListener('pointerdown', () => { if(this.engine.selected) this.engine.removeObject(this.engine.selected); });
+        if(delBtn) delBtn.addEventListener('click', (e) => { e.stopPropagation(); if(this.engine.selected) this.engine.removeObject(this.engine.selected); });
 
         const dragHandle = document.getElementById('panel-drag-handle');
-        if(dragHandle) dragHandle.addEventListener('pointerdown', () => document.getElementById('inspector-panel').classList.toggle('collapsed'));
+        if(dragHandle) dragHandle.addEventListener('click', () => document.getElementById('inspector-panel').classList.toggle('collapsed'));
 
-        // 6. ربط خصائص التحكم (Sliders)
+        // 7. ربط خصائص التحكم (Sliders)
         const bindProp = (id, callback) => {
             const el = document.getElementById(id);
             if(!el) return;
@@ -147,7 +154,7 @@ export class Editor {
             const div = document.createElement('div');
             div.className = 'obj-item' + (obj === this.engine.selected ? ' selected' : '');
             div.innerText = obj.userData.type;
-            div.addEventListener('pointerdown', () => this.engine.selectObject(obj));
+            div.addEventListener('click', (e) => { e.stopPropagation(); this.engine.selectObject(obj); });
             list.appendChild(div);
         });
     }
