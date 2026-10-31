@@ -1,16 +1,5 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-
-export const MATERIALS = {
-    default:  { color: 0x00e5ff, roughness: 0.4, metalness: 0.1 },
-    wood:     { color: 0x5c3a21, roughness: 0.95, metalness: 0.0 },
-    metal:    { color: 0x888888, roughness: 0.2,  metalness: 0.9 },
-    gold:     { color: 0xffaa00, roughness: 0.3,  metalness: 0.95 },
-    glass:    { color: 0xaaddff, roughness: 0.05, metalness: 0.0, transparent: true, opacity: 0.3 },
-    rock:     { color: 0x666666, roughness: 0.9,  metalness: 0.2 },
-    grass:    { color: 0x2d5a27, roughness: 0.9,  metalness: 0.0 }
-};
 
 export class Engine {
     constructor(canvas) {
@@ -38,6 +27,7 @@ export class Engine {
         this.sun = new THREE.DirectionalLight(0xfff5e6, 2.0);
         this.sun.castShadow = true;
         this.sun.shadow.mapSize.set(1024, 1024);
+        this.sun.position.set(10, 20, 10);
         this.scene.add(this.sun);
 
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({ color: 0x4a6e52 }));
@@ -53,68 +43,85 @@ export class Engine {
         this.selected = null;
         this.idCounter = 1;
         this.onSceneChange = null;
+        this.score = 0;
 
         this.loadScene();
         this.resize();
         window.addEventListener('resize', () => this.resize());
     }
 
-    makeMaterial(matName, colorHex) {
-        const base = MATERIALS[matName] || MATERIALS.default;
-        const opts = { ...base };
-        if (colorHex !== undefined) opts.color = colorHex;
-        return new THREE.MeshStandardMaterial(opts);
-    }
-
-    addObject(type, opts = {}) {
+    addObject(type) {
         let obj = null;
-        if (type === 'cube') { obj = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), this.makeMaterial('default')); obj.position.y = 0.5; }
-        else if (type === 'sphere') { obj = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), this.makeMaterial('default')); obj.position.y = 0.5; }
-        else if (type === 'cylinder') { obj = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 1.2, 32), this.makeMaterial('default')); obj.position.y = 0.6; }
-        else if (type === 'light') { obj = new THREE.PointLight(0xffaa00, 10, 15); obj.position.set(0, 3, 0); }
+        const mat = new THREE.MeshStandardMaterial({ color: 0x00e5ff, roughness: 0.4 });
+
+        if (type === 'cube') { obj = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat); obj.position.y = 0.5; }
+        else if (type === 'sphere') { obj = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), mat); obj.position.y = 0.5; }
+        else if (type === 'cylinder') { obj = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 1.2, 32), mat); obj.position.y = 0.6; }
+        else if (type === 'cone') { obj = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.2, 32), mat); obj.position.y = 0.6; }
         else if (type === 'tree') {
             obj = new THREE.Group();
-            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.25, 1.5, 8), this.makeMaterial('wood'));
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.25, 1.5, 8), new THREE.MeshStandardMaterial({ color: 0x5c3a21 }));
             trunk.position.y = 0.75;
-            for (let i = 0; i < 3; i++) {
-                const leaves = new THREE.Mesh(new THREE.ConeGeometry(1.2 - (i * 0.3), 1.5, 8), this.makeMaterial('grass', 0x1e5631));
-                leaves.position.y = 1.5 + (i * 0.7);
-                obj.add(leaves);
-            }
-            obj.add(trunk);
+            const leaves = new THREE.Mesh(new THREE.ConeGeometry(1, 1.5, 8), new THREE.MeshStandardMaterial({ color: 0x2d5a27 }));
+            leaves.position.y = 1.8;
+            obj.add(trunk); obj.add(leaves);
         }
         else if (type === 'rock') {
-            obj = new THREE.Mesh(new THREE.DodecahedronGeometry(0.6, 1), this.makeMaterial('rock'));
+            obj = new THREE.Mesh(new THREE.DodecahedronGeometry(0.6, 1), new THREE.MeshStandardMaterial({ color: 0x666666 }));
             obj.position.y = 0.4;
+        }
+        else if (type === 'building') {
+            obj = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.BoxGeometry(3, 6, 3), new THREE.MeshStandardMaterial({ color: 0x888888 }));
+            body.position.y = 3;
+            obj.add(body);
+        }
+        else if (type === 'light') {
+            obj = new THREE.PointLight(0xffaa00, 10, 15); obj.position.set(0, 3, 0);
         }
         else if (type === 'character') {
             obj = new THREE.Group();
-            const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 0.9, 4, 8), this.makeMaterial('default'));
+            const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 0.9, 4, 8), new THREE.MeshStandardMaterial({ color: 0x00e5ff }));
             body.position.y = 0.75;
-            const head = new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 16), this.makeMaterial('default', 0xffddaa));
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffddaa }));
             head.position.y = 1.5;
             obj.add(body); obj.add(head);
-            obj.userData = { type: 'character', physics: { enabled: true } };
+            obj.userData.isCharacter = true;
         }
 
         if (!obj) return null;
-        if (obj.isMesh || obj.isGroup) obj.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
-
-        if (!obj.userData.type) {
-            obj.userData = { type: type, physics: { enabled: false, vy: 0, bounce: 0.5 } };
-        }
-
-        if (opts.position) obj.position.fromArray(opts.position);
+        
+        obj.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+        
+        obj.userData = {
+            id: 'obj_' + (this.idCounter++),
+            type: type,
+            physics: { enabled: false, vy: 0 }
+        };
 
         this.scene.add(obj);
         this.objects.push(obj);
+        this.selectObject(obj);
         if (this.onSceneChange) this.onSceneChange();
         return obj;
     }
 
-    selectObject(obj) { this.selected = obj; if (this.onSelect) this.onSelect(obj); }
+    selectObject(obj) {
+        this.selected = obj;
+        if (this.onSelect) this.onSelect(obj);
+    }
 
     update(dt) {
+        this.objects.forEach(o => {
+            if (o.userData.physics && o.userData.physics.enabled && !o.userData.isCharacter) {
+                o.userData.physics.vy -= 9.8 * dt;
+                o.position.y += o.userData.physics.vy * dt;
+                if (o.position.y <= 0) {
+                    o.position.y = 0;
+                    o.userData.physics.vy = 0;
+                }
+            }
+        });
         if (!document.body.classList.contains('play-mode')) this.controls.update();
     }
 
@@ -137,8 +144,7 @@ export class Engine {
         const raw = localStorage.getItem('kgtf_scene_final');
         if (raw) {
             try {
-                const data = JSON.parse(raw);
-                data.forEach(d => this.addObject(d.type, { position: d.position }));
+                JSON.parse(raw).forEach(d => this.addObject(d.type));
                 return;
             } catch (e) {}
         }
