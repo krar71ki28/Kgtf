@@ -1,81 +1,94 @@
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; font-family: 'Cairo', sans-serif; }
-body { background: #0a0a0f; color: #ccc; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+body { background: #121215; color: #d1d1d1; height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 
-/* الشريط العلوي - مصمم للموبايل */
-#header { height: 55px; background: #14141a; border-bottom: 1px solid #2a2a35; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; flex-shrink: 0; z-index: 1000; }
-.logo { display: none; } /* إخفاء اللوجو في الموبايل لتوفير مساحة */
-
-.header-tools { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 4px; }
-
-/* مجموعة الأزرار (Gizmo) */
-.gizmo-group { display: flex; gap: 2px; background: #1e1e24; padding: 2px; border-radius: 6px; border: 1px solid #2a2a35; }
-
-/* الأزرار */
-.icon-btn { background: #1e1e24; border: 1px solid #333; color: #aaa; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+#header { height: 45px; background: rgba(20,20,25,0.9); backdrop-filter: blur(10px); border-bottom: 1px solid #2d2d35; display: flex; justify-content: space-between; align-items: center; padding: 0 10px; flex-shrink: 0; z-index: 1000; }
+.logo { font-weight: 900; color: #00e5ff; font-size: 14px; letter-spacing: 1px; flex-shrink: 0; margin-left: 10px; }
+.logo span { color: #fff; font-weight: 400; }
+.header-tools { display: flex; align-items: center; gap: 5px; width: 100%; padding: 0 5px; overflow-x: auto; scrollbar-width: none; }
+.header-tools::-webkit-scrollbar { display: none; }
+.icon-btn { flex-shrink: 0; background: #22222a; border: 1px solid #333; color: #aaa; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+.icon-btn:hover { background: #333; color: #fff; }
 .icon-btn.active { background: #00e5ff; color: #000; border-color: #00e5ff; }
+.gizmo-group { display: flex; gap: 2px; background: #18181d; padding: 2px; border-radius: 6px; border: 1px solid #2d2d35; flex-shrink: 0; }
+.play-btn { flex-shrink: 0; background: #4ade80; color: #000; border: none; width: 34px; height: 34px; border-radius: 6px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-right: auto; box-shadow: 0 0 10px rgba(74,222,128,0.3); }
 
-/* زر التشغيل (أهم زر) */
-.play-btn { background: #4ade80; color: #000; border: none; width: 40px; height: 32px; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-
-/* زر الإضافة (+) */
-#btn-add-menu { color: #4ade80; font-size: 18px; font-weight: bold; }
-
-/* القائمة المنسدلة */
-.dropdown { position: relative; display: flex; }
-.dropdown-content { 
-    display: none; 
-    position: absolute; 
-    top: 38px; 
-    right: 0; 
-    background: #1e1e24; 
-    border: 1px solid #444; 
-    border-radius: 8px; 
-    min-width: 130px; 
-    z-index: 9999; /* تأكد أنها فوق كل شي */
-    box-shadow: 0 10px 30px rgba(0,0,0,0.9);
-}
+.dropdown { position: relative; flex-shrink: 0; }
+.dropdown-content { display: none; position: absolute; top: 40px; right: 0; background: #1e1e24; border: 1px solid #333; border-radius: 8px; min-width: 150px; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.8); max-height: 70vh; overflow-y: auto; }
 .dropdown-content.show { display: flex; flex-direction: column; }
-.dropdown-content button { background: transparent; border: none; color: #ccc; padding: 10px 15px; text-align: right; font-size: 13px; cursor: pointer; border-bottom: 1px solid #2a2a35; font-family: inherit; }
-.dropdown-content button:hover { background: #333; color: #fff; }
+.dropdown-content button { background: transparent; border: none; color: #ccc; padding: 12px 15px; text-align: right; font-size: 14px; cursor: pointer; border-bottom: 1px solid #2a2a35; white-space: nowrap; transition: 0.1s; }
+.dropdown-content button:last-child { border-bottom: none; }
+.dropdown-content button:hover { background: #2a2a35; color: #00e5ff; }
 
-/* مساحة العرض */
-#viewport-container { flex: 1; position: relative; background: #000; overflow: hidden; touch-action: none; }
+#viewport-container { flex: 1; position: relative; background: #000; overflow: hidden; touch-action: none; display: flex; flex-direction: column; min-height: 30vh; }
 #viewport { width: 100%; height: 100%; display: block; }
-#status-bar { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-family: monospace; color: #4ade80; border: 1px solid #333; z-index: 5; }
+#status-bar { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); padding: 4px 8px; border-radius: 4px; font-size: 10px; font-family: monospace; color: #4ade80; border: 1px solid rgba(255,255,255,0.1); z-index: 5; }
 
-/* اللوحة السفلية - أصغر للموبايل */
-#inspector-panel { flex: 0 0 35vh; background: #14141a; border-top: 1px solid #2a2a35; display: flex; flex-direction: column; z-index: 10; transition: height 0.3s; }
-#inspector-panel.collapsed { flex: 0 0 45px; height: 45px; }
+#inspector-panel { flex: 0 0 45vh; background: #16161c; border-top: 1px solid #2d2d35; display: flex; flex-direction: column; z-index: 10; transition: height 0.3s cubic-bezier(0.25,0.8,0.25,1); }
+#inspector-panel.collapsed { height: 45px !important; flex: 0 0 45px !important; }
 #inspector-panel.collapsed .panel-content-wrapper { display: none; }
-#panel-drag-handle { height: 12px; background: #1e1e24; cursor: ns-resize; display: flex; justify-content: center; align-items: center; }
-#panel-drag-handle::after { content: ''; width: 40px; height: 4px; background: #555; border-radius: 2px; }
-#panel-tabs { display: flex; background: #0a0a0f; border-bottom: 1px solid #2a2a35; }
-.tab-btn { flex: 1; background: transparent; border: none; border-bottom: 2px solid transparent; color: #777; padding: 10px 0; font-size: 12px; font-weight: bold; cursor: pointer; font-family: inherit; }
-.tab-btn.active { color: #00e5ff; border-bottom-color: #00e5ff; background: #14141a; }
+#panel-drag-handle { height: 12px; background: #1e1e24; border-bottom: 1px solid #2d2d35; cursor: ns-resize; display: flex; justify-content: center; align-items: center; }
+#panel-drag-handle::after { content: ''; width: 40px; height: 4px; background: #444; border-radius: 2px; }
+
+#panel-tabs { display: flex; background: #121215; border-bottom: 1px solid #2d2d35; overflow-x: auto; }
+.tab-btn { flex: 1; background: transparent; border: none; border-bottom: 2px solid transparent; color: #888; padding: 10px 0; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; white-space: nowrap; padding: 10px 15px; }
+.tab-btn.active { color: #00e5ff; border-bottom-color: #00e5ff; background: #16161c; }
 .panel-content-wrapper { flex: 1; position: relative; overflow: hidden; }
 .tab-pane { display: none !important; height: 100%; flex-direction: column; position: absolute; top: 0; left: 0; width: 100%; }
 .tab-pane.active { display: flex !important; }
 .panel-section { display: flex; flex-direction: column; height: 100%; }
-.panel-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #0a0a0f; border-bottom: 1px solid #2a2a35; }
-.panel-title { font-size: 10px; color: #888; font-weight: 900; }
-.btn-small { background: #2a2a35; border: 1px solid #444; padding: 4px 8px; border-radius: 3px; font-size: 10px; cursor: pointer; color: #fff; font-family: inherit; }
+.panel-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #121215; border-bottom: 1px solid #2d2d35; }
+.panel-title { font-size: 11px; color: #888; font-weight: 900; letter-spacing: 1px; }
+.btn-small { background: #2a2a35; border: 1px solid #3c3c45; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; color: #ddd; }
 
-#object-list { padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
-.obj-item { background: #1e1e24; padding: 8px 12px; border-radius: 4px; font-size: 12px; color: #aaa; cursor: pointer; border: 1px solid #2a2a35; }
+#object-list { display: flex; flex-wrap: wrap; gap: 5px; padding: 10px; overflow-y: auto; align-content: flex-start; }
+.obj-item { background: #2a2a35; padding: 6px 12px; border-radius: 4px; font-size: 12px; color: #ccc; cursor: pointer; border: 1px solid transparent; }
 .obj-item.selected { border-color: #00e5ff; color: #00e5ff; background: rgba(0,229,255,0.1); }
-.prop-group { margin-bottom: 15px; }
-.prop-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 10px; }
-.prop-row label { font-size: 11px; color: #aaa; width: 50px; flex-shrink: 0; }
-.prop-row input[type="range"] { flex: 1; accent-color: #00e5ff; }
-.prop-row input[type="color"] { width: 30px; height: 30px; border: none; background: none; cursor: pointer; }
 
-/* واجهة اللعب */
+.asset-card { background: #22222a; border: 1px solid #333; border-radius: 8px; padding: 10px; text-align: center; cursor: pointer; transition: 0.2s; }
+.asset-card:hover { border-color: #ffaa00; background: #2a2a35; }
+.asset-icon { font-size: 24px; margin-bottom: 5px; }
+.asset-name { font-size: 11px; color: #ccc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+#inspector { padding: 15px; overflow-y: auto; }
+.prop-group { margin-bottom: 15px; border-bottom: 1px solid #2d2d35; padding-bottom: 10px; }
+.prop-title { font-size: 10px; color: #888; font-weight: 900; margin-bottom: 8px; letter-spacing: 1px; }
+.prop-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 10px; }
+.prop-row label { font-size: 12px; color: #bbb; width: 60px; flex-shrink: 0; }
+.prop-row input[type="range"] { flex: 1; accent-color: #00e5ff; height: 4px; }
+.prop-row select { flex: 1; background: #121215; border: 1px solid #333; color: #fff; padding: 6px; border-radius: 4px; font-size: 12px; }
+
+#floating-controls { position: absolute; top: 15px; left: 15px; z-index: 50; display: none; flex-direction: column; gap: 8px; }
+.fab { background: rgba(34,34,42,0.9); backdrop-filter: blur(10px); border: 1px solid #333; color: #fff; padding: 10px 14px; border-radius: 8px; font-family: 'Cairo', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.5); transition: 0.15s; }
+.fab:active { transform: scale(0.95); }
+.fab-green { background: #4ade80; color: #000; border-color: #4ade80; box-shadow: 0 4px 15px rgba(74,222,128,0.4); }
+
 #play-ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; pointer-events: none; }
 #play-ui > * { pointer-events: auto; }
-#exit-play { position: absolute; top: 15px; left: 15px; background: rgba(255, 85, 119, 0.9); color: #fff; border: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; font-family: inherit; }
-#joystick-zone { position: absolute; bottom: 30px; left: 30px; width: 120px; height: 120px; touch-action: none; }
-#joystick-base { width: 100%; height: 100%; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.2); border-radius: 50%; position: relative; }
-#joystick-knob { width: 50px; height: 50px; background: #00e5ff; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px rgba(0,229,255,0.5); }
-#btn-jump { position: absolute; bottom: 40px; right: 30px; width: 70px; height: 70px; border-radius: 50%; background: rgba(74,222,128,0.2); border: 2px solid #4ade80; color: #fff; font-weight: bold; display: flex; align-items: center; justify-content: center; font-size: 12px; font-family: inherit; }
 
-body.play-mode #header, body.play-mode #inspector-panel { display: none !important; }
+#exit-play { position: absolute; top: 20px; left: 20px; background: rgba(20,20,30,0.7); backdrop-filter: blur(10px); color: #fff; border: 1px solid rgba(255,85,119,0.5); padding: 8px 16px; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); transition: 0.2s; }
+#exit-play:active { background: rgba(255,85,119,0.8); }
+#exit-play span { font-size: 16px; color: #ff5577; }
+
+#joystick-zone { position: absolute; bottom: 40px; left: 40px; width: 130px; height: 130px; touch-action: none; }
+#joystick-base { width: 100%; height: 100%; background: rgba(255,255,255,0.05); backdrop-filter: blur(5px); border: 2px solid rgba(255,255,255,0.2); border-radius: 50%; position: relative; box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 4px 15px rgba(0,0,0,0.5); }
+#joystick-knob { width: 55px; height: 55px; background: linear-gradient(135deg, #00e5ff, #0088cc); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px rgba(0,229,255,0.5), inset 0 0 10px rgba(255,255,255,0.5); }
+
+#btn-jump { position: absolute; bottom: 50px; right: 40px; width: 80px; height: 80px; border-radius: 50%; background: rgba(74,222,128,0.1); backdrop-filter: blur(5px); border: 2px solid rgba(74,222,128,0.6); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #4ade80; cursor: pointer; box-shadow: inset 0 0 15px rgba(74,222,128,0.2), 0 4px 15px rgba(0,0,0,0.5); transition: 0.1s; }
+#btn-jump:active { transform: scale(0.95); background: rgba(74,222,128,0.3); }
+#btn-jump .jump-icon { font-size: 24px; font-weight: bold; margin-bottom: -5px; }
+#btn-jump .jump-text { font-size: 12px; font-weight: bold; font-family: 'Cairo', sans-serif; }
+
+#score-display { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); padding: 6px 20px; border-radius: 20px; border: 1px solid #ffaa00; color: #ffaa00; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+
+body.play-mode #header,
+body.play-mode #inspector-panel,
+body.play-mode #floating-controls,
+body.play-mode #status-bar { display: none !important; }
+
+@media (max-width: 768px) {
+    #inspector-panel { flex: 0 0 48vh; }
+    #joystick-zone { bottom: 30px; left: 30px; width: 110px; height: 110px; }
+    #joystick-knob { width: 45px; height: 45px; }
+    #btn-jump { bottom: 40px; right: 30px; width: 70px; height: 70px; }
+    #floating-controls { display: flex; }
+}
