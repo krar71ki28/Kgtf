@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>KGTF ENGINE</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=8.0.0">
+<link rel="stylesheet" href="style.css?v=9.0.0">
 </head>
 <body>
     <header id="header">
@@ -31,7 +31,6 @@
                 </div>
             </div>
 
-            <!-- زر رفع المجسمات الجديد -->
             <button class="icon-btn" id="btn-upload-glb" title="رفع مجسم 3D" style="color:#00e5ff;">📁</button>
             <input type="file" id="file-upload-glb" accept=".glb,.gltf" style="display:none;">
 
@@ -115,11 +114,16 @@
                 </div>
             </div>
 
+            <!-- تبويب World المحدث -->
             <div class="panel-section tab-pane" id="tab-world">
                 <div class="panel-header"><span class="panel-title">WORLD</span></div>
                 <div style="padding:10px;">
+                    <div class="prop-row" style="margin-bottom:10px;">
+                        <label style="width:80px; font-weight:bold; color:#ffaa00;">وقت اليوم</label>
+                        <input type="range" id="env-time-of-day" min="0" max="24" step="0.1" value="12" style="flex:1; accent-color:#ffaa00;">
+                    </div>
+                    <div class="prop-row" style="margin-bottom:10px;"><label style="width:80px;">المطر</label><input type="checkbox" id="env-rain-toggle"></div>
                     <div class="prop-row" style="margin-bottom:10px;"><label style="width:80px;">الوضع الليلي</label><input type="checkbox" id="env-night-mode"></div>
-                    <div class="prop-row"><label style="width:80px;">المطر</label><input type="checkbox" id="env-rain-toggle"></div>
                 </div>
             </div>
 
@@ -168,6 +172,6 @@
     <script type="importmap">
     { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
-    <script type="module" src="src/main.js?v=8.0.0"></script>
+    <script type="module" src="src/main.js?v=9.0.0"></script>
 </body>
 </html>

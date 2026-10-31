@@ -75,7 +75,6 @@ export class Editor {
             });
         });
 
-        // ✅ ربط زر رفع مجسمات GLB
         const btnUploadGlb = document.getElementById('btn-upload-glb');
         const fileUploadGlb = document.getElementById('file-upload-glb');
         if (btnUploadGlb && fileUploadGlb) {
@@ -114,10 +113,19 @@ export class Editor {
         const gS = document.getElementById('btn-gizmo-scale');
         if(gS) gS.addEventListener('click', () => this.engine.transform.setMode('scale'));
 
-        const nightEl = document.getElementById('env-night-mode');
-        if(nightEl) nightEl.addEventListener('change', (e) => this.engine.toggleNightMode(e.target.checked));
+        // ربط شريط وقت اليوم
+        const timeSlider = document.getElementById('env-time-of-day');
+        if(timeSlider) {
+            timeSlider.addEventListener('input', (e) => {
+                this.engine.updateSun(parseFloat(e.target.value));
+            });
+        }
+
         const rainEl = document.getElementById('env-rain-toggle');
         if(rainEl) rainEl.addEventListener('change', (e) => this.engine.toggleRain(e.target.checked));
+
+        const nightEl = document.getElementById('env-night-mode');
+        if(nightEl) nightEl.addEventListener('change', (e) => this.engine.toggleNightMode(e.target.checked));
 
         const btnAddText = document.getElementById('btn-add-text');
         if(btnAddText) btnAddText.addEventListener('click', () => {
