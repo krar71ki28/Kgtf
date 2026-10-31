@@ -1,18 +1,19 @@
-import { Engine } from './Engine.js?v=999';
-import { Editor } from './Editor.js?v=999';
-import { Player } from './Player.js?v=999';
+import { Engine } from './Engine.js?v=1000';
+import { Editor } from './Editor.js?v=1000';
+import { Player } from './Player.js?v=1000';
 
-// لو صار أي خطأ، راح تطلع رسالة تنبهنا
+// نظام صيد الأخطاء: إذا صار خطأ، راح يطلع تنبيه بيه تفاصيل المشكلة
 window.addEventListener('error', (e) => {
-    console.error('Global Error:', e.error);
-    // alert('حدث خطأ: ' + e.message); // يفضل تشغيلها للتأكد
+    console.error('Runtime Error:', e.error);
+    alert('خطأ برمجي: ' + (e.message || e.error?.message || 'Unknown'));
 });
 
 const canvas = document.getElementById('viewport');
-if (!canvas) { throw new Error('Canvas not found!'); }
+if (!canvas) throw new Error('Canvas not found!');
 
 const engine = new Engine(canvas);
 window.engine = engine;
+
 const editor = new Editor(engine);
 const player = new Player(engine);
 window.editor = editor;
@@ -26,13 +27,15 @@ function animate(now) {
     requestAnimationFrame(animate);
     const dt = Math.min((now - lastTime) / 1000, 0.1);
     lastTime = now;
+    
     try {
         engine.update(dt);
         player.update(dt);
         engine.render();
-    } catch (e) {
-        console.error('Frame error:', e);
+    } catch (err) {
+        console.error('Render Loop Error:', err);
     }
+
     if (fpsEl) {
         fpsAcc += dt; frames++;
         if (fpsAcc >= 0.5) {

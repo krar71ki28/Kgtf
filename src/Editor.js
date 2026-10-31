@@ -10,7 +10,10 @@ export class Editor {
 
         this.gizmo = new TransformControls(this.engine.editorCamera, this.engine.renderer.domElement);
         this.gizmo.setSize(0.8);
-        this.engine.scene.add(this.gizmo);
+        
+        // ✅ التعديل الحاسم: في three.js r160 يجب إضافة getHelper() وليس الأداة نفسها
+        this.engine.scene.add(this.gizmo.getHelper());
+
         this.gizmo.addEventListener('dragging-changed', (e) => {
             this.engine.controls.enabled = !e.value;
             this.isDraggingGizmo = e.value;
@@ -30,7 +33,7 @@ export class Editor {
 
     setupTabs() {
         document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('pointerdown', () => { // استخدام pointerdown بدل click
+            btn.addEventListener('pointerdown', () => {
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                 document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
                 btn.classList.add('active');
@@ -53,7 +56,6 @@ export class Editor {
                 -((e.clientY - rect.top) / rect.height) * 2 + 1
             );
             this.raycaster.setFromCamera(mouse, this.engine.editorCamera);
-            this.raycaster.far = 1000;
             const hits = this.raycaster.intersectObjects(this.engine.objects, true);
             if (hits.length > 0) {
                 let root = hits[0].object;
@@ -67,22 +69,11 @@ export class Editor {
     bindButtons() {
         const addMenu = document.getElementById('add-menu');
         const btnAddMenu = document.getElementById('btn-add-menu');
-        
-        // استخدام pointerdown لفتح القائمة
-        if (btnAddMenu) {
-            btnAddMenu.onpointerdown = (e) => { 
-                e.stopPropagation(); 
-                addMenu?.classList.toggle('show'); 
-            };
-        }
-        
+        if (btnAddMenu) btnAddMenu.onpointerdown = (e) => { e.stopPropagation(); addMenu?.classList.toggle('show'); };
         document.addEventListener('pointerdown', (e) => {
-            if (addMenu && !addMenu.contains(e.target) && e.target.id !== 'btn-add-menu') {
-                addMenu.classList.remove('show');
-            }
+            if (addMenu && !addMenu.contains(e.target) && e.target.id !== 'btn-add-menu') addMenu.classList.remove('show');
         });
 
-        // أنواع المجسمات.. نستخدم pointerdown لتشتغل فوراً بدون تأخير
         ['cube','sphere','cylinder','cone','torus','tree','bush','mountain','building','rock','light','character','camera'].forEach(t => {
             const el = document.getElementById(`btn-${t}`);
             if (!el) return;
