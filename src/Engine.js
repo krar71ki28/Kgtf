@@ -10,12 +10,12 @@ import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 
-import { VFXManager } from './VFX.js?v=24.0.0';
-import { Physics } from './Physics.js?v=24.0.0';
-import { LogicManager } from './Logic.js?v=24.0.0';
-import { UIManager } from './UI.js?v=24.0.0';
-import { AssetManager } from './AssetManager.js?v=24.0.0';
-import { KGTFNode } from './KGTFNode.js?v=24.0.0';
+import { VFXManager } from './VFX.js?v=25.0.0';
+import { Physics } from './Physics.js?v=25.0.0';
+import { LogicManager } from './Logic.js?v=25.0.0';
+import { UIManager } from './UI.js?v=25.0.0';
+import { AssetManager } from './AssetManager.js?v=25.0.0';
+import { KGTFNode } from './KGTFNode.js?v=25.0.0';
 
 export class Engine {
     constructor(canvas) {
@@ -233,6 +233,8 @@ export class Engine {
         group.traverse(c => { if (c.isMesh) { c.castShadow = false; c.receiveShadow = false; } });
         this.scene.add(group);
         this.objects.push(group);
+            this.physics.addNode(group);
+        this.physics.addNode(group);
         if (select) this.selectObject(group);
         if (this.onSceneChangeCallback) this.onSceneChangeCallback();
         return group;
@@ -259,6 +261,8 @@ export class Engine {
             }
             this.scene.add(group);
             this.objects.push(group);
+            this.physics.addNode(group);
+        this.physics.addNode(group);
             this.selectObject(group);
             if (this.onSceneChangeCallback) this.onSceneChangeCallback();
         }, undefined, (err) => { alert('فشل رفع الملف: ' + err.message); });
@@ -274,6 +278,7 @@ export class Engine {
                 else c.material.dispose();
             }
         });
+        this.physics.removeNode(obj);
         this.objects = this.objects.filter(o => o !== obj);
         this.selectObject(null);
         if (this.onSceneChangeCallback) this.onSceneChangeCallback();
@@ -325,7 +330,7 @@ export class Engine {
     update(dt) {
         if (!document.body.classList.contains('play-mode')) {
             this.orbit.update();
-            this.physics.updateGravity(dt);
+            this.physics.update(dt);
         } else {
             this.objects.forEach(obj => {
                 if (obj.userData.logic) {

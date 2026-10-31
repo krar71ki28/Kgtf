@@ -21,7 +21,8 @@ export class LogicManager {
             else if (action === 'spawnCube') {
                 // ✅ استخدام setTimeout عشان ما ينهار المحرك أثناء التوليد
                 setTimeout(() => {
-                    const newObj = this.engine.createObject('cube', false);
+                    const newObj = this.engine.createObject("cube", false);
+                        if(newObj.userData.physics) newObj.userData.physics.enabled = true;
                     if (newObj) {
                         newObj.position.set((Math.random()-0.5)*6, 3, (Math.random()-0.5)*6);
                         newObj.traverse(c => { if(c.isMesh && c.material) c.material = this.engine.getMaterial('gold', 0xffaa00); });
