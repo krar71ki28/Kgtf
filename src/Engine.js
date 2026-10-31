@@ -11,11 +11,11 @@ import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 
-import { VFXManager } from './VFX.js?v=11.0.0';
-import { Physics } from './Physics.js?v=11.0.0';
-import { LogicManager } from './Logic.js?v=11.0.0';
-import { UIManager } from './UI.js?v=11.0.0';
-import { AssetManager } from './AssetManager.js?v=11.0.0';
+import { VFXManager } from './VFX.js?v=12.0.0';
+import { Physics } from './Physics.js?v=12.0.0';
+import { LogicManager } from './Logic.js?v=12.0.0';
+import { UIManager } from './UI.js?v=12.0.0';
+import { AssetManager } from './AssetManager.js?v=12.0.0';
 
 export class Engine {
     constructor(canvas) {
@@ -28,7 +28,10 @@ export class Engine {
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 0.5; // تعرض متوسط للنهار
+        
+        // ✅ تقليل التعرض للضوء جداً عشان ما تحترق الشاشة
+        this.renderer.toneMappingExposure = 0.15; 
+        
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
@@ -41,11 +44,12 @@ export class Engine {
         this.sky.scale.setScalar(450000); 
         this.scene.add(this.sky);
         
+        // ✅ ضبط معاملات السماء لتبدو زرقاء وواقعية
         this.skyParams = {
-            turbidity: 8,       // غيوم خفيفة
-            rayleigh: 2,        // تشتت الضوء
+            turbidity: 2,       // هواء صافي
+            rayleigh: 1,        // زرقة السماء
             mieCoefficient: 0.005,
-            mieDirectionalG: 0.8,
+            mieDirectionalG: 0.7,
             elevation: 45, 
             azimuth: 180 
         };
@@ -53,15 +57,13 @@ export class Engine {
         this.composer = new EffectComposer(this.renderer);
         this.composer.addPass(new RenderPass(this.scene, this.camera));
         
-        // ✅ إعدادات التوهج السينمائية (UnrealBloom)
-        // strength = 0.3 (خفيف)، radius = 0.4، threshold = 0.9 (بس يشتغل على الإضاءة القوية)
+        // ✅ ضبط التوهج: Threshold = 1.0 يعني لا يشتغل إلا على الإضاءة القوية جداً
         this.bloomPass = new UnrealBloomPass(
             new THREE.Vector2(window.innerWidth, window.innerHeight),
-            0.3, 0.4, 0.9 
+            0.2, 0.4, 1.0 
         );
         this.composer.addPass(this.bloomPass);
 
-        // تحديد المجسمات
         this.outlinePass = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), this.scene, this.camera);
         this.outlinePass.edgeStrength = 3.0;
         this.outlinePass.visibleEdgeColor.set('#ffaa00');
@@ -72,12 +74,12 @@ export class Engine {
         this.composer.addPass(smaaPass);
         this.composer.addPass(new OutputPass());
 
-        // إضاءة محيطة (Hemisphere)
-        this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+        // إضاءة محيطة منخفضة جداً
+        this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.2);
         this.scene.add(this.hemiLight);
 
         // ضوء الشمس
-        this.sun = new THREE.DirectionalLight(0xfff5e6, 1.5);
+        this.sun = new THREE.DirectionalLight(0xfff5e6, 1.0);
         this.sun.castShadow = true;
         this.sun.shadow.mapSize.width = 2048;
         this.sun.shadow.mapSize.height = 2048;
@@ -129,11 +131,10 @@ export class Engine {
         window.addEventListener('resize', () => this.resize());
         this.resize();
         
-        // الوقت الافتراضي 2:00 PM
         this.updateSun(14);
     }
 
-    // دالة تحديث الشمس والسماء بناءً على الوقت
+    // ✅ تحديث موقع الشمس ولونها (بدون تغيير الشدة عشان ما يتعارض مع الشريط)
     updateSun(timeOfDay) {
         const angle = (timeOfDay / 24) * 360 - 90; 
         const phi = THREE.MathUtils.degToRad(90 - angle);
@@ -152,32 +153,29 @@ export class Engine {
         this.sun.target.position.set(0, 0, 0);
         this.sun.target.updateMatrixWorld();
 
-        // تغيير لون الشمس بناءً على الوقت (غروب = برتقالي)
+        // تغيير لون الشمس فقط
         if (timeOfDay < 6 || timeOfDay > 18) {
-            this.sun.color.setHex(0xffaa00); // غروب / ليل
-            this.hemiLight.intensity = 0.1;
-            this.renderer.toneMappingExposure = 0.2;
+            this.sun.color.setHex(0xff6600); // غروب برتقالي
         } else if (timeOfDay < 8 || timeOfDay > 16) {
-            this.sun.color.setHex(0xffcc88); // ذهبي
-            this.hemiLight.intensity = 0.4;
-            this.renderer.toneMappingExposure = 0.4;
+            this.sun.color.setHex(0xffaa00); // ذهبي
         } else {
-            this.sun.color.setHex(0xffffff); // نهار
-            this.hemiLight.intensity = 0.6;
-            this.renderer.toneMappingExposure = 0.6;
+            this.sun.color.setHex(0xffffff); // أبيض
         }
     }
 
+    // ✅ دالة التحكم بشدة الشمس (تشتغل مع الشريط)
     setSunIntensity(intensity) {
         this.sun.intensity = intensity;
+        // نرفع شدة الإضاءة المحيطة قليلاً لما تزيد الشمس عشان ما تصير الظلال سودة فاضية
+        this.hemiLight.intensity = intensity * 0.3;
     }
 
+    // ✅ دالة التحكم بالتوهج (تشتغل مع الشريط)
     setBloomIntensity(intensity) {
         this.bloomPass.strength = intensity;
     }
 
     setupGround() {
-        // أرضية خضراء داكنة لتباين مع السماء
         const groundMat = new THREE.MeshStandardMaterial({ color: 0x2e4a35, roughness: 0.9, metalness: 0.1 });
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), groundMat);
         ground.rotation.x = -Math.PI / 2;
@@ -214,7 +212,7 @@ export class Engine {
     }
 
     getMaterial(type, colorHex) {
-        let params = { color: colorHex, envMapIntensity: 1.0 }; // تقليل انعكاس البيئة
+        let params = { color: colorHex, envMapIntensity: 1.0 };
         if (type === 'metal') params = { color: colorHex, roughness: 0.2, metalness: 0.8, envMapIntensity: 1.5 };
         else if (type === 'wood') params = { color: colorHex, roughness: 0.9, metalness: 0.0, envMapIntensity: 0.5 };
         else if (type === 'glass') params = { color: colorHex, roughness: 0.05, metalness: 0.0, transparent: true, opacity: 0.4, envMapIntensity: 2.0 };
