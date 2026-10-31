@@ -86,6 +86,18 @@ export class Player {
         this.jumpSfx.play().catch(e => console.log("Audio error:", e));
     }
 
+    playAnimation(name) {
+        if (!this.playerModel || !this.playerModel.userData.actions) return;
+        const actions = this.playerModel.userData.actions;
+        if (actions[name] && this.playerModel.userData.currentAction !== name) {
+            if (this.playerModel.userData.currentAction && actions[this.playerModel.userData.currentAction]) {
+                actions[this.playerModel.userData.currentAction].fadeOut(0.2);
+            }
+            actions[name].reset().fadeIn(0.2).play();
+            this.playerModel.userData.currentAction = name;
+        }
+    }
+
     startPlay() {
         const playerObj = this.engine.objects.find(o => o.userData.type === 'character');
         if (!playerObj) { alert('أضف شخصية أولاً لتتمكن من اللعب!'); return; }
@@ -112,7 +124,6 @@ export class Player {
         this.engine.camera.position.set(8, 6, 10);
         this.engine.controls.target.set(0, 2, 0);
         this.engine.resize();
-        
         this.bgm.pause();
     }
 
@@ -191,21 +202,18 @@ export class Player {
         }
 
         const isMoving = this.currentVelocity.lengthSq() > 1;
-        const actions = this.playerModel.userData.actions;
-        if (actions && actions['Walking'] && actions['Idle']) {
-            if (isMoving && this.playerModel.userData.currentAction !== 'Walking') {
-                actions['Idle'].fadeOut(0.2); actions['Walking'].reset().fadeIn(0.2).play(); this.playerModel.userData.currentAction = 'Walking';
-            } else if (!isMoving && this.playerModel.userData.currentAction !== 'Idle') {
-                actions['Walking'].fadeOut(0.2); actions['Idle'].reset().fadeIn(0.2).play(); this.playerModel.userData.currentAction = 'Idle';
-            }
+        // تشغيل الأنميشن بناءً على الحركة
+        if (isMoving) {
+            this.playAnimation('Walk'); // أو 'Run' إذا كانت موجودة
+        } else {
+            this.playAnimation('Idle');
         }
 
-        // فيزياء الهبوط والقفز فوق المنصات
+        // فيزياء الهبوط
         this.velocityY -= 24 * dt;
         const prevY = this.playerModel.position.y;
         let nextY = prevY + this.velocityY * dt;
         let supportY = 0;
-        let hitJumpPad = false;
 
         const colliders = this.engine.objects.filter(o => o !== this.playerModel && o.userData.type !== 'character' && o.userData.type !== 'light');
 
@@ -219,15 +227,13 @@ export class Player {
 
             if (inXZ && prevY >= box.max.y - 0.22 && nextY <= box.max.y) {
                 supportY = Math.max(supportY, box.max.y);
-                if (obj.userData.type === 'jumppad') hitJumpPad = true;
             }
         }
 
         if (nextY <= supportY) {
             nextY = supportY;
-            this.velocityY = hitJumpPad ? 16 : 0;
-            this.isGrounded = !hitJumpPad;
-            if (hitJumpPad) this.playJumpSound();
+            this.velocityY = 0;
+            this.isGrounded = true;
         } else {
             this.isGrounded = false;
         }

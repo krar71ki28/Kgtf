@@ -203,7 +203,11 @@ export class Engine {
             model.scale.set(1, 1, 1);
             model.traverse(o => { if(o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
             
-            model.userData = { id: 'char_' + (this.idCounter++), type: 'character', material: 'custom', physics: { enabled: false, vy: 0, bounce: 0 }, behaviors: {}, behaviorStates: {} };
+            const mixer = new THREE.AnimationMixer(model);
+            const actions = {};
+            gltf.animations.forEach(clip => { actions[clip.name] = mixer.clipAction(clip); });
+
+            model.userData = { id: 'char_' + (this.idCounter++), type: 'character', mixer, actions, currentAction: null, material: 'custom', physics: { enabled: false, vy: 0, bounce: 0 }, behaviors: {}, behaviorStates: {} };
 
             const oldChar = this.objects.find(o => o.userData.type === 'character');
             if (oldChar) this.removeObject(oldChar);
@@ -333,7 +337,6 @@ export class Engine {
     loadCharacter(opts = {}) {
         const currentVersion = this.sceneVersion;
         const loader = new GLTFLoader();
-        // هنا نغير المسار عشان يقرأ الشخصية من مجلد models
         loader.load('./models/character.glb', (gltf) => {
             if (this.sceneVersion !== currentVersion) return;
             const model = gltf.scene;
@@ -345,19 +348,12 @@ export class Engine {
             const mixer = new THREE.AnimationMixer(model);
             const actions = {};
             gltf.animations.forEach(clip => { actions[clip.name] = mixer.clipAction(clip); });
-            if (actions['Idle']) actions['Idle'].play();
             
-            model.userData = { id: 'char_' + (this.idCounter++), type: 'character', mixer, actions, currentAction: 'Idle', material: 'custom', physics: { enabled: false, vy: 0, bounce: 0 }, behaviors: {}, behaviorStates: {} };
+            model.userData = { id: 'char_' + (this.idCounter++), type: 'character', mixer, actions, currentAction: null, material: 'custom', physics: { enabled: false, vy: 0, bounce: 0 }, behaviors: {}, behaviorStates: {} };
             this.scene.add(model); this.objects.push(model);
             if (!opts.isLoading) { this.selectObject(model); if (this.onSceneChange) this.onSceneChange(); }
         }, undefined, (err) => { 
-            console.warn('تعذر تحميل شخصية السيرفر، سيتم استخدام الروبوت الافتراضي.');
-            // في حال ما لقى الملف، يحمل الروبوت الافتراضي عشان ما تطلع شاشة سوداء
-            loader.load('https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb', (gltf) => {
-                const model = gltf.scene; model.scale.set(0.7, 0.7, 0.7);
-                model.userData = { id: 'char_' + (this.idCounter++), type: 'character', material: 'n/a', physics: { enabled: false }, behaviors: {}, behaviorStates: {} };
-                this.scene.add(model); this.objects.push(model);
-            });
+            console.warn('تعذر تحميل شخصية السيرفر.');
         });
     }
 
@@ -409,7 +405,7 @@ export class Engine {
 
     loadScene() {
         const saved = localStorage.getItem('kgtf_scene_final');
-        if (!saved) { this.addObject('cube'); this.loadCharacter(); return; } // يحمل الشخصية الافتراضية
+        if (!saved) { this.addObject('cube'); this.loadCharacter(); return; }
         try { const data = JSON.parse(saved); this.loadSceneData(data); } catch(e) { this.addObject('cube'); this.loadCharacter(); }
     }
 
