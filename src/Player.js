@@ -7,7 +7,7 @@ export class Player {
         this.velocityY = 0;
         this.isGrounded = true;
         this.keys = {};
-        this.playerBoxSize = new THREE.Vector3(0.6, 1.5, 0.6); // حجم صندوق الاصطدام
+        this.playerBoxSize = new THREE.Vector3(0.6, 1.5, 0.6);
         this.setupControls();
     }
 
@@ -51,6 +51,9 @@ export class Player {
         this.engine.selectObject(null); 
         this.engine.orbit.enabled = false;
         this.engine.camera.position.set(this.playerModel.position.x, this.playerModel.position.y + 3, this.playerModel.position.z - 5);
+        
+        // ✅ تشغيل منطق البداية
+        this.engine.startGameLogic();
     }
 
     stopPlay() {
@@ -85,7 +88,6 @@ export class Player {
         if (isMoving) {
             const len = Math.sqrt(moveX*moveX + moveZ*moveZ);
             
-            // --- فحص الاصطدام قبل الحركة ---
             const nextPos = this.playerModel.position.clone();
             nextPos.x += (moveX/len) * speed * dt;
             nextPos.z += (moveZ/len) * speed * dt;
@@ -105,6 +107,20 @@ export class Player {
         this.engine.camera.position.lerp(camTarget, 5 * dt);
         this.engine.camera.lookAt(this.playerModel.position.x, this.playerModel.position.y + 1, this.playerModel.position.z);
 
+        // ✅ فحص الاصطدام بالأشياء اللي فيها Logic
+        const pBox = new THREE.Box3().setFromCenterAndSize(
+            this.playerModel.position.clone().add(new THREE.Vector3(0, 0.75, 0)), 
+            this.playerBoxSize
+        );
+        this.engine.objects.forEach(obj => {
+            if (obj === this.playerModel || !obj.userData.logic || obj.userData.logic.length === 0) return;
+            const oBox = new THREE.Box3().setFromObject(obj);
+            if (pBox.intersectsBox(oBox)) {
+                this.engine.logic.triggerEvent(obj, 'onCollide');
+            }
+        });
+
+        // الأنميشن
         if (this.playerModel.userData.actions) {
             const actions = this.playerModel.userData.actions; let targetActionName = null;
             if (!this.isGrounded) targetActionName = Object.keys(actions).find(k => k.toLowerCase().includes('jump') || k.toLowerCase().includes('fall'));

@@ -18,6 +18,7 @@ export class Editor {
                     if(obj) {
                         obj.position.fromArray(d.pos);
                         obj.traverse(c => { if(c.isMesh && c.material && c.material.color) c.material.color.set(d.color); });
+                        if(d.logic) obj.userData.logic = d.logic;
                     }
                 });
                 engine.selectObject(null);
@@ -56,11 +57,30 @@ export class Editor {
         document.getElementById('env-night-mode').addEventListener('change', (e) => this.engine.toggleNightMode(e.target.checked));
         document.getElementById('env-rain-toggle').addEventListener('change', (e) => this.engine.toggleRain(e.target.checked));
 
+        // UI Editor
+        document.getElementById('btn-add-text').addEventListener('pointerdown', () => {
+            const text = document.getElementById('ui-text-input').value;
+            this.engine.ui.addText(text);
+            document.getElementById('ui-text-input').value = '';
+        });
+        document.getElementById('btn-clear-ui').addEventListener('pointerdown', () => this.engine.ui.clearUI());
+
+        // Logic Editor
+        document.getElementById('btn-add-logic').addEventListener('pointerdown', () => {
+            if (!this.engine.selectedObj) return;
+            const ev = document.getElementById('logic-event').value;
+            const ac = document.getElementById('logic-action').value;
+            
+            if (!this.engine.selectedObj.userData.logic) this.engine.selectedObj.userData.logic = [];
+            this.engine.selectedObj.userData.logic.push({ event: ev, action: ac });
+            this.renderLogicList();
+        });
+
         document.getElementById('btn-save').addEventListener('pointerdown', () => {
             const data = this.engine.objects.map(o => {
                 let color = '#00e5ff';
                 o.traverse(c => { if(c.isMesh && c.material && c.material.color) color = '#' + c.material.color.getHexString(); });
-                return { type: o.userData.type, pos: o.position.toArray(), color: color };
+                return { type: o.userData.type, pos: o.position.toArray(), color: color, logic: o.userData.logic };
             });
             localStorage.setItem('kgtf_scene_modular', JSON.stringify(data));
             alert('تم الحفظ!');
@@ -79,7 +99,6 @@ export class Editor {
             if(this.engine.selectedObj) this.engine.selectedObj.traverse(c => { if(c.isMesh && c.material && c.material.color) c.material.color.set(e.target.value); });
         });
 
-        // ✅ ربط تفعيل الفيزياء
         document.getElementById('prop-physics').addEventListener('change', (e) => {
             if(this.engine.selectedObj && this.engine.selectedObj.userData.physics) {
                 this.engine.selectedObj.userData.physics.enabled = e.target.checked;
@@ -117,11 +136,38 @@ export class Editor {
         });
     }
 
+    renderLogicList() {
+        const list = document.getElementById('active-logic-list');
+        list.innerHTML = '';
+        if (!this.engine.selectedObj || !this.engine.selectedObj.userData.logic) return;
+        
+        this.engine.selectedObj.userData.logic.forEach((l, index) => {
+            const div = document.createElement('div');
+            div.className = 'logic-item';
+            div.innerHTML = `<span>${l.event} ➔ ${l.action}</span> <button data-index="${index}">✕</button>`;
+            div.querySelector('button').onclick = (e) => {
+                this.engine.selectedObj.userData.logic.splice(index, 1);
+                this.renderLogicList();
+            };
+            list.appendChild(div);
+        });
+    }
+
     updateInspector(obj) {
         const insp = document.getElementById('inspector');
         const msg = document.getElementById('no-selection-msg');
-        if (!obj) { insp.style.display = 'none'; msg.style.display = 'block'; return; }
+        const logicEditor = document.getElementById('logic-editor');
+        const noLogicMsg = document.getElementById('no-logic-selection');
+
+        if (!obj) { 
+            insp.style.display = 'none'; msg.style.display = 'block'; 
+            logicEditor.style.display = 'none'; noLogicMsg.style.display = 'block';
+            return; 
+        }
+        
         insp.style.display = 'block'; msg.style.display = 'none';
+        logicEditor.style.display = 'block'; noLogicMsg.style.display = 'none';
+        
         document.getElementById('prop-x').value = obj.position.x;
         document.getElementById('prop-y').value = obj.position.y;
         document.getElementById('prop-z').value = obj.position.z;
@@ -130,9 +176,9 @@ export class Editor {
         obj.traverse(c => { if(c.isMesh && c.material && c.material.color) color = '#' + c.material.color.getHexString(); });
         document.getElementById('prop-color').value = color;
 
-        // ✅ تحديث حالة الفيزياء
         if(obj.userData.physics) {
             document.getElementById('prop-physics').checked = obj.userData.physics.enabled;
         }
+        this.renderLogicList();
     }
 }

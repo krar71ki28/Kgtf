@@ -4,6 +4,8 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { VFXManager } from './VFX.js';
 import { Physics } from './Physics.js';
+import { LogicManager } from './Logic.js';
+import { UIManager } from './UI.js';
 
 export class Engine {
     constructor(canvas) {
@@ -35,6 +37,8 @@ export class Engine {
         
         this.vfxManager = new VFXManager(this.scene);
         this.physics = new Physics(this);
+        this.logic = new LogicManager(this);
+        this.ui = new UIManager();
         
         this.transform = new TransformControls(this.camera, this.renderer.domElement);
         this.transform.addEventListener('dragging-changed', (e) => { this.orbit.enabled = !e.value; });
@@ -105,6 +109,7 @@ export class Engine {
         let group = new THREE.Group();
         group.userData.type = type;
         group.userData.physics = { vy: 0, enabled: false };
+        group.userData.logic = []; // مصفوفة الأحداث
         
         if (type === 'cube') {
             const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x00e5ff }));
@@ -142,7 +147,7 @@ export class Engine {
             }, undefined, (err) => console.warn('فشل تحميل GLB'));
         } else if (type === 'vfx-fire') {
             this.vfxManager.createFire(new THREE.Vector3(0, 0.5, 0));
-            return null; // VFX لا تحتاج تحديد أو فيزياء
+            return null;
         } else if (type === 'vfx-smoke') {
             this.vfxManager.createSmoke(new THREE.Vector3(0, 0.5, 0));
             return null;
@@ -168,6 +173,15 @@ export class Engine {
         this.objects = [];
         this.selectObject(null);
         if (this.onSceneChangeCallback) this.onSceneChangeCallback();
+    }
+
+    startGameLogic() {
+        this.logic.resetScore();
+        this.objects.forEach(obj => {
+            if (obj.userData.logic) {
+                this.logic.triggerEvent(obj, 'onStart');
+            }
+        });
     }
 
     update(dt) {
