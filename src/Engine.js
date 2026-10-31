@@ -207,7 +207,15 @@ export class Engine {
             const actions = {};
             gltf.animations.forEach(clip => { actions[clip.name] = mixer.clipAction(clip); });
 
-            model.userData = { id: 'char_' + (this.idCounter++), type: 'character', mixer, actions, currentAction: null, material: 'custom', physics: { enabled: false, vy: 0, bounce: 0 }, behaviors: {}, behaviorStates: {} };
+            // تشغيل أول أنميشن تلقائياً
+            const animNames = Object.keys(actions);
+            let defaultAnim = null;
+            if (animNames.length > 0) {
+                defaultAnim = animNames.find(n => n.toLowerCase().includes('idle')) || animNames[0];
+                actions[defaultAnim].play();
+            }
+
+            model.userData = { id: 'char_' + (this.idCounter++), type: 'character', mixer, actions, currentAction: defaultAnim, material: 'custom', physics: { enabled: false, vy: 0, bounce: 0 }, behaviors: {}, behaviorStates: {} };
 
             const oldChar = this.objects.find(o => o.userData.type === 'character');
             if (oldChar) this.removeObject(oldChar);
@@ -340,7 +348,7 @@ export class Engine {
         loader.load('./models/character.glb', (gltf) => {
             if (this.sceneVersion !== currentVersion) return;
             const model = gltf.scene;
-            model.position.set(0, 0, 0); // نصفر الموقع
+            model.position.set(0, 0, 0);
             model.scale.set(1, 1, 1);
             model.traverse(o => { if(o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
             
@@ -348,14 +356,17 @@ export class Engine {
             const actions = {};
             gltf.animations.forEach(clip => { actions[clip.name] = mixer.clipAction(clip); });
             
-            // إذا كانت الحركة الأولى موجودة، شغلها كوضع افتراضي
-            const firstAnim = Object.keys(actions)[0];
-            if (firstAnim) actions[firstAnim].play();
+            // تشغيل الأنميشن تلقائياً أول ما تنزل الشخصية
+            const animNames = Object.keys(actions);
+            let defaultAnim = null;
+            if (animNames.length > 0) {
+                defaultAnim = animNames.find(n => n.toLowerCase().includes('idle')) || animNames[0];
+                actions[defaultAnim].play();
+            }
 
-            model.userData = { id: 'char_' + (this.idCounter++), type: 'character', mixer, actions, currentAction: firstAnim || null, material: 'custom', physics: { enabled: false, vy: 0, bounce: 0 }, behaviors: {}, behaviorStates: {} };
+            model.userData = { id: 'char_' + (this.idCounter++), type: 'character', mixer, actions, currentAction: defaultAnim, material: 'custom', physics: { enabled: false, vy: 0, bounce: 0 }, behaviors: {}, behaviorStates: {} };
             this.scene.add(model); this.objects.push(model);
             
-            // مسح المكعب الافتراضي عشان ما يتداخل مع الشخصية
             const defaultCube = this.objects.find(o => o.userData.type === 'cube' && o.position.x === 0 && o.position.z === 0);
             if(defaultCube) this.removeObject(defaultCube);
 
@@ -413,7 +424,7 @@ export class Engine {
 
     loadScene() {
         const saved = localStorage.getItem('kgtf_scene_final');
-        if (!saved) { this.loadCharacter(); return; } // يحمل الشخصية الافتراضية بدون مكعب
+        if (!saved) { this.loadCharacter(); return; } 
         try { const data = JSON.parse(saved); this.loadSceneData(data); } catch(e) { this.loadCharacter(); }
     }
 

@@ -41,14 +41,7 @@ export class Player {
         let touchStart = null;
         const maxDist = 40;
 
-        zone.addEventListener('touchstart', (e) => { 
-            e.stopPropagation(); 
-            const touch = e.touches[0]; 
-            const rect = base.getBoundingClientRect(); 
-            touchStart = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 }; 
-            this.joystickActive = true; 
-        });
-        
+        zone.addEventListener('touchstart', (e) => { e.stopPropagation(); const touch = e.touches[0]; const rect = base.getBoundingClientRect(); touchStart = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 }; this.joystickActive = true; });
         zone.addEventListener('touchmove', (e) => {
             e.stopPropagation();
             if (!this.joystickActive) return;
@@ -61,12 +54,7 @@ export class Player {
             this.joystickDir.x = dx / maxDist;
             this.joystickDir.y = dy / maxDist;
         });
-        
-        zone.addEventListener('touchend', () => { 
-            this.joystickActive = false; 
-            knob.style.transform = `translate(-50%, -50%)`; 
-            this.joystickDir = { x: 0, y: 0 }; 
-        });
+        zone.addEventListener('touchend', () => { this.joystickActive = false; knob.style.transform = `translate(-50%, -50%)`; this.joystickDir = { x: 0, y: 0 }; });
 
         document.getElementById('btn-jump').addEventListener('touchstart', (e) => {
             e.preventDefault(); e.stopPropagation();
@@ -106,7 +94,6 @@ export class Player {
         this.playerModel = playerObj;
         document.body.classList.add('play-mode');
         
-        // إظهار واجهة اللعب (الجويستيك وزر القفز)
         document.getElementById('play-ui').style.display = 'block';
         
         this.engine.selectObject(null);
@@ -114,7 +101,7 @@ export class Player {
         
         this.cameraYaw = this.playerModel.rotation.y;
         this.cameraPitch = 0.4;
-        
+
         this.bgm.play().catch(e => console.log("Audio error:", e));
 
         this.updateCamera(1); 
@@ -125,7 +112,6 @@ export class Player {
         this.isPlaying = false;
         document.body.classList.remove('play-mode');
         
-        // إخفاء واجهة اللعب
         document.getElementById('play-ui').style.display = 'none';
 
         this.engine.controls.enabled = true;
@@ -136,22 +122,28 @@ export class Player {
     }
 
     updateCamera(dt) {
-        const dist = 8;
-        const h = 4;
+        // تقريب الكاميرا أكثر
+        const dist = 3.5; 
+        const h = 1.8;  
+        
         const offsetX = Math.sin(this.cameraYaw) * dist * Math.cos(this.cameraPitch);
         const offsetZ = Math.cos(this.cameraYaw) * dist * Math.cos(this.cameraPitch);
         const offsetY = h + Math.sin(this.cameraPitch) * dist;
 
         const desiredCamPos = this.playerModel.position.clone().add(new THREE.Vector3(offsetX, offsetY, offsetZ));
-        this.engine.camera.position.lerp(desiredCamPos, 10 * dt);
+        
+        if (this.engine.camera.position.distanceTo(desiredCamPos) > 0.05) {
+             this.engine.camera.position.lerp(desiredCamPos, 8 * dt);
+        }
+        
         if (this.engine.camera.position.y < 0.5) this.engine.camera.position.y = 0.5;
-        this.engine.camera.lookAt(this.playerModel.position.x, this.playerModel.position.y + 1.5, this.playerModel.position.z);
+        this.engine.camera.lookAt(this.playerModel.position.x, this.playerModel.position.y + 1.2, this.playerModel.position.z);
     }
 
     update(dt) {
         if (!this.isPlaying || !this.playerModel) return;
 
-        const maxSpeed = 6;
+        const maxSpeed = 5;
         this.direction.set(0, 0, 0);
 
         const camForward = new THREE.Vector3();
@@ -173,14 +165,16 @@ export class Player {
             }
         }
 
-        const targetSpeed = maxSpeed * (this.joystickActive ? joystickMagnitude : 1);
-        this.targetVelocity.set(0, 0, 0);
-        if (this.direction.lengthSq() > 0) {
-            this.direction.normalize();
-            this.targetVelocity.copy(this.direction).multiplyScalar(targetSpeed);
+        // إيقاف فوري (بدون انزلاق) إذا لم يتم الضغط على أي زر
+        if (this.direction.lengthSq() === 0) {
+            this.currentVelocity.set(0, 0, 0);
+            this.targetVelocity.set(0, 0, 0);
+        } else {
+            const targetSpeed = maxSpeed * (this.joystickActive ? joystickMagnitude : 1);
+            this.targetVelocity.copy(this.direction.normalize()).multiplyScalar(targetSpeed);
+            // استخدام lerp عشان يكون في تسارع بسيط بس يتوقف بسرعة
+            this.currentVelocity.lerp(this.targetVelocity, 15 * dt); 
         }
-
-        this.currentVelocity.lerp(this.targetVelocity, 10 * dt);
 
         if (this.currentVelocity.lengthSq() > 0.1) {
             const targetAngle = Math.atan2(this.currentVelocity.x, this.currentVelocity.z);
@@ -189,6 +183,39 @@ export class Player {
             while (diff > Math.PI) diff -= Math.PI * 2;
             this.playerModel.rotation.y += diff * 10 * dt;
         }
+
+        // ==========================================
+        // 🧠 نظام الأنميشن الذكي (يختار الحركة تلقائياً)
+        // ==========================================
+        const isMoving = this.currentVelocity.lengthSq() > 0.1;
+        const actions = this.playerModel.userData.actions;
+        
+        if (actions && Object.keys(actions).length > 0) {
+            const actionKeys = Object.keys(actions);
+            
+            if (isMoving) {
+                const walkKey = actionKeys.find(k => k.toLowerCase().includes('walk') || k.toLowerCase().includes('run'));
+                if (walkKey) {
+                    const walkAction = actions[walkKey];
+                    if (this.playerModel.userData.currentAction !== walkKey) {
+                        if (this.playerModel.userData.currentAction && actions[this.playerModel.userData.currentAction]) actions[this.playerModel.userData.currentAction].fadeOut(0.2);
+                        walkAction.reset().fadeIn(0.2).play();
+                        this.playerModel.userData.currentAction = walkKey;
+                    }
+                }
+            } else {
+                const idleKey = actionKeys.find(k => k.toLowerCase().includes('idle'));
+                if (idleKey) {
+                    const idleAction = actions[idleKey];
+                    if (this.playerModel.userData.currentAction !== idleKey) {
+                        if (this.playerModel.userData.currentAction && actions[this.playerModel.userData.currentAction]) actions[this.playerModel.userData.currentAction].fadeOut(0.2);
+                        idleAction.reset().fadeIn(0.2).play();
+                        this.playerModel.userData.currentAction = idleKey;
+                    }
+                }
+            }
+        }
+        // ==========================================
 
         const deltaX = this.currentVelocity.x * dt;
         const deltaZ = this.currentVelocity.z * dt;
