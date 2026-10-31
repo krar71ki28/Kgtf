@@ -9,6 +9,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js'; 
 import { VignetteShader } from 'three/addons/shaders/VignetteShader.js';
+import { Sky } from 'three/addons/objects/Sky.js'; // إضافة السماء
 
 export const MATERIALS = {
     default:  { color: 0x00e5ff, roughness: 0.4, metalness: 0.1 },
@@ -34,29 +35,46 @@ export class Engine {
     constructor(canvas) {
         this.canvas = canvas;
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x87CEEB);
-        this.scene.fog = new THREE.Fog(0x87CEEB, 30, 120);
+        
+        // إعداد السماء الواقعية
+        this.sky = new Sky();
+        this.sky.scale.setScalar(450000);
+        this.scene.add(this.sky);
+        const uniforms = this.sky.material.uniforms;
+        uniforms['turbidity'].value = 10;
+        uniforms['rayleigh'].value = 2;
+        uniforms['mieCoefficient'].value = 0.005;
+        uniforms['mieDirectionalG'].value = 0.8;
+        
+        // ضبط الضباب ليتناسب مع لون السماء
+        this.scene.fog = new THREE.Fog(0xaabbcc, 30, 150);
 
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this.renderer.toneMappingExposure = 1.0;
         
         this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
         this.camera.position.set(8, 6, 10);
 
+        // إعداد المعالجة اللاحقة
         this.composer = new EffectComposer(this.renderer);
         this.composer.addPass(new RenderPass(this.scene, this.camera));
+        
         this.smaaPass = new SMAAPass(window.innerWidth, window.innerHeight);
         this.composer.addPass(this.smaaPass);
+        
         this.bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0, 0.4, 0.8); 
         this.composer.addPass(this.bloomPass);
+        
         this.vignettePass = new ShaderPass(VignetteShader);
         this.vignettePass.uniforms["offset"].value = 1.0;
         this.vignettePass.uniforms["darkness"].value = 1.0;
         this.vignettePass.enabled = false;
         this.composer.addPass(this.vignettePass);
+        
         this.composer.addPass(new OutputPass());
 
         const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
@@ -68,7 +86,8 @@ export class Engine {
         this.controls.target.set(0, 2, 0);
         this.controls.maxPolarAngle = Math.PI / 2.05;
 
-        this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+        // إعداد الإضاءة
+        this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.4);
         this.scene.add(this.hemiLight);
 
         this.sun = new THREE.DirectionalLight(0xfff5e6, 2.0);
@@ -77,12 +96,26 @@ export class Engine {
         this.sun.shadow.mapSize.height = 2048;
         this.sun.shadow.camera.left = -40; this.sun.shadow.camera.right = 40;
         this.sun.shadow.camera.top = 40; this.sun.shadow.camera.bottom = -40;
+        this.sun.shadow.bias = -0.0005;
         this.scene.add(this.sun);
         this.scene.add(this.sun.target);
 
-        // تحسين الأرضية
-        const groundGeo = new THREE.PlaneGeometry(200, 200, 64, 64);
-        const groundMat = new THREE.MeshStandardMaterial({ color: 0x4a7c59, roughness: 0.9, metalness: 0.1 });
+        // إعداد الأرضية العشبية
+        const canvasTexture = document.createElement('canvas');
+        canvasTexture.width = 512; canvasTexture.height = 512;
+        const ctx = canvasTexture.getContext('2d');
+        ctx.fillStyle = '#3a5a40'; ctx.fillRect(0, 0, 512, 512);
+        for(let i=0; i<10000; i++) {
+            ctx.fillStyle = Math.random() > 0.5 ? '#2e4a33' : '#4a6e52';
+            ctx.fillRect(Math.random()*512, Math.random()*512, 2, 2);
+        }
+        const groundTexture = new THREE.CanvasTexture(canvasTexture);
+        groundTexture.wrapS = THREE.RepeatWrapping;
+        groundTexture.wrapT = THREE.RepeatWrapping;
+        groundTexture.repeat.set(50, 50);
+
+        const groundGeo = new THREE.PlaneGeometry(200, 200);
+        const groundMat = new THREE.MeshStandardMaterial({ map: groundTexture, roughness: 0.9, metalness: 0.0 });
         const ground = new THREE.Mesh(groundGeo, groundMat);
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
@@ -90,7 +123,7 @@ export class Engine {
 
         const grid = new THREE.GridHelper(200, 100, 0x00e5ff, 0x556677);
         grid.position.y = 0.05; 
-        grid.material.opacity = 0.3;
+        grid.material.opacity = 0.2;
         grid.material.transparent = true;
         this.scene.add(grid);
 
@@ -100,7 +133,6 @@ export class Engine {
         this.isManualSun = false;
         this.isNightMode = false;
 
-        // مطر
         this.isRaining = false;
         const rainGeo = new THREE.BufferGeometry();
         const rainCount = 3000;
@@ -116,7 +148,6 @@ export class Engine {
         this.rain.visible = false;
         this.scene.add(this.rain);
 
-        // نجوم
         const starsGeo = new THREE.BufferGeometry();
         const starsCount = 3000;
         const starsPos = new Float32Array(starsCount * 3);
@@ -145,6 +176,30 @@ export class Engine {
         this.loadScene();
         this.resize();
         window.addEventListener('resize', () => this.resize());
+        this.updateSunPosition();
+    }
+
+    updateSunPosition() {
+        const phi = THREE.MathUtils.degToRad(90 - (this.timeOfDay * 360 - 90));
+        const theta = THREE.MathUtils.degToRad(0);
+        const sunPos = new THREE.Vector3().setFromSphericalCoords(1, phi, theta);
+        
+        const uniforms = this.sky.material.uniforms;
+        uniforms['sunPosition'].value.copy(sunPos);
+        
+        this.sun.position.copy(sunPos).multiplyScalar(100);
+        
+        if (sunPos.y > 0) {
+            this.sun.intensity = Math.min(sunPos.y * 4, 2.0);
+            this.stars.material.opacity = 0;
+            this.moon.visible = false;
+            this.scene.fog.color.setHex(0xaabbcc); 
+        } else {
+            this.sun.intensity = 0;
+            this.stars.material.opacity = Math.min(Math.abs(sunPos.y) * 2, 1);
+            this.moon.visible = true;
+            this.scene.fog.color.setHex(0x050510);
+        }
     }
 
     makeMaterial(matName, colorHex) {
@@ -163,27 +218,20 @@ export class Engine {
         else if (type === 'torus') { obj = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.2, 16, 100), this.makeMaterial('default')); obj.position.y = 0.7; }
         else if (type === 'mountain') { 
             obj = new THREE.Mesh(new THREE.ConeGeometry(4, 8, 6), this.makeMaterial('metal', 0x555555)); 
-            obj.position.y = 4;
-            obj.rotation.y = Math.PI / 4;
+            obj.position.y = 4; obj.rotation.y = Math.PI / 4;
         }
         else if (type === 'bush') {
             obj = new THREE.Mesh(new THREE.SphereGeometry(0.6, 8, 8), this.makeMaterial('default', 0x2d5a27));
-            obj.position.y = 0.4;
-            obj.scale.set(1, 0.7, 1);
+            obj.position.y = 0.4; obj.scale.set(1, 0.7, 1);
         }
         else if (type === 'light') { obj = new THREE.PointLight(0xffaa00, 10, 15); obj.position.set(0, 3, 0); }
         else if (type === 'spotlight') { 
             obj = new THREE.SpotLight(0xffffff, 20, 30, Math.PI / 4, 0.5, 1);
-            obj.position.set(0, 5, 0);
-            obj.castShadow = true;
-            const target = new THREE.Object3D();
-            target.position.set(0, 0, 0);
-            this.scene.add(target);
-            obj.target = target;
+            obj.position.set(0, 5, 0); obj.castShadow = true;
+            const target = new THREE.Object3D(); target.position.set(0, 0, 0);
+            this.scene.add(target); obj.target = target;
             obj.userData = { id: 'spot_' + (this.idCounter++), type: 'spotlight', material: 'n/a', physics: { enabled: false }, behaviors: {}, behaviorStates: {} };
-            this.scene.add(obj);
-            this.objects.push(obj);
-            this.selectObject(obj);
+            this.scene.add(obj); this.objects.push(obj); this.selectObject(obj);
             if (this.onSceneChange) this.onSceneChange();
             return obj;
         }
@@ -192,9 +240,7 @@ export class Engine {
             const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 1.5), this.makeMaterial('wood', 0x4a2e15));
             trunk.position.y = 0.75;
             const leaves = new THREE.Mesh(new THREE.ConeGeometry(0.8, 2, 8), this.makeMaterial('default', 0x1e5631));
-            leaves.position.y = 2;
-            obj.add(trunk, leaves);
-            obj.position.y = 0;
+            leaves.position.y = 2; obj.add(trunk, leaves); obj.position.y = 0;
         }
         else if (type === 'rock') { obj = new THREE.Mesh(new THREE.DodecahedronGeometry(0.6, 0), this.makeMaterial('metal', 0x666666)); obj.position.y = 0.4; }
         else if (type === 'building') { obj = new THREE.Mesh(new THREE.BoxGeometry(2, 4, 2), this.makeMaterial('glass', 0x88ccff)); obj.position.y = 2; }
@@ -233,23 +279,14 @@ export class Engine {
         
         if (isNight) {
             this.timeOfDay = 22 / 24; 
-            this.sun.intensity = 0;
-            this.hemiLight.intensity = 0.2;
-            this.scene.background.setHex(0x050510);
-            this.scene.fog.color.setHex(0x050510);
-            this.stars.material.opacity = 1;
-            this.moon.visible = true;
+            this.hemiLight.intensity = 0.1;
             this.bloomPass.strength = 1.0; 
         } else {
             this.timeOfDay = 12 / 24;
-            this.sun.intensity = 2.0;
-            this.hemiLight.intensity = 0.6;
-            this.scene.background.setHex(0x87CEEB);
-            this.scene.fog.color.setHex(0x87CEEB);
-            this.stars.material.opacity = 0;
-            this.moon.visible = false;
+            this.hemiLight.intensity = 0.4;
             this.bloomPass.strength = 0;
         }
+        this.updateSunPosition();
         document.getElementById('env-time-slider').value = this.timeOfDay * 24;
     }
 
@@ -285,27 +322,7 @@ export class Engine {
         if (this.autoTime) { this.timeOfDay = (this.timeOfDay + dt * this.daySpeed) % 1; }
         
         if (!this.isNightMode) {
-            const angle = this.timeOfDay * Math.PI * 2;
-            this.sun.position.x = Math.cos(angle) * 50; this.sun.position.y = Math.sin(angle) * 50; this.sun.position.z = Math.sin(angle) * 20;
-            
-            const sunHeight = this.sun.position.y;
-            const dayColor = new THREE.Color(0x87CEEB); const nightColor = new THREE.Color(0x050510); const sunsetColor = new THREE.Color(0xff5500);
-            let currentSkyColor = new THREE.Color();
-
-            if (sunHeight > 0) {
-                const t = Math.min(sunHeight / 30, 1);
-                currentSkyColor.lerpColors(sunsetColor, dayColor, t);
-                if (!this.isManualSun) this.sun.intensity = t * 2.0;
-                this.stars.material.opacity = 0; this.moon.visible = false;
-            } else {
-                const t = Math.min(Math.abs(sunHeight) / 30, 1);
-                currentSkyColor.lerpColors(sunsetColor, nightColor, t);
-                if (!this.isManualSun) this.sun.intensity = 0;
-                this.stars.material.opacity = t; this.moon.visible = true;
-            }
-            this.scene.background.copy(currentSkyColor); this.scene.fog.color.copy(currentSkyColor);
-            this.moon.position.x = Math.cos(angle + Math.PI) * 50; this.moon.position.y = Math.sin(angle + Math.PI) * 50; this.moon.position.z = Math.sin(angle + Math.PI) * 20;
-            this.stars.rotation.y += 0.01 * dt;
+            this.updateSunPosition();
         }
 
         if (this.isRaining && this.rain) {
