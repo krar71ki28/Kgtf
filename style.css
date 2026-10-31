@@ -1,15 +1,30 @@
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; user-select: none; -webkit-tap-highlight-color: transparent; }
 body { background: #121215; color: #fff; height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 
-#header { height: 55px; background: #1a1a20; border-bottom: 1px solid #333; display: flex; align-items: center; padding: 0 10px; z-index: 100; flex-shrink: 0; }
+#header { height: 55px; background: #1a1a20; border-bottom: 1px solid #333; display: flex; align-items: center; padding: 0 10px; z-index: 1000; flex-shrink: 0; }
 .header-tools { display: flex; gap: 6px; align-items: center; width: 100%; overflow-x: auto; scrollbar-width: none; }
 .header-tools::-webkit-scrollbar { display: none; }
 .icon-btn { flex-shrink: 0; background: #2a2a35; border: 1px solid #444; color: #ccc; width: 40px; height: 40px; border-radius: 8px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .icon-btn.active { background: #00e5ff; color: #000; border-color: #00e5ff; }
 .play-btn { flex-shrink: 0; background: #4ade80; border: none; width: 40px; height: 40px; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; color: #000; margin-right: auto; }
 
+/* ✅ الحل: استخدام fixed بدل absolute عشان ما تنقص */
 .dropdown { position: relative; flex-shrink: 0; }
-.dropdown-content { display: none; position: absolute; top: 48px; right: 0; background: #222; border: 1px solid #444; border-radius: 8px; min-width: 150px; z-index: 200; flex-direction: column; box-shadow: 0 5px 15px rgba(0,0,0,0.8); }
+.dropdown-content { 
+    display: none; 
+    position: fixed; 
+    top: 55px; 
+    right: 50px; /* تعديل المكان ليناسب الشاشة */
+    background: #222; 
+    border: 1px solid #444; 
+    border-radius: 8px; 
+    min-width: 150px; 
+    z-index: 9999; /* أعلى من كل شي */
+    flex-direction: column; 
+    box-shadow: 0 5px 15px rgba(0,0,0,0.8); 
+    max-height: 60vh;
+    overflow-y: auto;
+}
 .dropdown-content.show { display: flex; }
 .add-btn { background: transparent; border: none; color: #fff; padding: 12px 15px; text-align: right; border-bottom: 1px solid #333; cursor: pointer; font-size: 14px; }
 .add-btn:active { background: #333; }
@@ -18,7 +33,6 @@ body { background: #121215; color: #fff; height: 100vh; height: 100dvh; display:
 #viewport { width: 100%; height: 100%; display: block; }
 #status-bar { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 5px; color: #4ade80; font-family: monospace; font-size: 12px; z-index: 50; pointer-events: none; }
 
-/* اللوحة السفلية والتبويبات */
 #inspector-panel { height: 190px; background: #121215; border-top: 1px solid #333; display: flex; flex-direction: column; z-index: 10; flex-shrink: 0; }
 #panel-tabs { display: flex; background: #1a1a20; border-bottom: 1px solid #333; }
 .tab-btn { flex: 1; background: transparent; border: none; border-bottom: 2px solid transparent; color: #888; padding: 8px 0; font-size: 12px; font-weight: bold; cursor: pointer; }
@@ -32,12 +46,10 @@ body { background: #121215; color: #fff; height: 100vh; height: 100dvh; display:
 .panel-title { font-size: 11px; font-weight: bold; color: #888; }
 .btn-small { background: #333; border: 1px solid #444; color: #ccc; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; }
 
-/* قائمة المجسمات */
 #object-list { display: flex; flex-direction: row; gap: 8px; padding: 10px; overflow-x: auto; flex-shrink: 0; height: 50px; align-items: center; }
 .obj-item { flex-shrink: 0; background: #2a2a35; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; border: 1px solid transparent; }
 .obj-item.selected { border-color: #00e5ff; color: #00e5ff; background: rgba(0,229,255,0.1); }
 
-/* لوحة الخصائص */
 #inspector { display: none; padding: 8px; background: #16161c; flex: 1; overflow-y: auto; }
 .prop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .prop-row { display: flex; align-items: center; gap: 6px; background: #222; padding: 4px 8px; border-radius: 6px; border: 1px solid #333; }
@@ -45,7 +57,6 @@ body { background: #121215; color: #fff; height: 100vh; height: 100dvh; display:
 .prop-row input[type="range"] { flex: 1; accent-color: #00e5ff; height: 4px; width: 100%; }
 .prop-row input[type="color"] { width: 100%; height: 22px; border: none; background: transparent; cursor: pointer; }
 
-/* واجهة اللعب */
 #play-ui { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 150; }
 #exit-play { position: absolute; top: 20px; left: 20px; background: rgba(255,85,119,0.9); border: none; padding: 10px 20px; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; pointer-events: auto; }
 #joystick-zone { position: absolute; bottom: 30px; left: 30px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; pointer-events: auto; touch-action: none; }
@@ -53,41 +64,15 @@ body { background: #121215; color: #fff; height: 100vh; height: 100dvh; display:
 #btn-jump { position: absolute; bottom: 40px; right: 30px; width: 80px; height: 80px; background: rgba(74,222,128,0.3); border: 2px solid #4ade80; border-radius: 50%; color: #4ade80; font-weight: bold; font-size: 16px; pointer-events: auto; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
 body.play-mode #header, body.play-mode #inspector-panel { display: none !important; }
-/* إضافات الواجهة */
+
+/* تنسيقات مكتبة الأصول */
+.asset-card { background: #222; border: 1px solid #444; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: 0.2s; position: relative; }
+.asset-card:active { background: #333; border-color: #00e5ff; }
+.asset-icon { font-size: 24px; margin-bottom: 5px; }
+.asset-name { font-size: 10px; color: #ccc; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; }
+.asset-delete { position: absolute; top: 2px; right: 2px; background: #ff5577; color: #fff; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
 #custom-hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; overflow: hidden; }
 #score-display { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 8px 20px; border-radius: 20px; border: 1px solid #ffaa00; color: #ffaa00; font-weight: bold; font-size: 18px; box-shadow: 0 0 10px rgba(255,170,0,0.3); }
 .logic-item { background: #222; border: 1px solid #444; padding: 6px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #ccc; }
 .logic-item button { background: none; border: none; color: #ff5577; cursor: pointer; font-size: 14px; padding: 0 5px; }
-
-/* تنسيقات مكتبة الأصول */
-.asset-card {
-    background: #222;
-    border: 1px solid #444;
-    border-radius: 8px;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    cursor: pointer;
-    transition: 0.2s;
-    position: relative;
-}
-.asset-card:active { background: #333; border-color: #00e5ff; }
-.asset-icon { font-size: 24px; margin-bottom: 5px; }
-.asset-name { font-size: 10px; color: #ccc; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; }
-.asset-delete {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    background: #ff5577;
-    color: #fff;
-    border: none;
-    border-radius: 50%;
-    width: 18px;
-    height: 18px;
-    font-size: 10px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
