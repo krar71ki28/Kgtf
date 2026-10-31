@@ -340,17 +340,25 @@ export class Engine {
         loader.load('./models/character.glb', (gltf) => {
             if (this.sceneVersion !== currentVersion) return;
             const model = gltf.scene;
-            model.position.y = 0; model.scale.set(1, 1, 1);
-            if (opts.position) model.position.fromArray(opts.position);
-            if (opts.rotation) model.rotation.set(opts.rotation[0] || 0, opts.rotation[1] || 0, opts.rotation[2] || 0);
+            model.position.set(0, 0, 0); // نصفر الموقع
+            model.scale.set(1, 1, 1);
             model.traverse(o => { if(o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
             
             const mixer = new THREE.AnimationMixer(model);
             const actions = {};
             gltf.animations.forEach(clip => { actions[clip.name] = mixer.clipAction(clip); });
             
-            model.userData = { id: 'char_' + (this.idCounter++), type: 'character', mixer, actions, currentAction: null, material: 'custom', physics: { enabled: false, vy: 0, bounce: 0 }, behaviors: {}, behaviorStates: {} };
+            // إذا كانت الحركة الأولى موجودة، شغلها كوضع افتراضي
+            const firstAnim = Object.keys(actions)[0];
+            if (firstAnim) actions[firstAnim].play();
+
+            model.userData = { id: 'char_' + (this.idCounter++), type: 'character', mixer, actions, currentAction: firstAnim || null, material: 'custom', physics: { enabled: false, vy: 0, bounce: 0 }, behaviors: {}, behaviorStates: {} };
             this.scene.add(model); this.objects.push(model);
+            
+            // مسح المكعب الافتراضي عشان ما يتداخل مع الشخصية
+            const defaultCube = this.objects.find(o => o.userData.type === 'cube' && o.position.x === 0 && o.position.z === 0);
+            if(defaultCube) this.removeObject(defaultCube);
+
             if (!opts.isLoading) { this.selectObject(model); if (this.onSceneChange) this.onSceneChange(); }
         }, undefined, (err) => { 
             console.warn('تعذر تحميل شخصية السيرفر.');
@@ -405,8 +413,8 @@ export class Engine {
 
     loadScene() {
         const saved = localStorage.getItem('kgtf_scene_final');
-        if (!saved) { this.addObject('cube'); this.loadCharacter(); return; }
-        try { const data = JSON.parse(saved); this.loadSceneData(data); } catch(e) { this.addObject('cube'); this.loadCharacter(); }
+        if (!saved) { this.loadCharacter(); return; } // يحمل الشخصية الافتراضية بدون مكعب
+        try { const data = JSON.parse(saved); this.loadSceneData(data); } catch(e) { this.loadCharacter(); }
     }
 
     update(dt) {

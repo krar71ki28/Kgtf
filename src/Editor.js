@@ -199,9 +199,56 @@ export class Editor {
         }
     }
 
+    // دالة جديدة: إضافة قائمة الحركات في لوحة الخصائص
+    renderAnimationUI(obj) {
+        const container = document.getElementById('animation-properties');
+        if(!container) return;
+        
+        // إذا كان المجسم ليس شخصية أو ليس لديه حركات، نخفي القائمة
+        if (!obj || obj.userData.type !== 'character' || !obj.userData.actions || Object.keys(obj.userData.actions).length === 0) {
+            container.style.display = 'none';
+            return;
+        }
+
+        container.style.display = 'block';
+        const select = document.getElementById('anim-select');
+        select.innerHTML = '<option value="">-- اختر حركة --</option>';
+        
+        for (const animName in obj.userData.actions) {
+            const option = document.createElement('option');
+            option.value = animName;
+            option.textContent = animName;
+            select.appendChild(option);
+        }
+
+        // إذا كان هناك حركة شغالة حالياً، نحددها في القائمة
+        if (obj.userData.currentAction) {
+            select.value = typeof obj.userData.currentAction === 'object' ? obj.userData.currentAction.getClip().name : obj.userData.currentAction;
+        }
+
+        // عند اختيار حركة جديدة من القائمة، يتم تشغيلها
+        select.onchange = (e) => {
+            const animName = e.target.value;
+            if (!animName) return;
+            
+            const actions = obj.userData.actions;
+            if (obj.userData.currentAction && actions[obj.userData.currentAction]) {
+                 actions[obj.userData.currentAction].fadeOut(0.2);
+            }
+            if (actions[animName]) {
+                 actions[animName].reset().fadeIn(0.2).play();
+                 obj.userData.currentAction = animName;
+            }
+        };
+    }
+
     updateInspector(obj) {
         if (!obj) { this.inspector.style.display = 'none'; document.getElementById('no-selection-msg').style.display = 'block'; document.getElementById('object-actions').style.display = 'none'; this.gizmo.detach(); this.updateList(); return; }
         this.inspector.style.display = 'block'; document.getElementById('no-selection-msg').style.display = 'none'; document.getElementById('object-actions').style.display = 'flex'; this.gizmo.attach(obj); this.updateUIValues(); this.renderBehaviorsUI();
+        
+        // تحديث قائمة الحركات
+        this.renderAnimationUI(obj);
+
         const lightProps = document.getElementById('light-properties');
         if (obj.isLight) { lightProps.style.display = 'block'; document.getElementById('prop-light-intensity').value = obj.intensity; document.getElementById('prop-light-distance').value = obj.distance; } else { lightProps.style.display = 'none'; }
         if (obj.userData.physics) { document.getElementById('prop-physics').checked = obj.userData.physics.enabled; document.getElementById('prop-bounce').value = obj.userData.physics.bounce; }
