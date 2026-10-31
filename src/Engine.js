@@ -1,11 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 export const MATERIALS = {
     default:  { color: 0x00e5ff, roughness: 0.4, metalness: 0.1 },
@@ -20,11 +15,6 @@ export const MATERIALS = {
     emissive: { color: 0x00e5ff, emissive: 0x00e5ff, emissiveIntensity: 1.0 }
 };
 
-export const BEHAVIORS = {
-    rotate: { name: 'دوران', defaultParams: { speed: 1.5 }, update: (obj, params, state, dt) => { obj.rotation.y += params.speed * dt; } },
-    float: { name: 'طيران', defaultParams: { amplitude: 0.5, speed: 2 }, update: (obj, params, state, dt, time) => { if (state.baseY === undefined) state.baseY = obj.position.y; obj.position.y = state.baseY + Math.sin(time * params.speed) * params.amplitude; } }
-};
-
 export class Engine {
     constructor(canvas) {
         this.canvas = canvas;
@@ -32,26 +22,15 @@ export class Engine {
         this.scene.background = new THREE.Color(0x87CEEB);
         this.scene.fog = new THREE.Fog(0x87CEEB, 50, 200);
 
-        // إعداد الـ Renderer بدون تعقيدات
-        this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // تقليل الحمل على الموبايل
+        // رندر عادي بدون أي مؤثرات
+        this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
 
         this.editorCamera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
         this.editorCamera.position.set(8, 6, 10);
         this.activeCamera = this.editorCamera;
-
-        // Composer مبسط (بدون SMAA لأنه يسبب مشاكل على الموبايل)
-        this.composer = new EffectComposer(this.renderer);
-        this.composer.addPass(new RenderPass(this.scene, this.activeCamera));
-        this.bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.3, 0.4, 0.8);
-        this.composer.addPass(this.bloomPass);
-        this.composer.addPass(new OutputPass());
-
-        const pmrem = new THREE.PMREMGenerator(this.renderer);
-        this.scene.environment = pmrem.fromScene(new RoomEnvironment()).texture;
 
         this.controls = new OrbitControls(this.editorCamera, this.renderer.domElement);
         this.controls.enableDamping = true;
@@ -63,7 +42,7 @@ export class Engine {
 
         this.sun = new THREE.DirectionalLight(0xfff5e6, 2.0);
         this.sun.castShadow = true;
-        this.sun.shadow.mapSize.set(1024, 1024); // تقليل الجودة قليلاً لتسريع الموبايل
+        this.sun.shadow.mapSize.set(1024, 1024);
         this.sun.shadow.camera.left = -20; this.sun.shadow.camera.right = 20;
         this.sun.shadow.camera.top = 20; this.sun.shadow.camera.bottom = -20;
         this.scene.add(this.sun);
@@ -80,13 +59,11 @@ export class Engine {
 
         this.objects = [];
         this.assets = JSON.parse(localStorage.getItem('kgtf_assets') || '[]');
-        this.score = 0;
         this.selected = null;
         this.idCounter = 1;
         this.onSelect = null;
         this.onSceneChange = null;
         this.totalTime = 0;
-        this.isNightMode = false;
         this.isPlaying = false;
         this.rainSystem = null;
 
@@ -160,14 +137,12 @@ export class Engine {
 
         if (obj.isMesh || obj.isGroup) obj.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
 
-        if (!obj.userData || Object.keys(obj.userData).length === 0) {
-            obj.userData = {
-                id: 'obj_' + (this.idCounter++),
-                type, material: 'default',
-                physics: { enabled: false, vy: 0, bounce: 0.5 },
-                behaviors: {}, behaviorStates: {}, logic: []
-            };
-        }
+        obj.userData = {
+            id: 'obj_' + (this.idCounter++),
+            type, material: 'default',
+            physics: { enabled: false, vy: 0, bounce: 0.5 },
+            behaviors: {}, behaviorStates: {}, logic: []
+        };
 
         if (opts.position) obj.position.fromArray(opts.position);
 
@@ -176,55 +151,6 @@ export class Engine {
         this.selectObject(obj);
         if (this.onSceneChange) this.onSceneChange();
         return obj;
-    }
-
-    _createPrimitiveCharacter() {
-        const group = new THREE.Group();
-        const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 0.9, 4, 8), this.makeMaterial('default', 0x00e5ff));
-        body.position.y = 0.75; body.castShadow = true;
-        const head = new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 16), this.makeMaterial('default', 0xffddaa));
-        head.position.y = 1.5; head.castShadow = true;
-        group.add(body); group.add(head);
-        group.userData = {
-            id: 'char_' + (this.idCounter++),
-            type: 'character', material: 'default',
-            physics: { enabled: true, vy: 0, bounce: 0 },
-            behaviors: {}, behaviorStates: {}, logic: [],
-            actions: {}, currentAction: null
-        };
-        return group;
-    }
-
-    loadCharacter() {
-        const group = this._createPrimitiveCharacter();
-        this.scene.add(group);
-        this.objects.push(group);
-        this.selectObject(group);
-        if (this.onSceneChange) this.onSceneChange();
-        return group;
-    }
-
-    loadModel(file) {
-        return new Promise((resolve, reject) => {
-            const url = URL.createObjectURL(file);
-            const loader = new GLTFLoader();
-            loader.load(url, (gltf) => {
-                URL.revokeObjectURL(url);
-                const root = gltf.scene;
-                root.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
-                root.userData = {
-                    id: 'model_' + (this.idCounter++),
-                    type: 'model', material: 'default',
-                    physics: { enabled: false, vy: 0, bounce: 0.5 },
-                    behaviors: {}, behaviorStates: {}, logic: []
-                };
-                this.scene.add(root);
-                this.objects.push(root);
-                this.selectObject(root);
-                if (this.onSceneChange) this.onSceneChange();
-                resolve(root);
-            }, undefined, reject);
-        });
     }
 
     _createParticles(position, color, speed, count, size, opacity, lightColor) {
@@ -259,7 +185,6 @@ export class Engine {
     createSmokeVFX(position) { return this._createParticles(position, 0x888888, 0.5, 40, 0.5, 0.5, null); }
 
     toggleGrid(visible) { if (this.grid) this.grid.visible = visible; }
-    toggleNightMode(isNight) { this.isNightMode = isNight; this.scene.background.setHex(isNight ? 0x050510 : 0x87CEEB); this.scene.fog.color.setHex(isNight ? 0x050510 : 0x87CEEB); this.sun.intensity = isNight ? 0 : 2.0; }
 
     selectObject(obj) { this.selected = obj; if (this.onSelect) this.onSelect(obj); }
 
@@ -297,7 +222,10 @@ export class Engine {
         if (!document.body.classList.contains('play-mode')) this.controls.update();
     }
 
-    render() { this.composer.render(); }
+    // استخدام الرسم المباشر
+    render() { 
+        this.renderer.render(this.scene, this.activeCamera); 
+    }
 
     resize() {
         const c = document.getElementById('viewport-container');
@@ -306,16 +234,10 @@ export class Engine {
         this.editorCamera.aspect = w / h;
         this.editorCamera.updateProjectionMatrix();
         this.renderer.setSize(w, h, false);
-        this.composer.setSize(w, h);
     }
 
     saveScene() {
-        const data = this.objects.map(o => ({
-            type: o.userData.type,
-            position: o.position.toArray(),
-            rotation: [o.rotation.x, o.rotation.y, o.rotation.z],
-            scale: o.scale.toArray()
-        }));
+        const data = this.objects.map(o => ({ type: o.userData.type, position: o.position.toArray() }));
         localStorage.setItem('kgtf_scene_final', JSON.stringify(data));
     }
 
@@ -324,13 +246,9 @@ export class Engine {
         if (raw) {
             try {
                 const data = JSON.parse(raw);
-                data.forEach(d => {
-                    const obj = this.addObject(d.type, { position: d.position });
-                    if (obj && d.rotation) obj.rotation.set(...d.rotation);
-                    if (obj && d.scale) obj.scale.set(...d.scale);
-                });
+                data.forEach(d => this.addObject(d.type, { position: d.position }));
                 return;
-            } catch (e) { console.warn('loadScene:', e); }
+            } catch (e) { console.warn(e); }
         }
         this.addObject('cube');
     }
