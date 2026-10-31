@@ -10,14 +10,11 @@ export class Player {
         this.playerBoxSize = new THREE.Vector3(0.6, 1.5, 0.6);
         this.raycaster = new THREE.Raycaster();
         
-        // إعدادات كاميرا Unreal (Spring Arm)
         this.cameraYaw = 0; 
         this.cameraPitch = 0.3; 
         this.targetDist = 4.5; 
         this.currentDist = 4.5; 
-        this.cameraLag = 15; // سرعة استجابة الكاميرا (Lerp)
-        
-        // وضع الكاميرا (TPS = Unreal Style, RPG = Genshin Style)
+        this.cameraLag = 15; 
         this.cameraMode = 'TPS'; 
         
         this.setupControls();
@@ -27,19 +24,17 @@ export class Player {
         document.getElementById('btn-play').addEventListener('click', () => this.startPlay());
         document.getElementById('exit-play').addEventListener('click', () => this.stopPlay());
 
-        // --- دعم الكيبورد (للـ PC) ---
         window.addEventListener('keydown', (e) => { 
             this.keys[e.code] = true; 
             if (e.code === 'Space' && this.isPlaying && this.isGrounded) { this.velocityY = 8; this.isGrounded = false; } 
-            // تبديل وضع الكاميرا (V)
             if (e.code === 'KeyV' && this.isPlaying) {
                 this.cameraMode = this.cameraMode === 'TPS' ? 'RPG' : 'TPS';
-                document.getElementById('btn-camera-mode').innerText = this.cameraMode;
+                const btn = document.getElementById('btn-camera-mode');
+                if(btn) btn.innerText = this.cameraMode;
             }
         });
         window.addEventListener('keyup', (e) => this.keys[e.code] = false);
 
-        // --- دعم الجويستيك (للموبايل) ---
         let joyActive = false, joyDir = {x:0, y:0};
         const joyZone = document.getElementById('joystick-zone'), joyKnob = document.getElementById('joystick-knob');
         
@@ -60,14 +55,13 @@ export class Player {
             });
         }
         
-        // --- زر القفز ---
         const btnJump = document.getElementById('btn-jump');
         if(btnJump) btnJump.addEventListener('pointerdown', (e) => { 
             e.preventDefault(); e.stopPropagation(); 
             if(this.isPlaying && this.isGrounded) { this.velocityY = 8; this.isGrounded = false; } 
         });
 
-        // --- زر تبديل وضع الكاميرا (موجود في HTML) ---
+        // ربط زر الكاميرا الموجود في HTML
         const btnCamMode = document.getElementById('btn-camera-mode');
         if (btnCamMode) {
             btnCamMode.innerText = this.cameraMode;
@@ -78,7 +72,6 @@ export class Player {
             });
         }
 
-        // --- التحكم بالكاميرا من الشاشة (لمس أو ماوس) ---
         const canvas = this.engine.renderer.domElement;
         let isDraggingCam = false;
         let lastCamPos = { x: 0, y: 0 };
@@ -109,7 +102,6 @@ export class Player {
         });
         canvas.addEventListener('touchend', () => { isDraggingCam = false; initialPinchDist = 0; });
 
-        // ماوس
         canvas.addEventListener('mousedown', (e) => {
             if (!this.isPlaying) return;
             e.preventDefault();
@@ -128,24 +120,11 @@ export class Player {
             this.targetDist = Math.max(0.5, Math.min(8, this.targetDist + e.deltaY * 0.01));
         }, { passive: false });
 
-                // --- زر تبديل وضع الكاميرا (موجود في HTML) ---
-        const btnCamMode = document.getElementById('btn-camera-mode');
-        if (btnCamMode) {
-            btnCamMode.innerText = this.cameraMode;
-            btnCamMode.addEventListener('pointerdown', (e) => {
-                e.preventDefault(); e.stopPropagation();
-                this.cameraMode = this.cameraMode === 'TPS' ? 'RPG' : 'TPS';
-                btnCamMode.innerText = this.cameraMode;
-            });
-        }
-
         this.getJoyDir = () => joyActive ? joyDir : {x:0, y:0};
     }
 
     updateCameraRotation(dx, dy) {
-        // سرعة دوران الكاميرا
         this.cameraYaw -= dx * 0.005; 
-        // زاوية النظر العمودية (منع الكاميرا من النزول تحت الأرض أو الانقلاب)
         this.cameraPitch = Math.max(-0.5, Math.min(1.2, this.cameraPitch + dy * 0.005));
     }
 
@@ -183,19 +162,16 @@ export class Player {
         
         const speed = 5;
         
-        // 1. حساب اتجاه الحركة بناءً على زاوية الكاميرا
         const forward = new THREE.Vector3(-Math.sin(this.cameraYaw), 0, -Math.cos(this.cameraYaw)).normalize();
         const right = new THREE.Vector3(Math.cos(this.cameraYaw), 0, -Math.sin(this.cameraYaw)).normalize();
 
         let moveVector = new THREE.Vector3();
 
-        // كيبورد
         if (this.keys['KeyW'] || this.keys['ArrowUp']) moveVector.add(forward);
         if (this.keys['KeyS'] || this.keys['ArrowDown']) moveVector.sub(forward);
         if (this.keys['KeyA'] || this.keys['ArrowLeft']) moveVector.sub(right); 
         if (this.keys['KeyD'] || this.keys['ArrowRight']) moveVector.add(right); 
 
-        // جويستيك
         const joy = this.getJoyDir();
         if (joy.x !== 0 || joy.y !== 0) {
             moveVector.add(right.clone().multiplyScalar(joy.x));
@@ -203,34 +179,26 @@ export class Player {
         }
 
         const isMoving = moveVector.lengthSq() > 0;
-
-        // 2. تحديث مسافة الكاميرا بسلاسة
         this.currentDist += (this.targetDist - this.currentDist) * 10 * dt;
 
-        // إخفاء الشخصية في وضع الشخص الأول
         const isFirstPerson = this.currentDist < 0.8;
         this.playerModel.visible = !isFirstPerson;
 
-        // 3. تحريك الشخصية
         if (isMoving) {
             moveVector.normalize(); 
             const nextPos = this.playerModel.position.clone();
             nextPos.addScaledVector(moveVector, speed * dt);
 
-            // فحص الاصطدام باستخدام محرك الفيزياء
             if (!this.engine.physics.checkPlayerCollision(nextPos, this.playerBoxSize)) {
                 this.playerModel.position.copy(nextPos);
                 
-                // --- إدارة دوران الشخصية ---
                 if (this.cameraMode === 'RPG') {
-                    // وضع Genshin: الشخصية تتجه نحو اتجاه المشي
                     const targetRot = Math.atan2(moveVector.x, moveVector.z); 
                     let diff = targetRot - this.playerModel.rotation.y;
                     while (diff < -Math.PI) diff += Math.PI * 2;
                     while (diff > Math.PI) diff -= Math.PI * 2;
                     this.playerModel.rotation.y += diff * 10 * dt;
                 } else if (this.cameraMode === 'TPS') {
-                    // وضع Unreal: الشخصية تتجه دائماً نحو اتجاه الكاميرا
                     this.playerModel.rotation.y = this.cameraYaw;
                 }
             }
@@ -240,25 +208,21 @@ export class Player {
             this.playerModel.rotation.y = this.cameraYaw;
         }
 
-        // 4. الفيزياء (السقوط والقفز)
         this.velocityY -= 24 * dt; 
         this.playerModel.position.y += this.velocityY * dt;
         if (this.playerModel.position.y <= 0) { 
             this.playerModel.position.y = 0; this.velocityY = 0; this.isGrounded = true; 
         }
 
-        // 5. تحديث الكاميرا (Spring Arm الاحترافي)
         const camHeight = 1.5; 
         const anchorPos = this.playerModel.position.clone().add(new THREE.Vector3(0, camHeight, 0));
         
-        // حساب موقع الكاميرا المثالي
         const offsetX = Math.sin(this.cameraYaw) * this.currentDist * Math.cos(this.cameraPitch);
         const offsetZ = Math.cos(this.cameraYaw) * this.currentDist * Math.cos(this.cameraPitch);
         const offsetY = Math.sin(this.cameraPitch) * this.currentDist;
         
         let targetCamPos = anchorPos.clone().add(new THREE.Vector3(offsetX, offsetY, offsetZ));
 
-        // --- تصادم الكاميرا (Camera Collision) ---
         if (!isFirstPerson) {
             const dirToCam = targetCamPos.clone().sub(anchorPos).normalize();
             this.raycaster.set(anchorPos, dirToCam);
@@ -268,13 +232,11 @@ export class Player {
             const hits = this.raycaster.intersectObjects(obstacles, true);
             
             if (hits.length > 0) {
-                // إذا كان هناك جدار، تقترب الكاميرا منه
                 const safeDist = Math.max(0.5, hits[0].distance - 0.2);
                 targetCamPos = anchorPos.clone().add(dirToCam.multiplyScalar(safeDist));
             }
         }
 
-        // --- تطبيق حركة الكاميرا بسلاسة (Lag) ---
         if (isFirstPerson) {
             this.engine.camera.position.lerp(anchorPos, this.cameraLag * dt);
             const lookDir = new THREE.Vector3(
@@ -288,7 +250,6 @@ export class Player {
             this.engine.camera.lookAt(anchorPos);
         }
 
-        // 6. إدارة الأنميشن
         if (this.playerModel.userData.animator && !isFirstPerson) {
             let targetState = 'idle';
             if (!this.isGrounded) targetState = 'jump';

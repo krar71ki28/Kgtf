@@ -80,8 +80,8 @@ export class Physics {
             
             const objBox = new THREE.Box3().setFromObject(obj);
             
-            // ✅ إصلاح العالق: إذا كنا عالقين، نسمح بالحركة للخروج
             if (nextBox.intersectsBox(objBox)) {
+                // إذا كان اللاعب عالقاً بالفعل، نسمح له بالخروج
                 if (currentBox.intersectsBox(objBox)) {
                     continue; 
                 }

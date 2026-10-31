@@ -10,13 +10,13 @@ import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 
-import { VFXManager } from './VFX.js?v=31.0.0';
-import { Physics } from './Physics.js?v=31.0.0';
-import { LogicManager } from './Logic.js?v=31.0.0';
-import { UIManager } from './UI.js?v=31.0.0';
-import { AssetManager } from './AssetManager.js?v=31.0.0';
-import { KGTFNode } from './KGTFNode.js?v=31.0.0';
-import { Animator } from './Animator.js?v=31.0.0';
+import { VFXManager } from './VFX.js?v=32.0.0';
+import { Physics } from './Physics.js?v=32.0.0';
+import { LogicManager } from './Logic.js?v=32.0.0';
+import { UIManager } from './UI.js?v=32.0.0';
+import { AssetManager } from './AssetManager.js?v=32.0.0';
+import { KGTFNode } from './KGTFNode.js?v=32.0.0';
+import { Animator } from './Animator.js?v=32.0.0';
 
 export class Engine {
     constructor(canvas) {
@@ -326,7 +326,7 @@ export class Engine {
     update(dt) {
         if (!document.body.classList.contains('play-mode')) {
             this.orbit.update();
-            this.physics.update(dt);
+            
         } else {
             this.objects.forEach(obj => {
                 if (obj.userData.logic) {
@@ -343,6 +343,7 @@ export class Engine {
                 }
             });
         }
+        this.physics.update(dt);
         this.objects.forEach(o => { if (o.userData.animator) o.userData.animator.update(dt); });
         this.vfxManager.update(dt);
 
