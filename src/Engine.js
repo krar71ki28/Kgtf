@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 export class Engine {
     constructor(canvas) {
@@ -19,7 +20,6 @@ export class Engine {
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);
         this.controls.enableDamping = true;
         this.controls.target.set(0, 2, 0);
-        this.controls.maxPolarAngle = Math.PI / 2.05;
 
         this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8);
         this.scene.add(this.hemiLight);
@@ -47,15 +47,21 @@ export class Engine {
         this.onSelect = null;
         this.onSceneChange = null;
 
-        this.addObject('cube'); // إضافة مكعب افتراضي عشان تظهر الشاشة
+        this.addObject('cube');
         this.resize();
         window.addEventListener('resize', () => this.resize());
     }
 
     addObject(type) {
         let obj;
-        if (type === 'cube') { obj = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x00e5ff })); obj.position.y = 0.5; }
-        else if (type === 'sphere') { obj = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), new THREE.MeshStandardMaterial({ color: 0xff5577 })); obj.position.y = 0.5; }
+        if (type === 'cube') { 
+            obj = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x00e5ff })); 
+            obj.position.y = 0.5; 
+        }
+        else if (type === 'sphere') { 
+            obj = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), new THREE.MeshStandardMaterial({ color: 0xff5577 })); 
+            obj.position.y = 0.5; 
+        }
         else if (type === 'tree') {
             obj = new THREE.Group();
             const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.25, 1.5, 8), new THREE.MeshStandardMaterial({ color: 0x5c3a21 }));
@@ -64,15 +70,53 @@ export class Engine {
             leaves.position.y = 2;
             obj.add(trunk, leaves);
         }
+        else if (type === 'character') { return this.loadCharacter(); }
+        else if (type === 'light') { 
+            obj = new THREE.PointLight(0xffaa00, 10, 15); 
+            obj.position.set(0, 3, 0); 
+        }
         
         if (!obj) return;
-        obj.castShadow = true; obj.receiveShadow = true;
-        obj.userData = { id: 'obj_' + Date.now(), type: type };
+        
+        if(obj.isMesh || obj.isGroup) {
+            obj.traverse(c => { if(c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+        }
+
+        obj.userData = { id: 'obj_' + Date.now(), type: type, physics: { enabled: false } };
+        if(!obj.userData.physics) obj.userData.physics = { enabled: false };
         
         this.scene.add(obj);
         this.objects.push(obj);
         this.selectObject(obj);
         if (this.onSceneChange) this.onSceneChange();
+    }
+
+    loadCharacter() {
+        const loader = new GLTFLoader();
+        loader.load('./models/character.glb', (gltf) => {
+            const model = gltf.scene;
+            model.traverse(o => { if(o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+            
+            model.userData = { id: 'char_' + Date.now(), type: 'character', physics: { enabled: false }, actions: {} };
+            const mixer = new THREE.AnimationMixer(model);
+            gltf.animations.forEach(clip => { model.userData.actions[clip.name] = mixer.clipAction(clip); });
+            model.userData.mixer = mixer;
+            
+            const anims = Object.keys(model.userData.actions);
+            if(anims.length > 0) model.userData.actions[anims[0]].play();
+
+            this.scene.add(model); 
+            this.objects.push(model);
+            this.selectObject(model); 
+            if (this.onSceneChange) this.onSceneChange();
+        }, undefined, (err) => { 
+            // Fallback Character
+            const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 0.9, 4, 8), new THREE.MeshStandardMaterial({color: 0x00e5ff}));
+            body.position.y = 0.75; body.castShadow = true;
+            body.userData = { id: 'char_' + Date.now(), type: 'character', physics: { enabled: false }, actions: {} };
+            this.scene.add(body); this.objects.push(body);
+            this.selectObject(body); if (this.onSceneChange) this.onSceneChange();
+        });
     }
 
     selectObject(obj) {
@@ -87,10 +131,13 @@ export class Engine {
         if (this.onSceneChange) this.onSceneChange();
     }
 
-    toggleGrid(visible) { this.grid.visible = visible; }
+    toggleGrid(visible) { if(this.grid) this.grid.visible = visible; }
 
-    update() {
+    update(dt) {
         this.controls.update();
+        this.objects.forEach(o => {
+            if(o.userData.mixer) o.userData.mixer.update(dt);
+        });
     }
 
     render() { this.renderer.render(this.scene, this.camera); }
