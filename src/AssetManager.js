@@ -1,3 +1,5 @@
+import { Serializer } from './Serializer.js?v=28.0.0';
+
 export class AssetManager {
     constructor(engine) {
         this.engine = engine;
@@ -11,19 +13,22 @@ export class AssetManager {
         if (!obj) return false;
         const prefabs = this.getPrefabs();
         
-        // استخراج اللون
-        let color = '#00e5ff';
-        obj.traverse(c => { if(c.isMesh && c.material && c.material.color) color = '#' + c.material.color.getHexString(); });
-
+        // استخدام Serializer لحفظ الشجرة كاملة
+        const serializedData = Serializer.serialize(obj);
+        
         prefabs.push({
             id: 'prefab_' + Date.now(),
-            type: obj.userData.type,
-            color: color,
-            logic: obj.userData.logic || []
+            name: obj.userData.type,
+            data: serializedData
         });
         
-        localStorage.setItem('kgtf_prefabs', JSON.stringify(prefabs));
-        return true;
+        try {
+            localStorage.setItem('kgtf_prefabs', JSON.stringify(prefabs));
+            return true;
+        } catch (e) {
+            alert('مساحة التخزين ممتلئة! لا يمكن حفظ المزيد.');
+            return false;
+        }
     }
 
     deletePrefab(id) {
@@ -32,22 +37,8 @@ export class AssetManager {
         localStorage.setItem('kgtf_prefabs', JSON.stringify(prefabs));
     }
 
-    // تصدير المشهد كملف
     exportScene() {
-        const data = this.engine.objects.map(o => {
-            let color = '#00e5ff';
-            o.traverse(c => { if(c.isMesh && c.material && c.material.color) color = '#' + c.material.color.getHexString(); });
-            return { 
-                type: o.userData.type, 
-                pos: o.position.toArray(), 
-                rot: [o.rotation.x, o.rotation.y, o.rotation.z],
-                scale: o.scale.toArray(),
-                color: color, 
-                logic: o.userData.logic,
-                physics: o.userData.physics
-            };
-        });
-        
+        const data = this.engine.objects.map(o => Serializer.serialize(o));
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -57,23 +48,15 @@ export class AssetManager {
         URL.revokeObjectURL(url);
     }
 
-    // استيراد مشهد من ملف
     importScene(jsonString) {
         try {
             const data = JSON.parse(jsonString);
             this.engine.clearScene();
             
             data.forEach(d => {
-                const obj = this.engine.createObject(d.type);
-                if (obj) {
-                    obj.position.fromArray(d.pos);
-                    if (d.rot) obj.rotation.set(d.rot[0], d.rot[1], d.rot[2]);
-                    if (d.scale) obj.scale.fromArray(d.scale);
-                    obj.traverse(c => { if(c.isMesh && c.material && c.material.color) c.material.color.set(d.color); });
-                    obj.userData.logic = d.logic || [];
-                    if (d.physics) obj.userData.physics = d.physics;
-                }
+                Serializer.deserialize(d, this.engine);
             });
+            
             this.engine.selectObject(null);
             return true;
         } catch (e) {

@@ -15,20 +15,10 @@ export class Editor {
             const raw = localStorage.getItem('kgtf_scene_modular');
             if (raw) {
                 try {
-                    JSON.parse(raw).forEach(d => {
-                        const obj = engine.createObject(d.type);
-                        if(obj) {
-                            if(d.pos) obj.position.fromArray(d.pos);
-                            if(d.materialType) {
-                                obj.traverse(c => { if(c.isMesh) c.material = engine.getMaterial(d.materialType, d.color || 0x00e5ff); });
-                            } else if(d.color) {
-                                obj.traverse(c => { if(c.isMesh && c.material && c.material.color) c.material.color.set(d.color); });
-                            }
-                            if(d.logic) obj.userData.logic = d.logic;
-                        }
-                    });
+                    const data = JSON.parse(raw);
+                    data.forEach(d => Serializer.deserialize(d, engine));
                     engine.selectObject(null);
-                } catch(e) { console.warn("Local storage error"); }
+                } catch(e) { console.warn("Local storage error: ", e); }
             }
             if(engine.objects.length === 0) engine.createObject('cube');
             
@@ -165,22 +155,10 @@ export class Editor {
 
         const btnSave = document.getElementById('btn-save');
         if(btnSave) btnSave.addEventListener('click', () => {
-            const data = this.engine.objects.map(o => {
-                let color = 0x00e5ff; let matType = 'default';
-                o.traverse(c => { 
-                    if(c.isMesh && c.material) {
-                        if(c.material.color) color = c.material.color.getHex();
-                        if(c.material.metalness === 0.8) matType = 'metal';
-                        else if(c.material.roughness === 0.9) matType = 'wood';
-                        else if(c.material.opacity === 0.4) matType = 'glass';
-                        else if(c.material.metalness === 0.9) matType = 'gold';
-                        else if(c.material.roughness === 1.0) matType = 'rubber';
-                    }
-                });
-                return { type: o.userData.type, pos: o.position.toArray(), color: color, materialType: matType, logic: o.userData.logic };
-            });
+            const data = this.engine.objects.map(o => this.engine.assetManager.getPrefabs() && Serializer.serialize(o));
+            // استخدام Serializer من AssetManager مباشرة
             localStorage.setItem('kgtf_scene_modular', JSON.stringify(data));
-            alert('تم الحفظ المحلي!');
+            alert('تم الحفظ المحلي بنجاح!');
         });
 
         const btnExport = document.getElementById('btn-export');
