@@ -11,27 +11,24 @@ import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 
-import { VFXManager } from './VFX.js?v=10.0.0';
-import { Physics } from './Physics.js?v=10.0.0';
-import { LogicManager } from './Logic.js?v=10.0.0';
-import { UIManager } from './UI.js?v=10.0.0';
-import { AssetManager } from './AssetManager.js?v=10.0.0';
+import { VFXManager } from './VFX.js?v=11.0.0';
+import { Physics } from './Physics.js?v=11.0.0';
+import { LogicManager } from './Logic.js?v=11.0.0';
+import { UIManager } from './UI.js?v=11.0.0';
+import { AssetManager } from './AssetManager.js?v=11.0.0';
 
 export class Engine {
     constructor(canvas) {
         this.canvas = canvas;
         this.scene = new THREE.Scene();
         
-        // ✅ إزالة الضباب نهائياً عشان تظهر السماء
-        // this.scene.fog = new THREE.Fog(0x87CEEB, 30, 120);
-
         this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
         this.camera.position.set(6, 6, 8);
 
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 0.5; 
+        this.renderer.toneMappingExposure = 0.5; // تعرض متوسط للنهار
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
@@ -39,18 +36,16 @@ export class Engine {
         const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
         this.scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
 
-        // ==========================================
-        // إعداد السماء الحقيقية
-        // ==========================================
+        // إعداد السماء
         this.sky = new Sky();
-        this.sky.scale.setScalar(10000); 
+        this.sky.scale.setScalar(450000); 
         this.scene.add(this.sky);
         
         this.skyParams = {
-            turbidity: 10, 
-            rayleigh: 3, 
+            turbidity: 8,       // غيوم خفيفة
+            rayleigh: 2,        // تشتت الضوء
             mieCoefficient: 0.005,
-            mieDirectionalG: 0.7,
+            mieDirectionalG: 0.8,
             elevation: 45, 
             azimuth: 180 
         };
@@ -58,13 +53,15 @@ export class Engine {
         this.composer = new EffectComposer(this.renderer);
         this.composer.addPass(new RenderPass(this.scene, this.camera));
         
-        // ✅ تقليل التوهج عشان ما يبيض المكعب
+        // ✅ إعدادات التوهج السينمائية (UnrealBloom)
+        // strength = 0.3 (خفيف)، radius = 0.4، threshold = 0.9 (بس يشتغل على الإضاءة القوية)
         this.bloomPass = new UnrealBloomPass(
             new THREE.Vector2(window.innerWidth, window.innerHeight),
             0.3, 0.4, 0.9 
         );
         this.composer.addPass(this.bloomPass);
 
+        // تحديد المجسمات
         this.outlinePass = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), this.scene, this.camera);
         this.outlinePass.edgeStrength = 3.0;
         this.outlinePass.visibleEdgeColor.set('#ffaa00');
@@ -75,10 +72,12 @@ export class Engine {
         this.composer.addPass(smaaPass);
         this.composer.addPass(new OutputPass());
 
-        this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
+        // إضاءة محيطة (Hemisphere)
+        this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
         this.scene.add(this.hemiLight);
 
-        this.sun = new THREE.DirectionalLight(0xfff5e6, 2.0);
+        // ضوء الشمس
+        this.sun = new THREE.DirectionalLight(0xfff5e6, 1.5);
         this.sun.castShadow = true;
         this.sun.shadow.mapSize.width = 2048;
         this.sun.shadow.mapSize.height = 2048;
@@ -130,10 +129,11 @@ export class Engine {
         window.addEventListener('resize', () => this.resize());
         this.resize();
         
-        // تشغيل الشمس في البداية
-        this.updateSun(12);
+        // الوقت الافتراضي 2:00 PM
+        this.updateSun(14);
     }
 
+    // دالة تحديث الشمس والسماء بناءً على الوقت
     updateSun(timeOfDay) {
         const angle = (timeOfDay / 24) * 360 - 90; 
         const phi = THREE.MathUtils.degToRad(90 - angle);
@@ -143,8 +143,6 @@ export class Engine {
         sunPos.setFromSphericalCoords(1, phi, theta);
 
         this.sky.material.uniforms['sunPosition'].value.copy(sunPos);
-        
-        // تحديث خصائص السماء
         this.sky.material.uniforms['turbidity'].value = this.skyParams.turbidity;
         this.sky.material.uniforms['rayleigh'].value = this.skyParams.rayleigh;
         this.sky.material.uniforms['mieCoefficient'].value = this.skyParams.mieCoefficient;
@@ -152,30 +150,43 @@ export class Engine {
 
         this.sun.position.copy(sunPos).multiplyScalar(30);
         this.sun.target.position.set(0, 0, 0);
-        this.sun.target.updateMatrixWorld(); // تحديث المصفوفة للظل
+        this.sun.target.updateMatrixWorld();
 
-        const isNight = sunPos.y < 0;
-        if (isNight) {
-            this.sun.intensity = 0.1;
-            this.hemiLight.intensity = 0.2;
+        // تغيير لون الشمس بناءً على الوقت (غروب = برتقالي)
+        if (timeOfDay < 6 || timeOfDay > 18) {
+            this.sun.color.setHex(0xffaa00); // غروب / ليل
+            this.hemiLight.intensity = 0.1;
             this.renderer.toneMappingExposure = 0.2;
+        } else if (timeOfDay < 8 || timeOfDay > 16) {
+            this.sun.color.setHex(0xffcc88); // ذهبي
+            this.hemiLight.intensity = 0.4;
+            this.renderer.toneMappingExposure = 0.4;
         } else {
-            this.sun.intensity = 2.0;
-            this.hemiLight.intensity = 1.0;
-            this.renderer.toneMappingExposure = 0.5;
+            this.sun.color.setHex(0xffffff); // نهار
+            this.hemiLight.intensity = 0.6;
+            this.renderer.toneMappingExposure = 0.6;
         }
     }
 
+    setSunIntensity(intensity) {
+        this.sun.intensity = intensity;
+    }
+
+    setBloomIntensity(intensity) {
+        this.bloomPass.strength = intensity;
+    }
+
     setupGround() {
-        const groundMat = new THREE.MeshStandardMaterial({ color: 0x3a5a40, roughness: 0.8, metalness: 0.2 });
+        // أرضية خضراء داكنة لتباين مع السماء
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x2e4a35, roughness: 0.9, metalness: 0.1 });
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), groundMat);
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
         this.scene.add(ground);
 
-        const grid = new THREE.GridHelper(200, 100, 0x00e5ff, 0x222222);
+        const grid = new THREE.GridHelper(200, 100, 0x00e5ff, 0x111111);
         grid.position.y = 0.01;
-        grid.material.opacity = 0.2;
+        grid.material.opacity = 0.15;
         grid.material.transparent = true;
         this.scene.add(grid);
     }
@@ -203,13 +214,13 @@ export class Engine {
     }
 
     getMaterial(type, colorHex) {
-        let params = { color: colorHex, envMapIntensity: 1.5 };
-        if (type === 'metal') params = { color: colorHex, roughness: 0.2, metalness: 0.9, envMapIntensity: 2.0 };
-        else if (type === 'wood') params = { color: colorHex, roughness: 0.9, metalness: 0.0, envMapIntensity: 0.8 };
-        else if (type === 'glass') params = { color: colorHex, roughness: 0.05, metalness: 0.0, transparent: true, opacity: 0.4, envMapIntensity: 2.5 };
-        else if (type === 'rubber') params = { color: colorHex, roughness: 1.0, metalness: 0.0, envMapIntensity: 0.5 };
-        else if (type === 'gold') params = { color: 0xffaa00, roughness: 0.2, metalness: 1.0, envMapIntensity: 3.0 };
-        else params = { color: colorHex, roughness: 0.4, metalness: 0.1, envMapIntensity: 1.0 };
+        let params = { color: colorHex, envMapIntensity: 1.0 }; // تقليل انعكاس البيئة
+        if (type === 'metal') params = { color: colorHex, roughness: 0.2, metalness: 0.8, envMapIntensity: 1.5 };
+        else if (type === 'wood') params = { color: colorHex, roughness: 0.9, metalness: 0.0, envMapIntensity: 0.5 };
+        else if (type === 'glass') params = { color: colorHex, roughness: 0.05, metalness: 0.0, transparent: true, opacity: 0.4, envMapIntensity: 2.0 };
+        else if (type === 'rubber') params = { color: colorHex, roughness: 1.0, metalness: 0.0, envMapIntensity: 0.3 };
+        else if (type === 'gold') params = { color: 0xffaa00, roughness: 0.2, metalness: 0.9, envMapIntensity: 2.5 };
+        else params = { color: colorHex, roughness: 0.5, metalness: 0.1, envMapIntensity: 0.8 };
         
         return new THREE.MeshStandardMaterial(params);
     }
@@ -233,7 +244,7 @@ export class Engine {
             leaves.position.y = 1.8;
             group.add(trunk, leaves);
         } else if (type === 'light') {
-            const light = new THREE.PointLight(0xffaa00, 20, 20); light.position.y = 2;
+            const light = new THREE.PointLight(0xffaa00, 10, 15); light.position.y = 2;
             const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.2), new THREE.MeshBasicMaterial({ color: 0xffaa00 })); bulb.position.y = 2;
             group.add(light, bulb);
         } else if (type === 'character') {
@@ -247,7 +258,7 @@ export class Engine {
                 model.traverse(c => { 
                     if (c.isMesh) { 
                         c.castShadow = true; c.receiveShadow = true; 
-                        if(c.material) { c.material.roughness = 0.5; c.material.metalness = 0.2; }
+                        if(c.material) { c.material.roughness = 0.7; c.material.metalness = 0.1; }
                     } 
                 });
                 group.add(model);

@@ -113,11 +113,32 @@ export class Editor {
         const gS = document.getElementById('btn-gizmo-scale');
         if(gS) gS.addEventListener('click', () => this.engine.transform.setMode('scale'));
 
-        // ✅ شريط وقت اليوم يعمل الآن
+        // ✅ ربط أشرطة التحكم بالبيئة (World)
         const timeSlider = document.getElementById('env-time-of-day');
+        const timeDisplay = document.getElementById('time-display');
         if(timeSlider) {
             timeSlider.addEventListener('input', (e) => {
-                this.engine.updateSun(parseFloat(e.target.value));
+                const time = parseFloat(e.target.value);
+                this.engine.updateSun(time);
+                if(timeDisplay) {
+                    const h = Math.floor(time);
+                    const m = Math.floor((time - h) * 60);
+                    timeDisplay.innerText = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                }
+            });
+        }
+
+        const sunIntSlider = document.getElementById('env-sun-intensity');
+        if(sunIntSlider) {
+            sunIntSlider.addEventListener('input', (e) => {
+                this.engine.setSunIntensity(parseFloat(e.target.value));
+            });
+        }
+
+        const bloomIntSlider = document.getElementById('env-bloom-intensity');
+        if(bloomIntSlider) {
+            bloomIntSlider.addEventListener('input', (e) => {
+                this.engine.setBloomIntensity(parseFloat(e.target.value));
             });
         }
 
@@ -154,10 +175,10 @@ export class Editor {
                 o.traverse(c => { 
                     if(c.isMesh && c.material) {
                         if(c.material.color) color = c.material.color.getHex();
-                        if(c.material.metalness === 0.9) matType = 'metal';
+                        if(c.material.metalness === 0.8) matType = 'metal';
                         else if(c.material.roughness === 0.9) matType = 'wood';
                         else if(c.material.opacity === 0.4) matType = 'glass';
-                        else if(c.material.metalness === 1.0) matType = 'gold';
+                        else if(c.material.metalness === 0.9) matType = 'gold';
                         else if(c.material.roughness === 1.0) matType = 'rubber';
                     }
                 });
@@ -378,10 +399,10 @@ export class Editor {
             let matType = 'default';
             obj.traverse(c => {
                 if(c.isMesh && c.material) {
-                    if(c.material.metalness === 0.9) matType = 'metal';
+                    if(c.material.metalness === 0.8) matType = 'metal';
                     else if(c.material.roughness === 0.9) matType = 'wood';
                     else if(c.material.opacity === 0.4) matType = 'glass';
-                    else if(c.material.metalness === 1.0) matType = 'gold';
+                    else if(c.material.metalness === 0.9) matType = 'gold';
                     else if(c.material.roughness === 1.0) matType = 'rubber';
                 }
             });
