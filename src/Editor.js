@@ -10,14 +10,15 @@ export class Editor {
         engine.onSelectCallback = (obj) => this.updateInspector(obj);
         engine.onSceneChangeCallback = () => this.updateOutliner();
         
-        // تحميل المشهد
         const raw = localStorage.getItem('kgtf_scene_modular');
         if (raw) {
             try {
                 JSON.parse(raw).forEach(d => {
                     const obj = engine.createObject(d.type);
-                    obj.position.fromArray(d.pos);
-                    obj.traverse(c => { if(c.isMesh && c.material && c.material.color) c.material.color.set(d.color); });
+                    if(obj) {
+                        obj.position.fromArray(d.pos);
+                        obj.traverse(c => { if(c.isMesh && c.material && c.material.color) c.material.color.set(d.color); });
+                    }
                 });
                 engine.selectObject(null);
             } catch(e) {}
@@ -77,6 +78,13 @@ export class Editor {
         document.getElementById('prop-color').addEventListener('input', (e) => {
             if(this.engine.selectedObj) this.engine.selectedObj.traverse(c => { if(c.isMesh && c.material && c.material.color) c.material.color.set(e.target.value); });
         });
+
+        // ✅ ربط تفعيل الفيزياء
+        document.getElementById('prop-physics').addEventListener('change', (e) => {
+            if(this.engine.selectedObj && this.engine.selectedObj.userData.physics) {
+                this.engine.selectedObj.userData.physics.enabled = e.target.checked;
+            }
+        });
     }
 
     setupRaycaster() {
@@ -117,8 +125,14 @@ export class Editor {
         document.getElementById('prop-x').value = obj.position.x;
         document.getElementById('prop-y').value = obj.position.y;
         document.getElementById('prop-z').value = obj.position.z;
+        
         let color = '#00e5ff';
         obj.traverse(c => { if(c.isMesh && c.material && c.material.color) color = '#' + c.material.color.getHexString(); });
         document.getElementById('prop-color').value = color;
+
+        // ✅ تحديث حالة الفيزياء
+        if(obj.userData.physics) {
+            document.getElementById('prop-physics').checked = obj.userData.physics.enabled;
+        }
     }
 }
