@@ -88,7 +88,6 @@ export class Editor {
             if (this.engine.selectedObj) this.engine.removeObject(this.engine.selectedObj);
         });
 
-        // ✅ ربط زر محاذاة الشبكة
         const btnSnap = document.getElementById('btn-snap-toggle');
         if(btnSnap) btnSnap.addEventListener('click', () => {
             this.engine.isSnapping = !this.engine.isSnapping;
@@ -198,15 +197,17 @@ export class Editor {
             if(this.engine.selectedObj) this.engine.selectedObj.traverse(c => { if(c.isMesh && c.material && c.material.color) c.material.color.set(e.target.value); });
         });
 
+        // ✅ إصلاح هام: استخدام حدث 'input' بدل 'change' للمواد
         const matEl = document.getElementById('prop-material');
-        if(matEl) matEl.addEventListener('change', (e) => {
+        if(matEl) matEl.addEventListener('input', (e) => {
             if(this.engine.selectedObj) {
                 const matType = e.target.value;
                 this.engine.selectedObj.traverse(c => { 
                     if(c.isMesh) {
                         let currentColor = 0x00e5ff;
                         if(c.material && c.material.color) currentColor = c.material.color.getHex();
-                        c.material.dispose();
+                        if (Array.isArray(c.material)) c.material.forEach(m => m.dispose());
+                        else c.material.dispose();
                         c.material = this.engine.getMaterial(matType, currentColor);
                     }
                 });
