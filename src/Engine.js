@@ -8,72 +8,46 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 
-import { VFXManager } from './VFX.js?v=3.0.0';
-import { Physics } from './Physics.js?v=3.0.0';
-import { LogicManager } from './Logic.js?v=3.0.0';
-import { UIManager } from './UI.js?v=3.0.0';
-import { AssetManager } from './AssetManager.js?v=3.0.0';
+import { VFXManager } from './VFX.js?v=4.2.0';
+import { Physics } from './Physics.js?v=4.2.0';
+import { LogicManager } from './Logic.js?v=4.2.0';
+import { UIManager } from './UI.js?v=4.2.0';
+import { AssetManager } from './AssetManager.js?v=4.2.0';
 
 export class Engine {
     constructor(canvas) {
         this.canvas = canvas;
         this.scene = new THREE.Scene();
-        
-        // لون سماء واقعي مع ضباب خفيف
         this.scene.background = new THREE.Color(0x87CEEB);
         this.scene.fog = new THREE.Fog(0x87CEEB, 30, 120);
 
         this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
         this.camera.position.set(6, 6, 8);
 
-        // ==========================================
-        // 1. إعدادات الريندر الاحترافية (High Quality)
-        // ==========================================
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
-        // زيادة الدقة (حتى 2x) لشاشات الموبايل الحديثة
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
-        
-        // تصحيح الألوان (Tone Mapping)
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.renderer.toneMappingExposure = 1.2;
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-
-        // ظلال ناعمة وواقعية
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
 
-        // ==========================================
-        // 2. الإضاءة البيئية (PBR Environment)
-        // ==========================================
         const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
-        // هذه الإضاءة تعطي انعكاسات واقعية للمجسمات (مثل الزجاج والمعدن)
         this.scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
 
-        // ==========================================
-        // 3. Post-Processing (تنعيم الحواف)
-        // ==========================================
         this.composer = new EffectComposer(this.renderer);
         this.composer.addPass(new RenderPass(this.scene, this.camera));
-        
-        // SMAA هو أفضل فلتر لتنعيم الحواف على الموبايل (أخف من FXAA و TAA)
         const smaaPass = new SMAAPass(window.innerWidth * this.renderer.getPixelRatio(), window.innerHeight * this.renderer.getPixelRatio());
         this.composer.addPass(smaaPass);
         this.composer.addPass(new OutputPass());
 
-        // ==========================================
-        // 4. إضاءة ثلاثية الأبعاد (3-Point Lighting)
-        // ==========================================
-        // إضاءة السماء (تعطي لون أزرق خفيف للمناطق المظلمة)
         this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5);
         this.scene.add(this.hemiLight);
 
-        // ضوء الشمس (الضوء الرئيسي مع الظلال)
         this.sun = new THREE.DirectionalLight(0xfff5e6, 2.5);
         this.sun.position.set(15, 25, 15);
         this.sun.castShadow = true;
-        
-        // تحسين جودة الظل وتقليل الحمل على المعالج
-        this.sun.shadow.mapSize.width = 2048; // دقة عالية للظل
+        this.sun.shadow.mapSize.width = 2048;
         this.sun.shadow.mapSize.height = 2048;
         this.sun.shadow.camera.near = 1;
         this.sun.shadow.camera.far = 50;
@@ -81,12 +55,9 @@ export class Engine {
         this.sun.shadow.camera.right = 20;
         this.sun.shadow.camera.top = 20;
         this.sun.shadow.camera.bottom = -20;
-        this.sun.shadow.bias = -0.0005; // لمنع تشوهات الظل (Shadow Acne)
+        this.sun.shadow.bias = -0.0005;
         this.scene.add(this.sun);
 
-        // ==========================================
-        // 5. الكاميرا والأرضية
-        // ==========================================
         this.orbit = new OrbitControls(this.camera, this.renderer.domElement);
         this.orbit.target.set(0, 1, 0);
         this.orbit.enableDamping = true;
@@ -94,9 +65,6 @@ export class Engine {
 
         this.setupGround();
 
-        // ==========================================
-        // 6. إدارة الملفات والمحرك
-        // ==========================================
         this.objects = [];
         this.selectedObj = null;
         this.loader = new GLTFLoader();
@@ -120,18 +88,12 @@ export class Engine {
     }
 
     setupGround() {
-        // أرضية واقعية مع استقبال للظل
-        const groundMat = new THREE.MeshStandardMaterial({ 
-            color: 0x3a5a40, 
-            roughness: 0.8, 
-            metalness: 0.2 
-        });
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x3a5a40, roughness: 0.8, metalness: 0.2 });
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), groundMat);
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
         this.scene.add(ground);
 
-        // شبكة خفيفة
         const grid = new THREE.GridHelper(200, 100, 0x00e5ff, 0x222222);
         grid.position.y = 0.01;
         grid.material.opacity = 0.2;
@@ -143,13 +105,11 @@ export class Engine {
         if (isNight) {
             this.scene.background.setHex(0x050510); 
             this.scene.fog.color.setHex(0x050510);
-            this.sun.intensity = 0.2; 
-            this.hemiLight.intensity = 0.3;
+            this.sun.intensity = 0.2; this.hemiLight.intensity = 0.3;
         } else {
             this.scene.background.setHex(0x87CEEB); 
             this.scene.fog.color.setHex(0x87CEEB);
-            this.sun.intensity = 2.5; 
-            this.hemiLight.intensity = 1.5;
+            this.sun.intensity = 2.5; this.hemiLight.intensity = 1.5;
         }
     }
 
@@ -181,29 +141,16 @@ export class Engine {
         group.userData.physics = { vy: 0, enabled: false };
         group.userData.logic = [];
         
-        // مواد واقعية (PBR Materials)
         if (type === 'cube') {
-            const mesh = new THREE.Mesh(
-                new THREE.BoxGeometry(1, 1, 1), 
-                new THREE.MeshStandardMaterial({ color: 0x00e5ff, roughness: 0.3, metalness: 0.6 }) // معدن لامع
-            );
+            const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x00e5ff, roughness: 0.3, metalness: 0.6 }));
             mesh.position.y = 0.5; group.add(mesh);
         } else if (type === 'sphere') {
-            const mesh = new THREE.Mesh(
-                new THREE.SphereGeometry(0.5, 64, 64), // دقة أعلى للكرة
-                new THREE.MeshStandardMaterial({ color: 0xff5577, roughness: 0.1, metalness: 0.1 }) // بلاستيك ناعم
-            );
+            const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 64, 64), new THREE.MeshStandardMaterial({ color: 0xff5577, roughness: 0.1, metalness: 0.1 }));
             mesh.position.y = 0.5; group.add(mesh);
         } else if (type === 'tree') {
-            const trunk = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.15, 0.25, 1.5, 16), 
-                new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.9 })
-            );
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.25, 1.5, 16), new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.9 }));
             trunk.position.y = 0.75;
-            const leaves = new THREE.Mesh(
-                new THREE.ConeGeometry(1, 1.5, 16), 
-                new THREE.MeshStandardMaterial({ color: 0x2d5a27, roughness: 0.8 })
-            );
+            const leaves = new THREE.Mesh(new THREE.ConeGeometry(1, 1.5, 16), new THREE.MeshStandardMaterial({ color: 0x2d5a27, roughness: 0.8 }));
             leaves.position.y = 1.8;
             group.add(trunk, leaves);
         } else if (type === 'light') {
@@ -218,15 +165,10 @@ export class Engine {
             this.loader.load('models/character.glb', (gltf) => {
                 group.clear(); 
                 const model = gltf.scene;
-                // تطبيق الظلال والمواد الواقعية على الشخصية
                 model.traverse(c => { 
                     if (c.isMesh) { 
-                        c.castShadow = true; 
-                        c.receiveShadow = true; 
-                        if(c.material) {
-                            c.material.roughness = 0.5;
-                            c.material.metalness = 0.2;
-                        }
+                        c.castShadow = true; c.receiveShadow = true; 
+                        if(c.material) { c.material.roughness = 0.5; c.material.metalness = 0.2; }
                     } 
                 });
                 group.add(model);
@@ -252,6 +194,60 @@ export class Engine {
         this.selectObject(group);
         if (this.onSceneChangeCallback) this.onSceneChangeCallback();
         return group;
+    }
+
+    // ==========================================
+    // دالة الحذف الآمن (تنظف الذاكرة)
+    // ==========================================
+    removeObject(obj) {
+        if (!obj) return;
+        
+        // إزالة من المشهد
+        this.scene.remove(obj);
+        
+        // تنظيف الهندسة والمواد من الذاكرة (منع تسريب الذاكرة)
+        obj.traverse(c => {
+            if (c.geometry) c.geometry.dispose();
+            if (c.material) {
+                if (Array.isArray(c.material)) c.material.forEach(m => m.dispose());
+                else c.material.dispose();
+            }
+        });
+
+        // إزالة من المصفوفة
+        this.objects = this.objects.filter(o => o !== obj);
+        
+        // إلغاء التحديد
+        this.selectObject(null);
+        if (this.onSceneChangeCallback) this.onSceneChangeCallback();
+    }
+
+    // ==========================================
+    // دالة التكرار الآمن (Duplicate)
+    // ==========================================
+    duplicateObject(obj) {
+        if (!obj) return null;
+        if (obj.userData.isCharacter) {
+            alert("لا يمكن تكرار الشخصية (GLB) حالياً لتجنب مشاكل الأنميشن.");
+            return null;
+        }
+
+        // استنساخ عميق (Deep Clone)
+        const clone = obj.clone(true);
+        
+        // إزاحة المجسم الجديد قليلاً عشان ما يتراكب مع الأصلي
+        clone.position.x += 1.5;
+
+        // نسخ البيانات (Logic, Physics) مع إعطاء ID جديد
+        clone.userData = JSON.parse(JSON.stringify(obj.userData));
+        clone.userData.id = Date.now() + Math.random(); // ID جديد
+        
+        this.scene.add(clone);
+        this.objects.push(clone);
+        this.selectObject(clone);
+        
+        if (this.onSceneChangeCallback) this.onSceneChangeCallback();
+        return clone;
     }
 
     selectObject(obj) {
@@ -296,19 +292,12 @@ export class Engine {
         }
     }
 
-    // ==========================================
-    // التحديث الأهم: استخدام Composer بدل Renderer
-    // ==========================================
-    render() { 
-        this.composer.render(); 
-    }
+    render() { this.composer.render(); }
 
     resize() {
         const c = document.getElementById('viewport-container');
         this.camera.aspect = c.clientWidth / c.clientHeight; 
         this.camera.updateProjectionMatrix();
-        
-        // تحديث الريندرر والـ Composer عشان ما يتشوه التصميم
         this.renderer.setSize(c.clientWidth, c.clientHeight, false);
         this.composer.setSize(c.clientWidth, c.clientHeight);
     }

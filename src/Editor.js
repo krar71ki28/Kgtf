@@ -51,14 +51,11 @@ export class Editor {
         const addMenu = document.getElementById('add-menu');
         const btnAddMenu = document.getElementById('btn-add-menu');
         
-        // ✅ إصلاح نهائي لزر الزائد: الاستجابة للماوس واللمس
         if(btnAddMenu && addMenu) {
             btnAddMenu.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault(); e.stopPropagation();
                 addMenu.classList.toggle('show');
             });
-            
             document.addEventListener('click', (e) => {
                 if (addMenu.classList.contains('show') && !addMenu.contains(e.target) && e.target !== btnAddMenu) {
                     addMenu.classList.remove('show');
@@ -77,6 +74,21 @@ export class Editor {
         const btnClear = document.getElementById('btn-clear-scene');
         if(btnClear) btnClear.addEventListener('click', () => this.engine.clearScene());
         
+        // ✅ ربط أزرار النسخ والحذف
+        const btnDuplicate = document.getElementById('btn-duplicate');
+        if(btnDuplicate) btnDuplicate.addEventListener('click', () => {
+            if (this.engine.selectedObj) {
+                this.engine.duplicateObject(this.engine.selectedObj);
+            }
+        });
+
+        const btnDeleteObj = document.getElementById('btn-delete-obj');
+        if(btnDeleteObj) btnDeleteObj.addEventListener('click', () => {
+            if (this.engine.selectedObj) {
+                this.engine.removeObject(this.engine.selectedObj);
+            }
+        });
+
         const gT = document.getElementById('btn-gizmo-translate');
         if(gT) gT.addEventListener('click', () => this.engine.transform.setMode('translate'));
         const gR = document.getElementById('btn-gizmo-rotate');
@@ -283,12 +295,14 @@ export class Editor {
         const msg = document.getElementById('no-selection-msg');
         const logicEditor = document.getElementById('logic-editor');
         const noLogicMsg = document.getElementById('no-logic-selection');
+        const actionsDiv = document.getElementById('object-actions');
 
         if (!obj) { 
             if(insp) insp.style.display = 'none'; 
             if(msg) msg.style.display = 'block'; 
             if(logicEditor) logicEditor.style.display = 'none'; 
             if(noLogicMsg) noLogicMsg.style.display = 'block';
+            if(actionsDiv) actionsDiv.style.display = 'none'; // إخفاء أزرار النسخ والحذف
             return; 
         }
         
@@ -296,6 +310,7 @@ export class Editor {
         if(msg) msg.style.display = 'none';
         if(logicEditor) logicEditor.style.display = 'block'; 
         if(noLogicMsg) noLogicMsg.style.display = 'none';
+        if(actionsDiv) actionsDiv.style.display = 'flex'; // إظهار أزرار النسخ والحذف
         
         const px = document.getElementById('prop-x');
         const py = document.getElementById('prop-y');

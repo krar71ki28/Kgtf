@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>KGTF ENGINE</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=3.0.0">
+<link rel="stylesheet" href="style.css?v=4.2.0">
 </head>
 <body>
     <header id="header">
@@ -72,7 +72,14 @@
             </div>
             
             <div class="panel-section tab-pane" id="tab-details">
-                <div class="panel-header"><span class="panel-title" style="color:#00e5ff;">DETAILS</span></div>
+                <div class="panel-header">
+                    <span class="panel-title" style="color:#00e5ff;">DETAILS</span>
+                    <!-- أزرار النسخ والحذف الجديدة -->
+                    <div id="object-actions" style="display:none; gap:5px;">
+                        <button class="btn-small" id="btn-duplicate" style="background:#478cbf; color:#fff;" title="نسخ المجسم">📑 نسخ</button>
+                        <button class="btn-small" id="btn-delete-obj" style="background:#ff5577; color:#fff;" title="حذف المجسم">🗑️ حذف</button>
+                    </div>
+                </div>
                 <div id="no-selection-msg" style="text-align:center; color:#666; font-size:12px; margin-top:10px;">لم يتم تحديد مجسم.</div>
                 <div id="inspector">
                     <div class="prop-grid">
@@ -142,6 +149,6 @@
     <script type="importmap">
     { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
-    <script type="module" src="src/main.js?v=3.0.0"></script>
+    <script type="module" src="src/main.js?v=4.2.0"></script>
 </body>
 </html>
