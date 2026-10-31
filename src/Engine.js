@@ -202,15 +202,19 @@ export class Engine {
             model.position.set(0, 0, 0);
             model.scale.set(1, 1, 1);
             model.traverse(o => { if(o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-            model.userData = { id: 'model_' + (this.idCounter++), type: 'model', material: 'custom', physics: { enabled: false, vy: 0, bounce: 0 }, behaviors: {}, behaviorStates: {} };
+            
+            model.userData = { id: 'char_' + (this.idCounter++), type: 'character', material: 'custom', physics: { enabled: false, vy: 0, bounce: 0 }, behaviors: {}, behaviorStates: {} };
+
+            const oldChar = this.objects.find(o => o.userData.type === 'character');
+            if (oldChar) this.removeObject(oldChar);
+
             this.scene.add(model);
             this.objects.push(model);
             this.selectObject(model);
             if (this.onSceneChange) this.onSceneChange();
             URL.revokeObjectURL(url); 
         }, undefined, (err) => {
-            alert('خطأ في تحميل المجسم. تأكد من أنه بصيغة .glb أو .gltf صحيحة ومحسنة للموبايل.');
-            console.error(err);
+            alert('خطأ في تحميل المجسم.');
         });
     }
 
@@ -329,21 +333,32 @@ export class Engine {
     loadCharacter(opts = {}) {
         const currentVersion = this.sceneVersion;
         const loader = new GLTFLoader();
-        loader.load('https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb', (gltf) => {
+        // هنا نغير المسار عشان يقرأ الشخصية من مجلد models
+        loader.load('./models/character.glb', (gltf) => {
             if (this.sceneVersion !== currentVersion) return;
             const model = gltf.scene;
-            model.position.y = 0; model.scale.set(0.7, 0.7, 0.7);
+            model.position.y = 0; model.scale.set(1, 1, 1);
             if (opts.position) model.position.fromArray(opts.position);
             if (opts.rotation) model.rotation.set(opts.rotation[0] || 0, opts.rotation[1] || 0, opts.rotation[2] || 0);
             model.traverse(o => { if(o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+            
             const mixer = new THREE.AnimationMixer(model);
             const actions = {};
             gltf.animations.forEach(clip => { actions[clip.name] = mixer.clipAction(clip); });
             if (actions['Idle']) actions['Idle'].play();
-            model.userData = { id: 'char_' + (this.idCounter++), type: 'character', mixer, actions, currentAction: 'Idle', material: 'n/a', physics: { enabled: false, vy: 0, bounce: 0 }, behaviors: {}, behaviorStates: {} };
+            
+            model.userData = { id: 'char_' + (this.idCounter++), type: 'character', mixer, actions, currentAction: 'Idle', material: 'custom', physics: { enabled: false, vy: 0, bounce: 0 }, behaviors: {}, behaviorStates: {} };
             this.scene.add(model); this.objects.push(model);
             if (!opts.isLoading) { this.selectObject(model); if (this.onSceneChange) this.onSceneChange(); }
-        }, undefined, (err) => { alert('تعذر تحميل الشخصية.'); });
+        }, undefined, (err) => { 
+            console.warn('تعذر تحميل شخصية السيرفر، سيتم استخدام الروبوت الافتراضي.');
+            // في حال ما لقى الملف، يحمل الروبوت الافتراضي عشان ما تطلع شاشة سوداء
+            loader.load('https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb', (gltf) => {
+                const model = gltf.scene; model.scale.set(0.7, 0.7, 0.7);
+                model.userData = { id: 'char_' + (this.idCounter++), type: 'character', material: 'n/a', physics: { enabled: false }, behaviors: {}, behaviorStates: {} };
+                this.scene.add(model); this.objects.push(model);
+            });
+        });
     }
 
     getSceneData() {
@@ -394,8 +409,8 @@ export class Engine {
 
     loadScene() {
         const saved = localStorage.getItem('kgtf_scene_final');
-        if (!saved) { this.addObject('cube'); return; }
-        try { const data = JSON.parse(saved); this.loadSceneData(data); } catch(e) { this.addObject('cube'); }
+        if (!saved) { this.addObject('cube'); this.loadCharacter(); return; } // يحمل الشخصية الافتراضية
+        try { const data = JSON.parse(saved); this.loadSceneData(data); } catch(e) { this.addObject('cube'); this.loadCharacter(); }
     }
 
     update(dt) {
