@@ -75,6 +75,18 @@ export class Editor {
             });
         });
 
+        // ✅ ربط زر رفع مجسمات GLB
+        const btnUploadGlb = document.getElementById('btn-upload-glb');
+        const fileUploadGlb = document.getElementById('file-upload-glb');
+        if (btnUploadGlb && fileUploadGlb) {
+            btnUploadGlb.addEventListener('click', () => fileUploadGlb.click());
+            fileUploadGlb.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) this.engine.loadGLB(file);
+                e.target.value = '';
+            });
+        }
+
         const btnClear = document.getElementById('btn-clear-scene');
         if(btnClear) btnClear.addEventListener('click', () => this.engine.clearScene());
         
@@ -197,7 +209,6 @@ export class Editor {
             if(this.engine.selectedObj) this.engine.selectedObj.traverse(c => { if(c.isMesh && c.material && c.material.color) c.material.color.set(e.target.value); });
         });
 
-        // ✅ إصلاح هام: استخدام حدث 'input' بدل 'change' للمواد
         const matEl = document.getElementById('prop-material');
         if(matEl) matEl.addEventListener('input', (e) => {
             if(this.engine.selectedObj) {

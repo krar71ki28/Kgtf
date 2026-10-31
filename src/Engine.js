@@ -6,14 +6,15 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 
-import { VFXManager } from './VFX.js?v=6.1.0';
-import { Physics } from './Physics.js?v=6.1.0';
-import { LogicManager } from './Logic.js?v=6.1.0';
-import { UIManager } from './UI.js?v=6.1.0';
-import { AssetManager } from './AssetManager.js?v=6.1.0';
+import { VFXManager } from './VFX.js?v=8.0.0';
+import { Physics } from './Physics.js?v=8.0.0';
+import { LogicManager } from './Logic.js?v=8.0.0';
+import { UIManager } from './UI.js?v=8.0.0';
+import { AssetManager } from './AssetManager.js?v=8.0.0';
 
 export class Engine {
     constructor(canvas) {
@@ -36,6 +37,9 @@ export class Engine {
         const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
         this.scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
 
+        // ==========================================
+        // Post-Processing (إضافة تحديد المجسمات Outline)
+        // ==========================================
         this.composer = new EffectComposer(this.renderer);
         this.composer.addPass(new RenderPass(this.scene, this.camera));
         
@@ -44,6 +48,16 @@ export class Engine {
             0.8, 0.4, 0.85
         );
         this.composer.addPass(this.bloomPass);
+
+        // OutlinePass (يحيط المجسم المحدد بإطار مضيء)
+        this.outlinePass = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), this.scene, this.camera);
+        this.outlinePass.edgeStrength = 3.0;
+        this.outlinePass.edgeGlow = 0.0;
+        this.outlinePass.edgeThickness = 1.0;
+        this.outlinePass.pulsePeriod = 0;
+        this.outlinePass.visibleEdgeColor.set('#ffaa00'); // لون التحديد
+        this.outlinePass.hiddenEdgeColor.set('#ffaa00');
+        this.composer.addPass(this.outlinePass);
 
         const smaaPass = new SMAAPass(window.innerWidth * this.renderer.getPixelRatio(), window.innerHeight * this.renderer.getPixelRatio());
         this.composer.addPass(smaaPass);
@@ -153,7 +167,6 @@ export class Engine {
         }
     }
 
-    // ✅ إصلاح المواد: إضافة envMapIntensity لتعطي لمعان حقيقي
     getMaterial(type, colorHex) {
         let params = { color: colorHex, envMapIntensity: 1.5 };
         if (type === 'metal') params = { color: colorHex, roughness: 0.2, metalness: 0.9, envMapIntensity: 2.0 };
@@ -227,6 +240,49 @@ export class Engine {
         return group;
     }
 
+    // ==========================================
+    // دالة رفع المجسمات الخارجية (GLB / GLTF)
+    // ==========================================
+    loadGLB(file) {
+        const url = URL.createObjectURL(file);
+        this.loader.load(url, (gltf) => {
+            URL.revokeObjectURL(url);
+            const group = new THREE.Group();
+            const model = gltf.scene;
+            
+            model.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+            
+            // توسيط المجسم (عشان ينزل على الأرضية بالضبط)
+            const box = new THREE.Box3().setFromObject(model);
+            const center = box.getCenter(new THREE.Vector3());
+            model.position.sub(center); 
+            model.position.y += (box.max.y - box.min.y) / 2; 
+
+            group.add(model);
+            group.userData = { 
+                type: 'glb', 
+                physics: { vy: 0, enabled: false }, 
+                logic: [] 
+            };
+            
+            // إعداد الأنميشن إذا وجد
+            if (gltf.animations && gltf.animations.length > 0) {
+                group.userData.mixer = new THREE.AnimationMixer(model);
+                group.userData.actions = {};
+                gltf.animations.forEach(clip => { group.userData.actions[clip.name] = group.userData.mixer.clipAction(clip); });
+                const firstAnim = Object.keys(group.userData.actions)[0];
+                if (firstAnim) { group.userData.actions[firstAnim].play(); group.userData.currentAction = firstAnim; }
+            }
+
+            this.scene.add(group);
+            this.objects.push(group);
+            this.selectObject(group);
+            if (this.onSceneChangeCallback) this.onSceneChangeCallback();
+        }, undefined, (err) => {
+            alert('فشل رفع الملف: ' + err.message);
+        });
+    }
+
     removeObject(obj) {
         if (!obj) return;
         this.scene.remove(obj);
@@ -262,8 +318,13 @@ export class Engine {
 
     selectObject(obj) {
         this.selectedObj = obj;
-        if (obj) this.transform.attach(obj);
-        else this.transform.detach();
+        if (obj) {
+            this.transform.attach(obj);
+            this.outlinePass.selectedObjects = [obj]; // تفعيل الإطار المضيء
+        } else {
+            this.transform.detach();
+            this.outlinePass.selectedObjects = []; // إطفاء الإطار المضيء
+        }
         if (this.onSelectCallback) this.onSelectCallback(obj);
     }
 
@@ -310,5 +371,6 @@ export class Engine {
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(c.clientWidth, c.clientHeight, false);
         this.composer.setSize(c.clientWidth, c.clientHeight);
+        this.outlinePass.setSize(c.clientWidth, c.clientHeight);
     }
 }
