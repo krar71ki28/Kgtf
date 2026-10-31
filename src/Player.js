@@ -20,13 +20,14 @@ export class Player {
         document.getElementById('btn-play').addEventListener('click', () => this.startPlay());
         document.getElementById('exit-play').addEventListener('click', () => this.stopPlay());
 
+        // --- دعم الكيبورد (للـ PC) ---
         window.addEventListener('keydown', (e) => { 
             this.keys[e.code] = true; 
             if (e.code === 'Space' && this.isPlaying && this.isGrounded) { this.velocityY = 8; this.isGrounded = false; } 
         });
         window.addEventListener('keyup', (e) => this.keys[e.code] = false);
 
-        // الجويستيك
+        // --- دعم الجويستيك (للموبايل) ---
         let joyActive = false, joyDir = {x:0, y:0};
         const joyZone = document.getElementById('joystick-zone'), joyKnob = document.getElementById('joystick-knob');
         
@@ -39,27 +40,21 @@ export class Player {
                 let dy = e.touches[0].clientY - (rect.top + rect.height/2);
                 const dist = Math.sqrt(dx*dx + dy*dy); 
                 if(dist > 40) { dx = (dx/dist)*40; dy = (dy/dist)*40; }
-                
                 joyKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-                joyDir.x = dx/40; 
-                joyDir.y = dy/40;
+                joyDir.x = dx/40; joyDir.y = dy/40;
             });
             joyZone.addEventListener('touchend', (e) => { 
-                e.stopPropagation(); 
-                joyActive = false; 
-                joyKnob.style.transform = `translate(-50%, -50%)`; 
-                joyDir = {x:0, y:0}; 
+                e.stopPropagation(); joyActive = false; joyKnob.style.transform = `translate(-50%, -50%)`; joyDir = {x:0, y:0}; 
             });
         }
         
-        // زر القفز (إصلاح)
+        // --- أزرار القفز والعين ---
         const btnJump = document.getElementById('btn-jump');
         if(btnJump) btnJump.addEventListener('pointerdown', (e) => { 
             e.preventDefault(); e.stopPropagation(); 
             if(this.isPlaying && this.isGrounded) { this.velocityY = 8; this.isGrounded = false; } 
         });
 
-        // زر تبديل الكاميرا (إصلاح)
         const btnCamToggle = document.getElementById('btn-camera-toggle');
         if(btnCamToggle) {
             btnCamToggle.addEventListener('pointerdown', (e) => {
@@ -70,40 +65,49 @@ export class Player {
             });
         }
 
-        // التحكم بالكاميرا من خلال منطقة السحب (Drag Zone)
+        // --- التحكم بالكاميرا (ماوس للكمبيوتر + لمس للموبايل) ---
         const dragZone = document.getElementById('camera-drag-zone');
         let isDraggingCam = false;
-        let lastCamTouch = { x: 0, y: 0 };
+        let lastCamPos = { x: 0, y: 0 };
 
         if (dragZone) {
+            // لمس (للموبايل)
             dragZone.addEventListener('touchstart', (e) => {
                 if (!this.isPlaying) return;
                 e.stopPropagation();
                 isDraggingCam = true;
-                lastCamTouch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                lastCamPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
             });
-
             dragZone.addEventListener('touchmove', (e) => {
                 if (!isDraggingCam || !this.isPlaying) return;
                 e.stopPropagation();
-                
                 const touch = e.touches[0];
-                const dx = touch.clientX - lastCamTouch.x;
-                const dy = touch.clientY - lastCamTouch.y;
-                
-                this.cameraYaw -= dx * 0.01; 
-                this.cameraPitch = Math.max(0.05, Math.min(1.0, this.cameraPitch + dy * 0.01));
-                
-                lastCamTouch = { x: touch.clientX, y: touch.clientY };
+                this.updateCameraRotation(touch.clientX - lastCamPos.x, touch.clientY - lastCamPos.y);
+                lastCamPos = { x: touch.clientX, y: touch.clientY };
             });
+            dragZone.addEventListener('touchend', () => isDraggingCam = false);
 
-            dragZone.addEventListener('touchend', (e) => {
-                e.stopPropagation();
-                isDraggingCam = false;
+            // ماوس (للكمبيوتر)
+            dragZone.addEventListener('mousedown', (e) => {
+                if (!this.isPlaying) return;
+                e.preventDefault();
+                isDraggingCam = true;
+                lastCamPos = { x: e.clientX, y: e.clientY };
             });
+            dragZone.addEventListener('mousemove', (e) => {
+                if (!isDraggingCam || !this.isPlaying) return;
+                this.updateCameraRotation(e.clientX - lastCamPos.x, e.clientY - lastCamPos.y);
+                lastCamPos = { x: e.clientX, y: e.clientY };
+            });
+            window.addEventListener('mouseup', () => isDraggingCam = false);
         }
 
         this.getJoyDir = () => joyActive ? joyDir : {x:0, y:0};
+    }
+
+    updateCameraRotation(dx, dy) {
+        this.cameraYaw -= dx * 0.01; 
+        this.cameraPitch = Math.max(0.05, Math.min(1.0, this.cameraPitch + dy * 0.01));
     }
 
     startPlay() {
@@ -151,11 +155,13 @@ export class Player {
 
         let moveVector = new THREE.Vector3();
 
+        // كيبورد
         if (this.keys['KeyW'] || this.keys['ArrowUp']) moveVector.add(forward);
         if (this.keys['KeyS'] || this.keys['ArrowDown']) moveVector.sub(forward);
         if (this.keys['KeyA'] || this.keys['ArrowLeft']) moveVector.sub(right); 
         if (this.keys['KeyD'] || this.keys['ArrowRight']) moveVector.add(right); 
 
+        // جويستيك
         const joy = this.getJoyDir();
         if (joy.x !== 0 || joy.y !== 0) {
             moveVector.add(right.clone().multiplyScalar(joy.x));
@@ -166,19 +172,15 @@ export class Player {
 
         if (isMoving) {
             moveVector.normalize(); 
-            
             const nextPos = this.playerModel.position.clone();
             nextPos.addScaledVector(moveVector, speed * dt);
 
             if (!this.engine.physics.checkPlayerCollision(nextPos, this.playerBoxSize)) {
                 this.playerModel.position.copy(nextPos);
-                
                 const targetRot = Math.atan2(moveVector.x, moveVector.z); 
                 let diff = targetRot - this.playerModel.rotation.y;
-                
                 while (diff < -Math.PI) diff += Math.PI * 2;
                 while (diff > Math.PI) diff -= Math.PI * 2;
-                
                 this.playerModel.rotation.y += diff * 10 * dt;
             }
         }
@@ -186,14 +188,10 @@ export class Player {
         this.velocityY -= 24 * dt; 
         this.playerModel.position.y += this.velocityY * dt;
         if (this.playerModel.position.y <= 0) { 
-            this.playerModel.position.y = 0; 
-            this.velocityY = 0; 
-            this.isGrounded = true; 
+            this.playerModel.position.y = 0; this.velocityY = 0; this.isGrounded = true; 
         }
 
-        const camDist = 4.5;
-        const camHeight = 1.8;
-        
+        const camDist = 4.5; const camHeight = 1.8;
         const offsetX = Math.sin(this.cameraYaw) * camDist * Math.cos(this.cameraPitch);
         const offsetZ = Math.cos(this.cameraYaw) * camDist * Math.cos(this.cameraPitch);
         const offsetY = camHeight + Math.sin(this.cameraPitch) * camDist;
@@ -204,10 +202,8 @@ export class Player {
             const headHeight = 1.5;
             const cameraOffset = new THREE.Vector3(0, headHeight, 0);
             const forwardOffset = new THREE.Vector3(Math.sin(this.playerModel.rotation.y), 0, Math.cos(this.playerModel.rotation.y)).multiplyScalar(0.2);
-            
             const firstPersonPos = this.playerModel.position.clone().add(cameraOffset).add(forwardOffset);
             this.engine.camera.position.lerp(firstPersonPos, 20 * dt); 
-            
             const lookAtPos = firstPersonPos.clone().add(new THREE.Vector3(Math.sin(this.cameraYaw), 0, Math.cos(this.cameraYaw)));
             this.engine.camera.lookAt(lookAtPos);
         } else {
@@ -232,7 +228,6 @@ export class Player {
         if (this.playerModel.userData.actions && !this.isFirstPerson) {
             const actions = this.playerModel.userData.actions; 
             let targetActionName = null;
-            
             if (!this.isGrounded) {
                 targetActionName = Object.keys(actions).find(k => k.toLowerCase().includes('jump') || k.toLowerCase().includes('fall'));
             } else if (isMoving) {

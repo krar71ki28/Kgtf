@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>KGTF ENGINE</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=15.0.0">
+<link rel="stylesheet" href="style.css?v=16.0.0">
 </head>
 <body>
     <header id="header">
@@ -50,10 +50,9 @@
         <div id="status-bar">FPS: <span id="fps">--</span></div>
         
         <div id="play-ui">
-            <!-- منطقة سحب الكاميرا (النصف الأيمن) -->
+            <!-- منطقة سحب الكاميرا (للماوس في الكمبيوتر واللمس في الموبايل) -->
             <div id="camera-drag-zone"></div>
 
-            <!-- الأزرار (z-index عالي لتعمل فوق منطقة السحب) -->
             <button id="exit-play">✕ إيقاف</button>
             <button id="btn-camera-toggle" title="تبديل الكاميرا">👁️</button>
             <div id="score-display" style="display:none;">النقاط: <span id="score-val">0</span></div>
@@ -120,13 +119,16 @@
                 </div>
             </div>
 
+            <!-- World Tab -->
             <div class="panel-section tab-pane" id="tab-world">
                 <div class="panel-header"><span class="panel-title">WORLD</span></div>
-                <div style="padding:20px; text-align:center; color:#888; font-size:12px;">
-                    <p>محرك الرسم السينمائي (UE Style) مطبق تلقائياً.</p>
-                    <div class="prop-row" style="margin-top:20px; justify-content:center;">
-                        <label style="width:auto; margin-left:10px;">المطر</label><input type="checkbox" id="env-rain-toggle">
+                <div style="padding:10px;">
+                    <div class="prop-row" style="margin-bottom:10px;">
+                        <label style="width:70px; font-weight:bold; color:#ffaa00; font-size:11px;">الوقت</label>
+                        <input type="range" id="env-time-of-day" min="0" max="24" step="0.1" value="14" style="flex:1; accent-color:#ffaa00;">
+                        <span id="time-display" style="width:35px; text-align:center; font-size:11px; color:#fff;">14:00</span>
                     </div>
+                    <div class="prop-row" style="margin-bottom:10px;"><label style="width:80px;">المطر</label><input type="checkbox" id="env-rain-toggle"></div>
                 </div>
             </div>
 
@@ -141,22 +143,26 @@
                 </div>
             </div>
 
+            <!-- Logic Tab المحدث -->
             <div class="panel-section tab-pane" id="tab-logic">
                 <div class="panel-header"><span class="panel-title" style="color:#4ade80;">LOGIC</span></div>
                 <div style="padding:10px;">
                     <div id="no-logic-selection" style="text-align:center; color:#666; font-size:12px; margin-top:10px;">حدد مجسماً.</div>
                     <div id="logic-editor" style="display:none;">
-                        <div class="prop-row" style="margin-bottom:5px;"><label style="width:50px;">الحدث</label>
-                            <select id="logic-event" style="flex:1; background:#222; color:#fff; border:1px solid #444; padding:4px;">
+                        <div class="prop-row" style="margin-bottom:5px;"><label style="width:50px; font-size:11px;">الحدث</label>
+                            <select id="logic-event" style="flex:1; background:#222; color:#fff; border:1px solid #444; padding:4px; font-size:11px;">
                                 <option value="onStart">عند البدء</option>
                                 <option value="onCollide">عند الاصطدام</option>
+                                <option value="onTimer">مؤقت (كل 3 ثواني)</option>
                             </select>
                         </div>
-                        <div class="prop-row" style="margin-bottom:10px;"><label style="width:50px;">الإجراء</label>
-                            <select id="logic-action" style="flex:1; background:#222; color:#fff; border:1px solid #444; padding:4px;">
+                        <div class="prop-row" style="margin-bottom:10px;"><label style="width:50px; font-size:11px;">الإجراء</label>
+                            <select id="logic-action" style="flex:1; background:#222; color:#fff; border:1px solid #444; padding:4px; font-size:11px;">
                                 <option value="addScore">نقاط +10</option>
                                 <option value="destroy">تدمير</option>
                                 <option value="playSound">صوت</option>
+                                <option value="spawnCube">توليد مكعب</option>
+                                <option value="teleport">انتقال عشوائي</option>
                             </select>
                         </div>
                         <button class="btn-small" id="btn-add-logic" style="width:100%; background:#4ade80; color:#000; font-weight:bold;">إضافة</button>
@@ -175,6 +181,6 @@
     <script type="importmap">
     { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
-    <script type="module" src="src/main.js?v=15.0.0"></script>
+    <script type="module" src="src/main.js?v=16.0.0"></script>
 </body>
 </html>

@@ -7,14 +7,16 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { VignetteShader } from 'three/addons/shaders/VignetteShader.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 
-import { VFXManager } from './VFX.js?v=15.0.0';
-import { Physics } from './Physics.js?v=15.0.0';
-import { LogicManager } from './Logic.js?v=15.0.0';
-import { UIManager } from './UI.js?v=15.0.0';
-import { AssetManager } from './AssetManager.js?v=15.0.0';
+import { VFXManager } from './VFX.js?v=16.0.0';
+import { Physics } from './Physics.js?v=16.0.0';
+import { LogicManager } from './Logic.js?v=16.0.0';
+import { UIManager } from './UI.js?v=16.0.0';
+import { AssetManager } from './AssetManager.js?v=16.0.0';
 
 export class Engine {
     constructor(canvas) {
@@ -27,44 +29,25 @@ export class Engine {
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
         
-        // ✅ إضاءة UE سينمائية (Exposure منخفض جداً)
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.renderer.toneMappingExposure = 0.35; 
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
 
-        // ✅ إعداد السماء
         this.sky = new Sky();
         this.sky.scale.setScalar(450000); 
         this.scene.add(this.sky);
         
-        const skyParams = {
-            turbidity: 2,       
-            rayleigh: 1,        
-            mieCoefficient: 0.005,
-            mieDirectionalG: 0.7,
-            elevation: 35, 
-            azimuth: 135 
+        this.skyParams = {
+            turbidity: 2, rayleigh: 1, mieCoefficient: 0.005,
+            mieDirectionalG: 0.7, elevation: 35, azimuth: 135 
         };
 
-        const phi = THREE.MathUtils.degToRad(90 - skyParams.elevation);
-        const theta = THREE.MathUtils.degToRad(skyParams.azimuth);
-        const sunPos = new THREE.Vector3().setFromSphericalCoords(1, phi, theta);
-
-        this.sky.material.uniforms['sunPosition'].value.copy(sunPos);
-        this.sky.material.uniforms['turbidity'].value = skyParams.turbidity;
-        this.sky.material.uniforms['rayleigh'].value = skyParams.rayleigh;
-        this.sky.material.uniforms['mieCoefficient'].value = skyParams.mieCoefficient;
-        this.sky.material.uniforms['mieDirectionalG'].value = skyParams.mieDirectionalG;
-
-        // ✅ إضاءة محيطة منخفضة جداً (للظلال)
         this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x222222, 0.3);
         this.scene.add(this.hemiLight);
 
-        // ✅ شمس قوية
         this.sun = new THREE.DirectionalLight(0xfff5e6, 3.5);
-        this.sun.position.copy(sunPos).multiplyScalar(30);
         this.sun.castShadow = true;
         this.sun.shadow.mapSize.width = 2048;
         this.sun.shadow.mapSize.height = 2048;
@@ -78,15 +61,22 @@ export class Engine {
         this.scene.add(this.sun);
         this.scene.add(this.sun.target);
 
+        // ==========================================
+        // Post-Processing (المؤثرات السينمائية)
+        // ==========================================
         this.composer = new EffectComposer(this.renderer);
         this.composer.addPass(new RenderPass(this.scene, this.camera));
         
-        // توهج خفيف
         this.bloomPass = new UnrealBloomPass(
-            new THREE.Vector2(window.innerWidth, window.innerHeight),
-            0.2, 0.4, 0.95 
+            new THREE.Vector2(window.innerWidth, window.innerHeight), 0.2, 0.4, 0.95 
         );
         this.composer.addPass(this.bloomPass);
+
+        // Vignette (تعتيم الحواف)
+        this.vignettePass = new ShaderPass(VignetteShader);
+        this.vignettePass.uniforms["offset"].value = 0.8;
+        this.vignettePass.uniforms["darkness"].value = 1.5;
+        this.composer.addPass(this.vignettePass);
 
         this.outlinePass = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), this.scene, this.camera);
         this.outlinePass.edgeStrength = 3.0;
@@ -119,7 +109,6 @@ export class Engine {
         
         this.transform = new TransformControls(this.camera, this.renderer.domElement);
         this.transform.addEventListener('dragging-changed', (e) => { this.orbit.enabled = !e.value; });
-        
         this.transform.addEventListener('objectChange', () => {
             if (!this.isSnapping || !this.selectedObj) return;
             this.selectedObj.position.x = Math.round(this.selectedObj.position.x);
@@ -127,7 +116,6 @@ export class Engine {
             this.selectedObj.position.z = Math.round(this.selectedObj.position.z);
             if (this.onSelectCallback) this.onSelectCallback(this.selectedObj);
         });
-
         this.scene.add(this.transform);
         
         this.onSelectCallback = null;
@@ -135,10 +123,40 @@ export class Engine {
 
         window.addEventListener('resize', () => this.resize());
         this.resize();
+        
+        // تطبيق وقت اليوم الافتراضي
+        this.updateSun(14);
+    }
+
+    // ✅ دالة تحديث الشمس (ترجع لتشتغل من شريط الوقت)
+    updateSun(timeOfDay) {
+        const angle = (timeOfDay / 24) * 360 - 90; 
+        const phi = THREE.MathUtils.degToRad(90 - angle);
+        const theta = THREE.MathUtils.degToRad(this.skyParams.azimuth);
+
+        const sunPos = new THREE.Vector3();
+        sunPos.setFromSphericalCoords(1, phi, theta);
+
+        this.sky.material.uniforms['sunPosition'].value.copy(sunPos);
+        this.sky.material.uniforms['turbidity'].value = this.skyParams.turbidity;
+        this.sky.material.uniforms['rayleigh'].value = this.skyParams.rayleigh;
+        this.sky.material.uniforms['mieCoefficient'].value = this.skyParams.mieCoefficient;
+        this.sky.material.uniforms['mieDirectionalG'].value = this.skyParams.mieDirectionalG;
+
+        this.sun.position.copy(sunPos).multiplyScalar(30);
+        this.sun.target.position.set(0, 0, 0);
+        this.sun.target.updateMatrixWorld();
+
+        if (timeOfDay < 6 || timeOfDay > 18) {
+            this.sun.color.setHex(0xff6600);
+            this.hemiLight.intensity = 0.1;
+        } else {
+            this.sun.color.setHex(0xffffff);
+            this.hemiLight.intensity = 0.3;
+        }
     }
 
     setupGround() {
-        // أرضية خضراء داكنة جداً (UE Style)
         const groundMat = new THREE.MeshStandardMaterial({ color: 0x1e2e1e, roughness: 0.9, metalness: 0.1 });
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), groundMat);
         ground.rotation.x = -Math.PI / 2;
@@ -191,6 +209,7 @@ export class Engine {
         group.userData.type = type;
         group.userData.physics = { vy: 0, enabled: false };
         group.userData.logic = [];
+        group.userData.lastTimerAction = 0;
         
         if (type === 'cube') {
             const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), this.getMaterial('default', 0x00e5ff));
@@ -262,7 +281,7 @@ export class Engine {
             model.position.y += (box.max.y - box.min.y) / 2; 
 
             group.add(model);
-            group.userData = { type: 'glb', physics: { vy: 0, enabled: false }, logic: [] };
+            group.userData = { type: 'glb', physics: { vy: 0, enabled: false }, logic: [], lastTimerAction: 0 };
             
             if (gltf.animations && gltf.animations.length > 0) {
                 group.userData.mixer = new THREE.AnimationMixer(model);
@@ -346,6 +365,21 @@ export class Engine {
         if (!document.body.classList.contains('play-mode')) {
             this.orbit.update();
             this.physics.updateGravity(dt);
+        } else {
+            // فحص المؤقتات (Timer) أثناء اللعب
+            this.objects.forEach(obj => {
+                if (obj.userData.logic) {
+                    obj.userData.logic.forEach(l => {
+                        if (l.event === 'onTimer') {
+                            const now = performance.now();
+                            if (now - obj.userData.lastTimerAction > 3000) { // كل 3 ثواني
+                                this.logic.executeAction(obj, l.action);
+                                obj.userData.lastTimerAction = now;
+                            }
+                        }
+                    });
+                }
+            });
         }
         
         this.objects.forEach(o => { if (o.userData.mixer) o.userData.mixer.update(dt); });

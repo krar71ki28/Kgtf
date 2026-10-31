@@ -113,6 +113,21 @@ export class Editor {
         const gS = document.getElementById('btn-gizmo-scale');
         if(gS) gS.addEventListener('click', () => this.engine.transform.setMode('scale'));
 
+        // شريط الوقت
+        const timeSlider = document.getElementById('env-time-of-day');
+        const timeDisplay = document.getElementById('time-display');
+        if(timeSlider) {
+            timeSlider.addEventListener('input', (e) => {
+                const time = parseFloat(e.target.value);
+                this.engine.updateSun(time);
+                if(timeDisplay) {
+                    const h = Math.floor(time);
+                    const m = Math.floor((time - h) * 60);
+                    timeDisplay.innerText = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                }
+            });
+        }
+
         const rainEl = document.getElementById('env-rain-toggle');
         if(rainEl) rainEl.addEventListener('change', (e) => this.engine.toggleRain(e.target.checked));
 
@@ -141,8 +156,7 @@ export class Editor {
         const btnSave = document.getElementById('btn-save');
         if(btnSave) btnSave.addEventListener('click', () => {
             const data = this.engine.objects.map(o => {
-                let color = 0x00e5ff;
-                let matType = 'default';
+                let color = 0x00e5ff; let matType = 'default';
                 o.traverse(c => { 
                     if(c.isMesh && c.material) {
                         if(c.material.color) color = c.material.color.getHex();
