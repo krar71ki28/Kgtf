@@ -210,3 +210,24 @@ export class Editor {
         if (obj.isMesh && obj.material) document.getElementById('prop-color').value = '#' + obj.material.color.getHexString();
     }
 }
+
+// ربط زر الاستيراد بالملف المخفي (Surgical Fix)
+document.addEventListener('DOMContentLoaded', () => {
+    const uploadBtn = document.getElementById('btn-upload-model');
+    const fileInput = document.getElementById('model-upload-input');
+    if (uploadBtn && fileInput) {
+        uploadBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            fileInput.click();
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                // استدعاء دالة المحرك
+                if (window.engine) {
+                    window.engine.loadModelFromFile(e.target.files[0]);
+                }
+                e.target.value = ''; // تصفير الحقل عشان تقدر تختار ملف ثاني
+            }
+        });
+    }
+});

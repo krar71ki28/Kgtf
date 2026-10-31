@@ -166,3 +166,22 @@ export class Engine {
     render() { this.renderer.render(this.scene, this.camera); }
     resize() { const w = this.canvas.clientWidth, h = this.canvas.clientHeight; this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); this.renderer.setSize(w, h, false); }
 }
+
+// إضافة دالة تحميل المجسمات الخارجية (Surgical Fix)
+Engine.prototype.loadModelFromFile = function(file) {
+    const loader = new GLTFLoader();
+    const url = URL.createObjectURL(file);
+    loader.load(url, (gltf) => {
+        const model = gltf.scene;
+        model.position.set(0, 0, 0);
+        model.traverse(o => { if(o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+        
+        model.userData = { id: 'model_' + Date.now(), type: 'custom_model', physics: { enabled: false }, logic: [] };
+        
+        this.scene.add(model);
+        this.objects.push(model);
+        this.selectObject(model);
+        if(this.onSceneChange) this.onSceneChange();
+        URL.revokeObjectURL(url);
+    }, undefined, (err) => alert('تعذر تحميل المجسم. تأكد من أنه بصيغة GLB أو GLTF.'));
+};
