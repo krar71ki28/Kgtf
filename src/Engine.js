@@ -8,11 +8,11 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 
-import { VFXManager } from './VFX.js?v=4.2.0';
-import { Physics } from './Physics.js?v=4.2.0';
-import { LogicManager } from './Logic.js?v=4.2.0';
-import { UIManager } from './UI.js?v=4.2.0';
-import { AssetManager } from './AssetManager.js?v=4.2.0';
+import { VFXManager } from './VFX.js?v=5.0.0';
+import { Physics } from './Physics.js?v=5.0.0';
+import { LogicManager } from './Logic.js?v=5.0.0';
+import { UIManager } from './UI.js?v=5.0.0';
+import { AssetManager } from './AssetManager.js?v=5.0.0';
 
 export class Engine {
     constructor(canvas) {
@@ -135,6 +135,19 @@ export class Engine {
         }
     }
 
+    // ✅ دالة لإنشاء مواد واقعية بناءً على النوع
+    getMaterial(type, colorHex) {
+        let params = { color: colorHex };
+        if (type === 'metal') params = { color: colorHex, roughness: 0.2, metalness: 0.9 };
+        else if (type === 'wood') params = { color: colorHex, roughness: 0.9, metalness: 0.0 };
+        else if (type === 'glass') params = { color: colorHex, roughness: 0.05, metalness: 0.0, transparent: true, opacity: 0.4 };
+        else if (type === 'rubber') params = { color: colorHex, roughness: 1.0, metalness: 0.0 };
+        else if (type === 'gold') params = { color: 0xffaa00, roughness: 0.2, metalness: 1.0 };
+        else params = { color: colorHex, roughness: 0.4, metalness: 0.1 }; // default
+        
+        return new THREE.MeshStandardMaterial(params);
+    }
+
     createObject(type) {
         let group = new THREE.Group();
         group.userData.type = type;
@@ -142,15 +155,15 @@ export class Engine {
         group.userData.logic = [];
         
         if (type === 'cube') {
-            const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x00e5ff, roughness: 0.3, metalness: 0.6 }));
+            const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), this.getMaterial('default', 0x00e5ff));
             mesh.position.y = 0.5; group.add(mesh);
         } else if (type === 'sphere') {
-            const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 64, 64), new THREE.MeshStandardMaterial({ color: 0xff5577, roughness: 0.1, metalness: 0.1 }));
+            const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 64, 64), this.getMaterial('default', 0xff5577));
             mesh.position.y = 0.5; group.add(mesh);
         } else if (type === 'tree') {
-            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.25, 1.5, 16), new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.9 }));
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.25, 1.5, 16), this.getMaterial('wood', 0x5c3a21));
             trunk.position.y = 0.75;
-            const leaves = new THREE.Mesh(new THREE.ConeGeometry(1, 1.5, 16), new THREE.MeshStandardMaterial({ color: 0x2d5a27, roughness: 0.8 }));
+            const leaves = new THREE.Mesh(new THREE.ConeGeometry(1, 1.5, 16), this.getMaterial('rubber', 0x2d5a27));
             leaves.position.y = 1.8;
             group.add(trunk, leaves);
         } else if (type === 'light') {
@@ -159,7 +172,7 @@ export class Engine {
             group.add(light, bulb);
         } else if (type === 'character') {
             group.userData.isCharacter = true;
-            const tempMesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 0.9, 8, 16), new THREE.MeshStandardMaterial({ color: 0x888888 }));
+            const tempMesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 0.9, 8, 16), this.getMaterial('default', 0x888888));
             tempMesh.position.y = 0.75; group.add(tempMesh);
             
             this.loader.load('models/character.glb', (gltf) => {
@@ -196,16 +209,9 @@ export class Engine {
         return group;
     }
 
-    // ==========================================
-    // دالة الحذف الآمن (تنظف الذاكرة)
-    // ==========================================
     removeObject(obj) {
         if (!obj) return;
-        
-        // إزالة من المشهد
         this.scene.remove(obj);
-        
-        // تنظيف الهندسة والمواد من الذاكرة (منع تسريب الذاكرة)
         obj.traverse(c => {
             if (c.geometry) c.geometry.dispose();
             if (c.material) {
@@ -213,39 +219,25 @@ export class Engine {
                 else c.material.dispose();
             }
         });
-
-        // إزالة من المصفوفة
         this.objects = this.objects.filter(o => o !== obj);
-        
-        // إلغاء التحديد
         this.selectObject(null);
         if (this.onSceneChangeCallback) this.onSceneChangeCallback();
     }
 
-    // ==========================================
-    // دالة التكرار الآمن (Duplicate)
-    // ==========================================
     duplicateObject(obj) {
         if (!obj) return null;
         if (obj.userData.isCharacter) {
             alert("لا يمكن تكرار الشخصية (GLB) حالياً لتجنب مشاكل الأنميشن.");
             return null;
         }
-
-        // استنساخ عميق (Deep Clone)
         const clone = obj.clone(true);
-        
-        // إزاحة المجسم الجديد قليلاً عشان ما يتراكب مع الأصلي
         clone.position.x += 1.5;
-
-        // نسخ البيانات (Logic, Physics) مع إعطاء ID جديد
         clone.userData = JSON.parse(JSON.stringify(obj.userData));
-        clone.userData.id = Date.now() + Math.random(); // ID جديد
+        clone.userData.id = Date.now() + Math.random();
         
         this.scene.add(clone);
         this.objects.push(clone);
         this.selectObject(clone);
-        
         if (this.onSceneChangeCallback) this.onSceneChangeCallback();
         return clone;
     }

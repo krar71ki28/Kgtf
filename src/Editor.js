@@ -19,7 +19,12 @@ export class Editor {
                         const obj = engine.createObject(d.type);
                         if(obj) {
                             if(d.pos) obj.position.fromArray(d.pos);
-                            if(d.color) obj.traverse(c => { if(c.isMesh && c.material && c.material.color) c.material.color.set(d.color); });
+                            // تطبيق المادة واللون عند التحميل
+                            if(d.materialType) {
+                                obj.traverse(c => { if(c.isMesh) c.material = engine.getMaterial(d.materialType, d.color || 0x00e5ff); });
+                            } else if(d.color) {
+                                obj.traverse(c => { if(c.isMesh && c.material && c.material.color) c.material.color.set(d.color); });
+                            }
                             if(d.logic) obj.userData.logic = d.logic;
                         }
                     });
@@ -74,19 +79,14 @@ export class Editor {
         const btnClear = document.getElementById('btn-clear-scene');
         if(btnClear) btnClear.addEventListener('click', () => this.engine.clearScene());
         
-        // ✅ ربط أزرار النسخ والحذف
         const btnDuplicate = document.getElementById('btn-duplicate');
         if(btnDuplicate) btnDuplicate.addEventListener('click', () => {
-            if (this.engine.selectedObj) {
-                this.engine.duplicateObject(this.engine.selectedObj);
-            }
+            if (this.engine.selectedObj) this.engine.duplicateObject(this.engine.selectedObj);
         });
 
         const btnDeleteObj = document.getElementById('btn-delete-obj');
         if(btnDeleteObj) btnDeleteObj.addEventListener('click', () => {
-            if (this.engine.selectedObj) {
-                this.engine.removeObject(this.engine.selectedObj);
-            }
+            if (this.engine.selectedObj) this.engine.removeObject(this.engine.selectedObj);
         });
 
         const gT = document.getElementById('btn-gizmo-translate');
@@ -126,9 +126,19 @@ export class Editor {
         const btnSave = document.getElementById('btn-save');
         if(btnSave) btnSave.addEventListener('click', () => {
             const data = this.engine.objects.map(o => {
-                let color = '#00e5ff';
-                o.traverse(c => { if(c.isMesh && c.material && c.material.color) color = '#' + c.material.color.getHexString(); });
-                return { type: o.userData.type, pos: o.position.toArray(), color: color, logic: o.userData.logic };
+                let color = 0x00e5ff;
+                let matType = 'default';
+                o.traverse(c => { 
+                    if(c.isMesh && c.material) {
+                        if(c.material.color) color = c.material.color.getHex();
+                        if(c.material.metalness === 0.9) matType = 'metal';
+                        else if(c.material.roughness === 0.9) matType = 'wood';
+                        else if(c.material.opacity === 0.4) matType = 'glass';
+                        else if(c.material.metalness === 1.0) matType = 'gold';
+                        else if(c.material.roughness === 1.0) matType = 'rubber';
+                    }
+                });
+                return { type: o.userData.type, pos: o.position.toArray(), color: color, materialType: matType, logic: o.userData.logic };
             });
             localStorage.setItem('kgtf_scene_modular', JSON.stringify(data));
             alert('تم الحفظ المحلي!');
@@ -179,6 +189,22 @@ export class Editor {
         const colorEl = document.getElementById('prop-color');
         if(colorEl) colorEl.addEventListener('input', (e) => {
             if(this.engine.selectedObj) this.engine.selectedObj.traverse(c => { if(c.isMesh && c.material && c.material.color) c.material.color.set(e.target.value); });
+        });
+
+        // ✅ ربط قائمة المواد
+        const matEl = document.getElementById('prop-material');
+        if(matEl) matEl.addEventListener('change', (e) => {
+            if(this.engine.selectedObj) {
+                const matType = e.target.value;
+                this.engine.selectedObj.traverse(c => { 
+                    if(c.isMesh) {
+                        let currentColor = 0x00e5ff;
+                        if(c.material && c.material.color) currentColor = c.material.color.getHex();
+                        c.material.dispose(); // تنظيف المادة القديمة
+                        c.material = this.engine.getMaterial(matType, currentColor);
+                    }
+                });
+            }
         });
 
         const physEl = document.getElementById('prop-physics');
@@ -302,7 +328,7 @@ export class Editor {
             if(msg) msg.style.display = 'block'; 
             if(logicEditor) logicEditor.style.display = 'none'; 
             if(noLogicMsg) noLogicMsg.style.display = 'block';
-            if(actionsDiv) actionsDiv.style.display = 'none'; // إخفاء أزرار النسخ والحذف
+            if(actionsDiv) actionsDiv.style.display = 'none';
             return; 
         }
         
@@ -310,7 +336,7 @@ export class Editor {
         if(msg) msg.style.display = 'none';
         if(logicEditor) logicEditor.style.display = 'block'; 
         if(noLogicMsg) noLogicMsg.style.display = 'none';
-        if(actionsDiv) actionsDiv.style.display = 'flex'; // إظهار أزرار النسخ والحذف
+        if(actionsDiv) actionsDiv.style.display = 'flex';
         
         const px = document.getElementById('prop-x');
         const py = document.getElementById('prop-y');
@@ -323,6 +349,22 @@ export class Editor {
         obj.traverse(c => { if(c.isMesh && c.material && c.material.color) color = '#' + c.material.color.getHexString(); });
         const pc = document.getElementById('prop-color');
         if(pc) pc.value = color;
+
+        // ✅ تحديث قائمة المواد عند التحديد
+        const matEl = document.getElementById('prop-material');
+        if(matEl) {
+            let matType = 'default';
+            obj.traverse(c => {
+                if(c.isMesh && c.material) {
+                    if(c.material.metalness === 0.9) matType = 'metal';
+                    else if(c.material.roughness === 0.9) matType = 'wood';
+                    else if(c.material.opacity === 0.4) matType = 'glass';
+                    else if(c.material.metalness === 1.0) matType = 'gold';
+                    else if(c.material.roughness === 1.0) matType = 'rubber';
+                }
+            });
+            matEl.value = matType;
+        }
 
         const phys = document.getElementById('prop-physics');
         if(obj.userData.physics && phys) {
