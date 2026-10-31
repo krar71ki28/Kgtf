@@ -20,7 +20,10 @@ export class Editor {
                     engine.selectObject(null);
                 } catch(e) { console.warn("Local storage error: ", e); }
             }
-            if(engine.objects.length === 0) engine.createObject('cube');
+            if(engine.objects.length === 0) {
+                const defaultCube = engine.createObject('cube');
+                if (defaultCube) defaultCube.position.set(3, 0, 3); // نقله بعيداً عن اللاعب
+            }
             
             this.renderAssetGrid();
         } catch(e) {

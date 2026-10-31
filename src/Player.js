@@ -61,7 +61,6 @@ export class Player {
             if(this.isPlaying && this.isGrounded) { this.velocityY = 8; this.isGrounded = false; } 
         });
 
-        // ربط زر الكاميرا الموجود في HTML
         const btnCamMode = document.getElementById('btn-camera-mode');
         if (btnCamMode) {
             btnCamMode.innerText = this.cameraMode;

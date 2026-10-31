@@ -60,34 +60,26 @@ export class Physics {
         });
     }
 
+    // ✅ استخدام Raycaster لفحص التصادم (دقيق جداً ولا يعلق)
     checkPlayerCollision(nextPos, playerBoxSize) {
-        const nextBox = new THREE.Box3().setFromCenterAndSize(
-            nextPos.clone().add(new THREE.Vector3(0, 0.75, 0)),
-            playerBoxSize
-        );
-
         const playerObj = this.engine.objects.find(o => o.userData.isCharacter);
         if (!playerObj) return false;
 
-        const currentBox = new THREE.Box3().setFromCenterAndSize(
-            playerObj.position.clone().add(new THREE.Vector3(0, 0.75, 0)),
-            playerBoxSize
+        const direction = new THREE.Vector3().subVectors(nextPos, playerObj.position);
+        direction.y = 0; // فحص أفقي فقط
+        if (direction.lengthSq() < 0.0001) return false;
+        direction.normalize();
+
+        const origin = playerObj.position.clone().add(new THREE.Vector3(0, 0.75, 0)); // منتصف جسم اللاعب
+        const raycaster = new THREE.Raycaster(origin, direction, 0, 0.4); // مسافة الفحص (نصف قطر اللاعب)
+
+        const obstacles = this.engine.objects.filter(o => 
+            o !== playerObj && 
+            o.userData.type !== 'light' && 
+            o.userData.type !== 'vfx'
         );
 
-        for (let i = 0; i < this.engine.objects.length; i++) {
-            const obj = this.engine.objects[i];
-            if (obj.userData.isCharacter || obj.userData.type === 'light' || obj.userData.type === 'vfx') continue;
-            
-            const objBox = new THREE.Box3().setFromObject(obj);
-            
-            if (nextBox.intersectsBox(objBox)) {
-                // إذا كان اللاعب عالقاً بالفعل، نسمح له بالخروج
-                if (currentBox.intersectsBox(objBox)) {
-                    continue; 
-                }
-                return true; 
-            }
-        }
-        return false;
+        const hits = raycaster.intersectObjects(obstacles, true);
+        return hits.length > 0;
     }
 }
