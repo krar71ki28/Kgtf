@@ -4,18 +4,69 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<title>KGTF ENGINE</title>
+<title>KGTF ENGINE (Single File)</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=101">
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; user-select: none; -webkit-tap-highlight-color: transparent; }
+    body { background: #121215; color: #fff; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* الهيدر */
+    #header { height: 50px; background: #1a1a20; border-bottom: 1px solid #333; display: flex; align-items: center; padding: 0 10px; gap: 8px; z-index: 100; }
+    .logo { font-weight: 900; color: #00e5ff; font-size: 14px; margin-left: 10px; }
+    .header-tools { display: flex; gap: 5px; align-items: center; margin-right: auto; }
+    .icon-btn { background: #2a2a35; border: 1px solid #444; color: #ccc; width: 36px; height: 36px; border-radius: 6px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .icon-btn.active { background: #00e5ff; color: #000; border-color: #00e5ff; }
+    .play-btn { background: #4ade80; border: none; width: 36px; height: 36px; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; color: #000; }
+
+    /* القائمة المنسدلة */
+    .dropdown { position: relative; }
+    .dropdown-content { display: none; position: absolute; top: 45px; right: 0; background: #222; border: 1px solid #444; border-radius: 8px; min-width: 130px; z-index: 200; flex-direction: column; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+    .dropdown-content.show { display: flex; }
+    .add-btn { background: transparent; border: none; color: #fff; padding: 12px 15px; text-align: right; border-bottom: 1px solid #333; cursor: pointer; font-size: 14px; }
+    .add-btn:active { background: #333; }
+
+    /* الشاشة الرئيسية */
+    #viewport-container { flex: 1; position: relative; background: #000; touch-action: none; overflow: hidden; }
+    #viewport { width: 100%; height: 100%; display: block; }
+    #status-bar { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 5px; color: #4ade80; font-family: monospace; font-size: 12px; z-index: 50; pointer-events: none; }
+
+    /* لوحة التفتيش السفلية */
+    #inspector-panel { height: 180px; background: #121215; border-top: 1px solid #333; display: flex; flex-direction: column; z-index: 10; }
+    .panel-header { padding: 8px 10px; background: #1a1a20; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; }
+    .panel-title { font-size: 11px; font-weight: bold; color: #888; letter-spacing: 1px; }
+    .btn-small { background: #333; border: 1px solid #444; color: #ccc; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+    
+    #object-list { padding: 10px; display: flex; flex-wrap: wrap; gap: 5px; overflow-y: auto; flex: 1; align-content: flex-start; }
+    .obj-item { background: #2a2a35; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; border: 1px solid transparent; }
+    .obj-item.selected { border-color: #00e5ff; color: #00e5ff; background: rgba(0,229,255,0.1); }
+    
+    #inspector { display: none; padding: 10px; background: #1a1a20; border-top: 1px solid #333; overflow-y: auto; }
+    .prop-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .prop-row label { width: 40px; font-size: 12px; color: #aaa; }
+    .prop-row input[type="range"] { flex: 1; accent-color: #00e5ff; }
+    .prop-row input[type="color"] { width: 40px; height: 30px; border: none; background: transparent; }
+
+    /* واجهة اللعب */
+    #play-ui { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 150; }
+    #exit-play { position: absolute; top: 20px; left: 20px; background: rgba(255,85,119,0.8); border: none; padding: 10px 20px; border-radius: 8px; color: #fff; font-weight: bold; cursor: pointer; pointer-events: auto; }
+    
+    /* Joystick */
+    #joystick-zone { position: absolute; bottom: 40px; left: 40px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; pointer-events: auto; touch-action: none; }
+    #joystick-knob { position: absolute; top: 50%; left: 50%; width: 50px; height: 50px; background: #00e5ff; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 10px rgba(0,229,255,0.5); }
+    #btn-jump { position: absolute; bottom: 50px; right: 40px; width: 80px; height: 80px; background: rgba(74,222,128,0.2); border: 2px solid #4ade80; border-radius: 50%; color: #4ade80; font-weight: bold; font-size: 16px; pointer-events: auto; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+    /* وضع اللعب (إخفاء واجهة المحرر) */
+    body.play-mode #header, body.play-mode #inspector-panel { display: none !important; }
+</style>
 </head>
 <body>
     <header id="header">
-        <div class="logo">KGTF <span>ENGINE</span></div>
+        <div class="logo">KGTF ENGINE</div>
         <div class="header-tools">
-            <div class="gizmo-group">
-                <button class="icon-btn active" id="btn-gizmo-translate">✥</button>
-                <button class="icon-btn" id="btn-gizmo-rotate">↻</button>
-                <button class="icon-btn" id="btn-gizmo-scale">⤢</button>
+            <div class="gizmo-group" style="display:flex; gap:5px;">
+                <button class="icon-btn active" id="btn-gizmo-translate" title="تحريك">✥</button>
+                <button class="icon-btn" id="btn-gizmo-rotate" title="تدوير">↻</button>
+                <button class="icon-btn" id="btn-gizmo-scale" title="تكبير">⤢</button>
             </div>
             <div class="dropdown">
                 <button class="icon-btn" id="btn-add-menu" style="color:#4ade80;">➕</button>
@@ -24,30 +75,33 @@
                     <button class="add-btn" data-type="sphere">🔴 كرة</button>
                     <button class="add-btn" data-type="character">🏃 شخصية</button>
                     <button class="add-btn" data-type="tree">🌲 شجرة</button>
+                    <button class="add-btn" data-type="light">💡 ضوء</button>
                 </div>
             </div>
             <button class="icon-btn" id="btn-save" title="حفظ">💾</button>
-            <button class="play-btn" id="btn-play">▶</button>
+            <button class="play-btn" id="btn-play" title="تشغيل">▶</button>
         </div>
     </header>
 
     <main id="viewport-container">
         <canvas id="viewport"></canvas>
-        <div id="floating-controls">
-            <button class="fab fab-green" id="btn-play-fab">▶ تشغيل</button>
-            <button class="fab" id="btn-save-fab">💾 حفظ</button>
-        </div>
         <div id="status-bar">FPS: <span id="fps">--</span></div>
+
+        <div id="play-ui">
+            <button id="exit-play">✕ إيقاف</button>
+            <div id="joystick-zone"><div id="joystick-knob"></div></div>
+            <button id="btn-jump">قفز</button>
+        </div>
     </main>
 
     <aside id="inspector-panel">
         <div class="panel-header">
-            <span class="panel-title">OUTLINER & DETAILS</span>
+            <span class="panel-title">OUTLINER</span>
             <button class="btn-small" id="btn-clear-scene" style="color:#ff5577;">مسح الكل</button>
         </div>
-        <div id="object-list" style="padding:10px; display:flex; flex-wrap:wrap; gap:5px;"></div>
+        <div id="object-list"></div>
         
-        <div id="inspector" style="display:none; padding:10px; background:#1a1a20; border-top:1px solid #333;">
+        <div id="inspector">
             <div class="prop-row"><label>اللون</label><input type="color" id="prop-color" value="#00e5ff"></div>
             <div class="prop-row"><label>X</label><input type="range" id="prop-x" min="-50" max="50" step="0.1"></div>
             <div class="prop-row"><label>Y</label><input type="range" id="prop-y" min="-5" max="30" step="0.1"></div>
@@ -58,6 +112,377 @@
     <script type="importmap">
     { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
-    <script type="module" src="src/app.js?v=101"></script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { TransformControls } from 'three/addons/controls/TransformControls.js';
+
+        // ==========================================
+        // 1. إعداد المشهد والكاميرا
+        // ==========================================
+        const canvas = document.getElementById('viewport');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB);
+        scene.fog = new THREE.Fog(0x87CEEB, 30, 100);
+
+        const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+        camera.position.set(6, 6, 8);
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        const orbit = new OrbitControls(camera, renderer.domElement);
+        orbit.target.set(0, 1, 0);
+        orbit.enableDamping = true;
+        orbit.maxPolarAngle = Math.PI / 2.05; // منع الكاميرا من النزول تحت الأرض
+
+        // الإضاءة
+        scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.0));
+        const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+        sun.position.set(10, 20, 10);
+        sun.castShadow = true;
+        sun.shadow.mapSize.width = 1024;
+        sun.shadow.mapSize.height = 1024;
+        sun.shadow.camera.left = -20; sun.shadow.camera.right = 20;
+        sun.shadow.camera.top = 20; sun.shadow.camera.bottom = -20;
+        scene.add(sun);
+
+        // الأرضية والشبكة
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({ color: 0x4a6e52 }));
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        const grid = new THREE.GridHelper(100, 100, 0x00e5ff, 0x556677);
+        grid.position.y = 0.01;
+        scene.add(grid);
+
+        // ==========================================
+        // 2. أداة التحريك (Gizmo)
+        // ==========================================
+        const transform = new TransformControls(camera, renderer.domElement);
+        transform.addEventListener('dragging-changed', (e) => { orbit.enabled = !e.value; });
+        scene.add(transform);
+
+        // ==========================================
+        // 3. إدارة المجسمات
+        // ==========================================
+        let objects = [];
+        let selectedObj = null;
+
+        function createObject(type) {
+            let group = new THREE.Group();
+            const mat = new THREE.MeshStandardMaterial({ color: 0x00e5ff, roughness: 0.4 });
+
+            if (type === 'cube') {
+                const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
+                mesh.position.y = 0.5;
+                group.add(mesh);
+            } else if (type === 'sphere') {
+                const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), mat);
+                mesh.position.y = 0.5;
+                group.add(mesh);
+            } else if (type === 'tree') {
+                const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.25, 1.5, 8), new THREE.MeshStandardMaterial({ color: 0x5c3a21 }));
+                trunk.position.y = 0.75;
+                const leaves = new THREE.Mesh(new THREE.ConeGeometry(1, 1.5, 8), new THREE.MeshStandardMaterial({ color: 0x2d5a27 }));
+                leaves.position.y = 1.8;
+                group.add(trunk, leaves);
+            } else if (type === 'light') {
+                const light = new THREE.PointLight(0xffaa00, 10, 15);
+                light.position.y = 2;
+                const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.2), new THREE.MeshBasicMaterial({ color: 0xffaa00 }));
+                bulb.position.y = 2;
+                group.add(light, bulb);
+            } else if (type === 'character') {
+                const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 0.9, 4, 8), new THREE.MeshStandardMaterial({ color: 0x00e5ff }));
+                body.position.y = 0.75;
+                const head = new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffddaa }));
+                head.position.y = 1.5;
+                group.add(body, head);
+                group.userData.isCharacter = true;
+            }
+
+            group.traverse(c => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+            group.userData.type = type;
+            group.userData.physics = { vy: 0, grounded: true };
+            
+            scene.add(group);
+            objects.push(group);
+            selectObject(group);
+            updateOutliner();
+        }
+
+        function selectObject(obj) {
+            selectedObj = obj;
+            if (obj) transform.attach(obj);
+            else transform.detach();
+            updateOutliner();
+            updateInspector();
+        }
+
+        // ==========================================
+        // 4. واجهة المستخدم (UI) والتفاعل
+        // ==========================================
+        
+        // القائمة المنسدلة
+        const addMenu = document.getElementById('add-menu');
+        document.getElementById('btn-add-menu').addEventListener('click', (e) => {
+            e.stopPropagation();
+            addMenu.classList.toggle('show');
+        });
+        document.addEventListener('click', (e) => {
+            if (!addMenu.contains(e.target) && e.target.id !== 'btn-add-menu') addMenu.classList.remove('show');
+        });
+
+        // إضافة مجسمات
+        document.querySelectorAll('.add-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                createObject(btn.dataset.type);
+                addMenu.classList.remove('show');
+            });
+        });
+
+        // مسح الكل
+        document.getElementById('btn-clear-scene').addEventListener('click', () => {
+            objects.forEach(o => scene.remove(o));
+            objects = [];
+            selectObject(null);
+        });
+
+        // أدوات التحريك
+        document.getElementById('btn-gizmo-translate').addEventListener('click', () => transform.setMode('translate'));
+        document.getElementById('btn-gizmo-rotate').addEventListener('click', () => transform.setMode('rotate'));
+        document.getElementById('btn-gizmo-scale').addEventListener('click', () => transform.setMode('scale'));
+
+        // تحديث القائمة السفلية
+        function updateOutliner() {
+            const list = document.getElementById('object-list');
+            list.innerHTML = '';
+            objects.forEach(o => {
+                const div = document.createElement('div');
+                div.className = 'obj-item' + (o === selectedObj ? ' selected' : '');
+                div.innerText = o.userData.type;
+                div.onclick = () => selectObject(o);
+                list.appendChild(div);
+            });
+        }
+
+        // لوحة الخصائص (Inspector)
+        function updateInspector() {
+            const insp = document.getElementById('inspector');
+            if (!selectedObj) { insp.style.display = 'none'; return; }
+            insp.style.display = 'block';
+            document.getElementById('prop-x').value = selectedObj.position.x;
+            document.getElementById('prop-y').value = selectedObj.position.y;
+            document.getElementById('prop-z').value = selectedObj.position.z;
+            
+            // تحديث اللون
+            let color = '#00e5ff';
+            selectedObj.traverse(c => { if(c.isMesh && c.material.color) color = '#' + c.material.color.getHexString(); });
+            document.getElementById('prop-color').value = color;
+        }
+
+        document.getElementById('prop-x').addEventListener('input', (e) => { if(selectedObj) selectedObj.position.x = parseFloat(e.target.value); });
+        document.getElementById('prop-y').addEventListener('input', (e) => { if(selectedObj) selectedObj.position.y = parseFloat(e.target.value); });
+        document.getElementById('prop-z').addEventListener('input', (e) => { if(selectedObj) selectedObj.position.z = parseFloat(e.target.value); });
+        document.getElementById('prop-color').addEventListener('input', (e) => {
+            if(selectedObj) selectedObj.traverse(c => { if(c.isMesh && c.material.color) c.material.color.set(e.target.value); });
+        });
+
+        // التحديد باللمس أو الماوس (Raycaster)
+        let pointerStart = { x: 0, y: 0 };
+        canvas.addEventListener('pointerdown', (e) => { pointerStart = { x: e.clientX, y: e.clientY }; });
+        canvas.addEventListener('pointerup', (e) => {
+            if (transform.dragging) return; // إذا كان المستخدم يسحب الـ Gizmo، لا تغير التحديد
+            if (Math.hypot(e.clientX - pointerStart.x, e.clientY - pointerStart.y) > 5) return; // إذا كان يسحب الكاميرا
+            
+            const rect = canvas.getBoundingClientRect();
+            const mouse = new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+            const hits = raycaster.intersectObjects(objects, true);
+            
+            if (hits.length > 0) {
+                let root = hits[0].object;
+                while (root.parent !== scene) root = root.parent;
+                selectObject(root);
+            } else {
+                selectObject(null);
+            }
+        });
+
+        // ==========================================
+        // 5. الحفظ والتشغيل والفيزياء
+        // ==========================================
+        document.getElementById('btn-save').addEventListener('click', () => {
+            const data = objects.map(o => {
+                let color = '#00e5ff';
+                o.traverse(c => { if(c.isMesh && c.material.color) color = '#' + c.material.color.getHexString(); });
+                return { type: o.userData.type, pos: o.position.toArray(), color: color };
+            });
+            localStorage.setItem('kgtf_scene_single', JSON.stringify(data));
+            alert('تم حفظ المشهد بنجاح!');
+        });
+
+        function loadScene() {
+            const raw = localStorage.getItem('kgtf_scene_single');
+            if (raw) {
+                try {
+                    JSON.parse(raw).forEach(d => {
+                        createObject(d.type);
+                        const obj = objects[objects.length - 1];
+                        obj.position.fromArray(d.pos);
+                        obj.traverse(c => { if(c.isMesh && c.material.color) c.material.color.set(d.color); });
+                    });
+                    selectObject(null);
+                    return;
+                } catch(e) {}
+            }
+            createObject('cube'); // مجسم افتراضي
+        }
+
+        // تشغيل اللعبة
+        let isPlaying = false;
+        let playerModel = null;
+        let velocityY = 0;
+        let isGrounded = true;
+        let keys = {};
+
+        document.getElementById('btn-play').addEventListener('click', () => {
+            playerModel = objects.find(o => o.userData.isCharacter);
+            if (!playerModel) { alert('أضف شخصية أولاً (🏃) لتتمكن من اللعب!'); return; }
+            isPlaying = true;
+            document.body.classList.add('play-mode');
+            document.getElementById('play-ui').style.display = 'block';
+            selectObject(null);
+            orbit.enabled = false;
+            camera.position.set(playerModel.position.x, playerModel.position.y + 3, playerModel.position.z - 5);
+        });
+
+        document.getElementById('exit-play').addEventListener('click', () => {
+            isPlaying = false;
+            document.body.classList.remove('play-mode');
+            document.getElementById('play-ui').style.display = 'none';
+            orbit.enabled = true;
+            camera.position.set(6, 6, 8);
+            orbit.target.set(0, 1, 0);
+        });
+
+        // أزرار الكيبورد
+        window.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            if (e.code === 'Space' && isPlaying && isGrounded) { velocityY = 8; isGrounded = false; }
+        });
+        window.addEventListener('keyup', (e) => keys[e.code] = false);
+
+        // أزرار اللمس (Joystick)
+        let joyActive = false, joyDir = {x:0, y:0};
+        const joyZone = document.getElementById('joystick-zone');
+        const joyKnob = document.getElementById('joystick-knob');
+        if (joyZone) {
+            joyZone.addEventListener('touchstart', (e) => { e.stopPropagation(); joyActive = true; });
+            joyZone.addEventListener('touchmove', (e) => {
+                e.stopPropagation(); if(!joyActive) return;
+                const rect = joyZone.getBoundingClientRect();
+                let dx = e.touches[0].clientX - (rect.left + rect.width/2);
+                let dy = e.touches[0].clientY - (rect.top + rect.height/2);
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if(dist > 40) { dx = (dx/dist)*40; dy = (dy/dist)*40; }
+                joyKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+                joyDir.x = dx/40; joyDir.y = dy/40;
+            });
+            joyZone.addEventListener('touchend', (e) => { e.stopPropagation(); joyActive = false; joyKnob.style.transform = `translate(-50%, -50%)`; joyDir = {x:0, y:0}; });
+        }
+
+        document.getElementById('btn-jump').addEventListener('pointerdown', (e) => {
+            e.preventDefault(); if(isPlaying && isGrounded) { velocityY = 8; isGrounded = false; }
+        });
+
+        // ==========================================
+        // 6. حلقة الرسم والتحديث (Render Loop)
+        // ==========================================
+        function resize() {
+            const c = document.getElementById('viewport-container');
+            camera.aspect = c.clientWidth / c.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(c.clientWidth, c.clientHeight, false);
+        }
+        window.addEventListener('resize', resize);
+
+        let lastTime = performance.now();
+        let fpsAcc = 0, frames = 0;
+        const fpsEl = document.getElementById('fps');
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const now = performance.now();
+            const dt = Math.min((now - lastTime) / 1000, 0.1);
+            lastTime = now;
+
+            if (!isPlaying) {
+                // وضع التعديل
+                orbit.update();
+                
+                // فيزياء المجسمات (تسقط إذا كانت مرتفعة)
+                objects.forEach(o => {
+                    if (o !== selectedObj && o.userData.type !== 'light' && !o.userData.isCharacter) {
+                        if (o.position.y > 0) {
+                            o.userData.physics.vy -= 9.8 * dt;
+                            o.position.y += o.userData.physics.vy * dt;
+                            if (o.position.y <= 0) { o.position.y = 0; o.userData.physics.vy = 0; }
+                        }
+                    }
+                });
+            } else {
+                // وضع اللعب
+                if (playerModel) {
+                    const speed = 5;
+                    let moveX = 0, moveZ = 0;
+                    
+                    // كيبورد
+                    if (keys['KeyW'] || keys['ArrowUp']) moveZ += 1;
+                    if (keys['KeyS'] || keys['ArrowDown']) moveZ -= 1;
+                    if (keys['KeyA'] || keys['ArrowLeft']) moveX += 1;
+                    if (keys['KeyD'] || keys['ArrowRight']) moveX -= 1;
+                    
+                    // جويستيك
+                    if (joyActive) { moveX += joyDir.x; moveZ -= joyDir.y; }
+
+                    if (moveX !== 0 || moveZ !== 0) {
+                        const len = Math.sqrt(moveX*moveX + moveZ*moveZ);
+                        playerModel.position.x += (moveX/len) * speed * dt;
+                        playerModel.position.z += (moveZ/len) * speed * dt;
+                        // توجيه الشخصية نحو الحركة
+                        const targetRot = Math.atan2(moveX, moveZ);
+                        playerModel.rotation.y += (targetRot - playerModel.rotation.y) * 10 * dt;
+                    }
+
+                    // جاذبية اللاعب
+                    velocityY -= 24 * dt;
+                    playerModel.position.y += velocityY * dt;
+                    if (playerModel.position.y <= 0) { playerModel.position.y = 0; velocityY = 0; isGrounded = true; }
+
+                    // كاميرا تتبع
+                    const camTarget = playerModel.position.clone().add(new THREE.Vector3(0, 3, -5));
+                    camera.position.lerp(camTarget, 5 * dt);
+                    camera.lookAt(playerModel.position.x, playerModel.position.y + 1, playerModel.position.z);
+                }
+            }
+
+            renderer.render(scene, camera);
+
+            fpsAcc += dt; frames++;
+            if (fpsAcc >= 0.5) { fpsEl.innerText = Math.round(frames / fpsAcc); fpsAcc = 0; frames = 0; }
+        }
+
+        // بدء التشغيل
+        resize();
+        loadScene();
+        animate();
+    </script>
 </body>
 </html>
