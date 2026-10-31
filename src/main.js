@@ -16,11 +16,16 @@ function animate(now) {
     engine.update(dt);
     player.update(dt);
     engine.render();
+    
+    // FPS Counter
     const fps = document.getElementById('fps');
     if (fps && !window._fpsAcc) { window._fpsAcc = 0; window._frames = 0; }
     if (fps) {
         window._fpsAcc += dt; window._frames++;
-        if (window._fpsAcc >= 0.5) { fps.innerText = Math.round(window._frames / window._fpsAcc); window._fpsAcc = 0; window._frames = 0; }
+        if (window._fpsAcc >= 0.5) { 
+            fps.innerText = Math.round(window._frames / window._fpsAcc); 
+            window._fpsAcc = 0; window._frames = 0; 
+        }
     }
 }
 requestAnimationFrame(animate);

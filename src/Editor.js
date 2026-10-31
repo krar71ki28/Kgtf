@@ -13,10 +13,16 @@ export class Editor {
         
         this.engine.onSelect = (obj) => this.updateInspector(obj);
         this.engine.onSceneChange = () => this.updateList();
+        
+        // اختيار أول مجسم تلقائياً عشان يطلع الـ Gizmo
+        if (this.engine.objects.length > 0) {
+            this.engine.selectObject(this.engine.objects[0]);
+        }
         this.updateList();
     }
 
     setupUI() {
+        // التبويبات
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.onclick = () => {
                 document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -26,37 +32,35 @@ export class Editor {
             };
         });
 
-        const addMenu = document.getElementById('add-menu');
-        document.getElementById('btn-add-menu').onclick = (e) => { e.stopPropagation(); addMenu.classList.toggle('show'); };
-        document.body.onclick = (e) => { if (!addMenu.contains(e.target) && e.target.id !== 'btn-add-menu') addMenu.classList.remove('show'); };
-
-        // ربط كل الأزرار (إصلاح 3)
+        // أزرار الإضافة (اليسار)
         const types = ['cube','sphere','cylinder','cone','torus','tree','bush','mountain','rock','building','light','character','camera'];
         types.forEach(t => {
             const el = document.getElementById(`btn-${t}`);
             if(el) el.onclick = () => {
                 if(t === 'character') this.engine.loadCharacter();
-                else if (t === 'camera') this.engine.addObject('camera');
                 else this.engine.addObject(t);
-                addMenu.classList.remove('show');
             };
         });
         
-        document.getElementById('btn-vfx-fire').onclick = () => { this.engine.addObject('vfx', {vfxType:'fire'}); addMenu.classList.remove('show'); };
-        document.getElementById('btn-vfx-smoke').onclick = () => { this.engine.addObject('vfx', {vfxType:'smoke'}); addMenu.classList.remove('show'); };
+        const uploadBtn = document.getElementById('btn-upload-model');
+        if(uploadBtn) {
+            uploadBtn.onclick = () => document.getElementById('model-upload-input').click();
+            document.getElementById('model-upload-input').onchange = (e) => {
+                if(e.target.files.length > 0) this.engine.loadModelFromFile(e.target.files[0]);
+            };
+        }
 
-        // أدوات
-        document.getElementById('btn-gizmo-translate').onclick = () => this.gizmo.setMode('translate');
-        document.getElementById('btn-gizmo-rotate').onclick = () => this.gizmo.setMode('rotate');
-        document.getElementById('btn-gizmo-scale').onclick = () => this.gizmo.setMode('scale');
+        // أدوات التحكم (أعلى)
+        document.getElementById('btn-gizmo-translate').onclick = () => { this.gizmo.setMode('translate'); this.setActiveTool('btn-gizmo-translate'); };
+        document.getElementById('btn-gizmo-rotate').onclick = () => { this.gizmo.setMode('rotate'); this.setActiveTool('btn-gizmo-rotate'); };
+        document.getElementById('btn-gizmo-scale').onclick = () => { this.gizmo.setMode('scale'); this.setActiveTool('btn-gizmo-scale'); };
         document.getElementById('btn-toggle-grid').onclick = () => this.engine.toggleGrid(document.getElementById('btn-toggle-grid').classList.toggle('active'));
-        document.getElementById('panel-drag-handle').onclick = () => document.getElementById('inspector-panel').classList.toggle('collapsed');
-        document.getElementById('env-rain-toggle').onchange = (e) => this.engine.toggleRain(e.target.checked);
+        
         document.getElementById('btn-save').onclick = () => this.engine.saveScene();
-        document.getElementById('btn-export').onclick = () => this.engine.exportScene();
-        document.getElementById('btn-clear-scene').onclick = () => { if(confirm('مسح المشهد؟')) { this.engine.objects.forEach(o=>this.engine.scene.remove(o)); this.engine.objects = []; this.updateList(); } };
+        document.getElementById('btn-clear-scene').onclick = () => { if(confirm('مسح الكل؟')) { this.engine.objects.forEach(o=>this.engine.scene.remove(o)); this.engine.objects = []; this.updateList(); } };
+        document.getElementById('btn-delete').onclick = () => { if(this.engine.selected) this.engine.removeObject(this.engine.selected); };
 
-        // ربط أشرطة الخصائص (إصلاح 17)
+        // أشرطة الخصائص
         const bindProp = (id, callback) => {
             const el = document.getElementById(id);
             if(!el) return;
@@ -72,8 +76,12 @@ export class Editor {
         bindProp('prop-rot-y', (obj, v) => obj.rotation.y = v);
         bindProp('prop-scale', (obj, v) => obj.scale.set(v, v, v));
         bindProp('prop-color', (obj, v) => { if (obj.isMesh) obj.material.color.set(v); });
-        bindProp('prop-physics', (obj, v) => { if(obj.userData.physics) obj.userData.physics.enabled = v; }); // إصلاح 13
-        bindProp('prop-material', (obj, v) => { if (obj.isMesh) { obj.material.dispose(); obj.material = this.engine.makeMaterial(v); } });
+        bindProp('prop-physics', (obj, v) => { if(obj.userData.physics) obj.userData.physics.enabled = v; });
+    }
+
+    setActiveTool(id) {
+        document.querySelectorAll('.toolbar-group .tool-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
     }
 
     setupRaycaster() {
@@ -106,11 +114,12 @@ export class Editor {
     updateInspector(obj) {
         const inspector = document.getElementById('inspector');
         const noMsg = document.getElementById('no-selection-msg');
+        const actions = document.getElementById('object-actions');
         
         if (!obj) { 
-            inspector.style.display = 'none'; noMsg.style.display = 'block'; this.gizmo.detach(); return; 
+            inspector.style.display = 'none'; noMsg.style.display = 'block'; actions.style.display = 'none'; this.gizmo.detach(); return; 
         }
-        inspector.style.display = 'block'; noMsg.style.display = 'none'; this.gizmo.attach(obj);
+        inspector.style.display = 'block'; noMsg.style.display = 'none'; actions.style.display = 'flex'; this.gizmo.attach(obj);
         
         document.getElementById('prop-x').value = obj.position.x.toFixed(2);
         document.getElementById('prop-y').value = obj.position.y.toFixed(2);
@@ -119,7 +128,6 @@ export class Editor {
         document.getElementById('prop-scale').value = obj.scale.x;
         if (obj.isMesh) document.getElementById('prop-color').value = '#' + obj.material.color.getHexString();
         
-        // مزامنة الجاذبية (إصلاح 13)
         const physCheck = document.getElementById('prop-physics');
         if (physCheck && obj.userData.physics) physCheck.checked = obj.userData.physics.enabled;
     }
