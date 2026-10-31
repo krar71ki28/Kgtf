@@ -21,7 +21,7 @@ export class Editor {
     }
 
     setupUI() {
-        // 1. التبويبات (Tabs) - نستخدم click بدل pointerdown عشان نمنع التداخل
+        // 1. التبويبات (Tabs)
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -58,14 +58,34 @@ export class Editor {
             if(el) {
                 el.addEventListener('click', (e) => { 
                     e.preventDefault();
-                    e.stopPropagation(); // نمنع اللمسة من الانتقال للعناصر الثانية
+                    e.stopPropagation(); 
                     this.engine.addObject(t); 
                     if(addMenu) addMenu.classList.remove('show'); 
                 });
             }
         });
 
-        // 4. أدوات التحكم (Gizmo)
+        // 4. زر الحفظ (اللي كان ناقص)
+        const saveBtn = document.getElementById('btn-save');
+        if(saveBtn) {
+            saveBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.engine.saveScene();
+            });
+        }
+
+        // 5. أزرار البيئة (الليل والمطر) - اللي كانت ناقصة
+        const rainTog = document.getElementById('env-rain-toggle');
+        if(rainTog) {
+            rainTog.addEventListener('change', (e) => this.engine.toggleRain(e.target.checked));
+        }
+        
+        const nightTog = document.getElementById('env-night-mode');
+        if(nightTog) {
+            nightTog.addEventListener('change', (e) => this.engine.toggleNightMode(e.target.checked));
+        }
+
+        // 6. أدوات التحكم (Gizmo)
         const gTrans = document.getElementById('btn-gizmo-translate');
         if(gTrans) gTrans.addEventListener('click', () => { this.gizmo.setMode('translate'); this.setActiveTool('btn-gizmo-translate'); });
         const gRot = document.getElementById('btn-gizmo-rotate');
@@ -73,11 +93,10 @@ export class Editor {
         const gScale = document.getElementById('btn-gizmo-scale');
         if(gScale) gScale.addEventListener('click', () => { this.gizmo.setMode('scale'); this.setActiveTool('btn-gizmo-scale'); });
 
-        // 5. زر المسح (مع حماية إضافية لمنع التداخل)
+        // 7. زر المسح
         const clearBtn = document.getElementById('btn-clear-scene');
         if(clearBtn) clearBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // يمنع أي تداخل
-            // نتحقق إذا كانت القائمة مفتوحة، نغلقها وما نمسح
+            e.stopPropagation(); 
             if (addMenu && addMenu.classList.contains('show')) {
                 addMenu.classList.remove('show');
                 return;
@@ -89,7 +108,7 @@ export class Editor {
             } 
         });
 
-        // 6. باقي الأزرار
+        // 8. باقي الأزرار
         const gridBtn = document.getElementById('btn-toggle-grid');
         if(gridBtn) gridBtn.addEventListener('click', (e) => { e.stopPropagation(); this.engine.toggleGrid(gridBtn.classList.toggle('active')); });
         
@@ -99,7 +118,7 @@ export class Editor {
         const dragHandle = document.getElementById('panel-drag-handle');
         if(dragHandle) dragHandle.addEventListener('click', () => document.getElementById('inspector-panel').classList.toggle('collapsed'));
 
-        // 7. ربط خصائص التحكم (Sliders)
+        // 9. ربط خصائص التحكم (Sliders)
         const bindProp = (id, callback) => {
             const el = document.getElementById(id);
             if(!el) return;
