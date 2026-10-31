@@ -27,7 +27,6 @@ export class Player {
     setupControls() {
         window.addEventListener('keydown', (e) => {
             this.keys[e.code] = true;
-            // قفز بالمسافة (إصلاح 7)
             if (e.code === 'Space' && this.isPlaying && this.isGrounded) {
                 this.velocityY = 8; this.isGrounded = false; this.playJumpSound();
             }
@@ -73,6 +72,16 @@ export class Player {
         this.engine.controls.enabled = false;
         this.cameraYaw = p.rotation.y; this.cameraPitch = 0.4;
         if(this.bgm) this.bgm.play().catch(e=>{});
+        
+        // تشغيل أحداث onStart (Visual Scripting)
+        this.engine.objects.forEach(obj => {
+            if (obj.userData.logic) {
+                obj.userData.logic.forEach(l => {
+                    if (l.event === 'onStart') this.executeAction(obj, l.action);
+                });
+            }
+        });
+
         this.updateCamera(1); this.engine.resize();
     }
 
@@ -84,6 +93,20 @@ export class Player {
         this.engine.resize(); if(this.bgm) this.bgm.pause();
     }
 
+    executeAction(obj, action) {
+        if (action === 'destroySelf') {
+            this.engine.removeObject(obj);
+        } else if (action === 'addScore') {
+            this.engine.score = (this.engine.score || 0) + 10;
+            const scoreDisp = document.getElementById('score-display');
+            const scoreVal = document.getElementById('score-val');
+            if (scoreDisp) scoreDisp.style.display = 'block';
+            if (scoreVal) scoreVal.innerText = this.engine.score;
+        } else if (action === 'changeColor' && obj.isMesh) {
+            obj.material.color.setHex(Math.random() * 0xffffff);
+        }
+    }
+
     updateCamera(dt) {
         const dist = 4.5, h = 2.0;
         const offX = Math.sin(this.cameraYaw) * dist * Math.cos(this.cameraPitch);
@@ -91,12 +114,10 @@ export class Player {
         const offY = h + Math.sin(this.cameraPitch) * dist;
         const desired = this.playerModel.position.clone().add(new THREE.Vector3(offX, offY, offZ));
         
-        // إصلاح اصطدام الكاميرا بالشخصية (إصلاح 4)
         const dirToCam = desired.clone().sub(this.playerModel.position).normalize();
         const distToCam = desired.distanceTo(this.playerModel.position);
         this.raycaster.set(this.playerModel.position.clone().add(new THREE.Vector3(0, 1, 0)), dirToCam);
         
-        // استثناء الشخصية من الاصطدام
         const obstacles = this.engine.objects.filter(o => o !== this.playerModel && o.userData.type !== 'vfx');
         const intersects = this.raycaster.intersectObjects(obstacles, true);
         
@@ -136,12 +157,26 @@ export class Player {
             this.playerModel.rotation.y += diff * 10 * dt;
         }
 
-        // الحركة والجاذبية
         this.playerModel.position.x += this.currentVelocity.x * dt;
         this.playerModel.position.z += this.currentVelocity.z * dt;
         this.velocityY -= 24 * dt;
         this.playerModel.position.y += this.velocityY * dt;
         if (this.playerModel.position.y <= 0) { this.playerModel.position.y = 0; this.velocityY = 0; this.isGrounded = true; }
+
+        // --- Visual Scripting: OnCollide ---
+        if (this.playerModel) {
+            const playerBox = new THREE.Box3().setFromObject(this.playerModel);
+            this.engine.objects.forEach(obj => {
+                if (obj === this.playerModel || !obj.userData.logic) return;
+                const objBox = new THREE.Box3().setFromObject(obj);
+                if (playerBox.intersectsBox(objBox)) {
+                    obj.userData.logic.forEach(l => {
+                        if (l.event === 'onCollide') this.executeAction(obj, l.action);
+                    });
+                }
+            });
+        }
+        // -----------------------------------
 
         this.updateCamera(dt);
     }

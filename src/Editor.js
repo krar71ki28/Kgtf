@@ -55,6 +55,17 @@ export class Editor {
         document.getElementById('btn-delete').onclick = () => { if(this.engine.selected) this.engine.removeObject(this.engine.selected); };
         document.getElementById('panel-drag-handle').onclick = () => document.getElementById('inspector-panel').classList.toggle('collapsed');
 
+        // ربط زر البرمجة المرئية
+        document.getElementById('btn-add-logic').onclick = () => {
+            if (!this.engine.selected) return alert('اختر مجسماً أولاً!');
+            const ev = document.getElementById('logic-event').value;
+            const act = document.getElementById('logic-action').value;
+            
+            if (!this.engine.selected.userData.logic) this.engine.selected.userData.logic = [];
+            this.engine.selected.userData.logic.push({ event: ev, action: act });
+            this.renderLogicList();
+        };
+
         const bindProp = (id, callback) => {
             const el = document.getElementById(id);
             if(!el) return;
@@ -93,6 +104,28 @@ export class Editor {
         });
     }
 
+    renderLogicList() {
+        const list = document.getElementById('active-logic-list');
+        list.innerHTML = '';
+        if (!this.engine.selected || !this.engine.selected.userData.logic) return;
+        
+        this.engine.selected.userData.logic.forEach((item, index) => {
+            const div = document.createElement('div');
+            div.style.cssText = 'background:#1e1e24; padding:8px; border-radius:4px; font-size:11px; display:flex; justify-content:space-between; border:1px solid #333;';
+            div.innerHTML = `<span>إذا: ${item.event} ← أفعل: ${item.action}</span>`;
+            
+            const delBtn = document.createElement('span');
+            delBtn.innerText = '✕';
+            delBtn.style.cssText = 'color:#ff5577; cursor:pointer;';
+            delBtn.onclick = () => {
+                this.engine.selected.userData.logic.splice(index, 1);
+                this.renderLogicList();
+            };
+            div.appendChild(delBtn);
+            list.appendChild(div);
+        });
+    }
+
     updateList() {
         const list = document.getElementById('object-list'); if(!list) return;
         list.innerHTML = '';
@@ -111,7 +144,7 @@ export class Editor {
         const actions = document.getElementById('object-actions');
         
         if (!obj) { 
-            inspector.style.display = 'none'; noMsg.style.display = 'block'; actions.style.display = 'none'; this.gizmo.detach(); return; 
+            inspector.style.display = 'none'; noMsg.style.display = 'block'; actions.style.display = 'none'; this.gizmo.detach(); this.renderLogicList(); return; 
         }
         inspector.style.display = 'block'; noMsg.style.display = 'none'; actions.style.display = 'flex'; this.gizmo.attach(obj);
         
@@ -124,5 +157,7 @@ export class Editor {
         
         const physCheck = document.getElementById('prop-physics');
         if (physCheck && obj.userData.physics) physCheck.checked = obj.userData.physics.enabled;
+        
+        this.renderLogicList(); // تحديث قائمة المنطق عند اختيار مجسم
     }
 }
