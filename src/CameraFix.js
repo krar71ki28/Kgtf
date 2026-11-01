@@ -1,15 +1,21 @@
 import * as THREE from 'three';
 
-// ننتظر تحميل المشهد ثم نجبر الكاميرا على الارتفاع
+// نستخدم دالة تتكرر لضمان بقاء الكاميرا فوق الأرض
 setInterval(() => {
     const scene = window.scene || (window.engine && window.engine.scene);
     if (scene) {
-        const camera = scene.getObjectByProperty('isCamera', true);
-        if (camera && !camera.userData.fixed) {
-            camera.position.set(0, 15, 15); // ارتفاع 15 متر
-            camera.lookAt(0, 0, 0);         // النظر للمركز
-            camera.userData.fixed = true;
-            console.log("📷 Camera Forced to Bird's Eye View");
+        // البحث عن الكاميرا
+        let camera = scene.getObjectByProperty('isCamera', true);
+        
+        // البحث عن اللاعب أو الكيوب
+        const player = scene.getObjectByName('cube') || scene.getObjectByName('character') || scene.getObjectByName('Player');
+
+        if (camera && player) {
+            // إذا كانت الكاميرا منخفضة جداً، نرفعها قليلاً
+            // (هذا يمنع الكاميرا من الدخول في التلة عندما يصعد اللاعب)
+            if (camera.position.y < player.position.y + 1.5) {
+                camera.position.y = player.position.y + 1.5;
+            }
         }
     }
-}, 1000);
+}, 100); // يفحص 10 مرات في الثانية

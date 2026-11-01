@@ -9,16 +9,15 @@ export function createTerrain(scene, world) {
 
     for (let i = 0; i < pos.length; i += 3) {
         const x = pos[i], z = pos[i+2];
-        pos[i+1] = Math.sin(x * 0.1) * Math.cos(z * 0.1) * 3.0; // تلال
+        // 🚨 تخفيف الارتفاع: بدلاً من 3.0 جعلناها 0.5 (تلال ناعمة)
+        pos[i+1] = Math.sin(x * 0.1) * Math.cos(z * 0.1) * 0.5; 
     }
     geometry.computeVertexNormals();
 
-    // 🚨 السر 2: مادة الأرضية
-    // نستخدم لون أخضر غامق وطبيعي، ونعطيها خشونة عالية (Roughness) لكي لا تعكس الضوء كالمعدن
     const material = new THREE.MeshStandardMaterial({ 
-        color: 0x2d5a27, // أخضر غامق طبيعي
-        roughness: 0.9,  // يمنع اللمعان الرصاصي
-        metalness: 0.0   // الأرض ليست معدن
+        color: 0x2d5a27, 
+        roughness: 0.9,  
+        metalness: 0.0   
     });
 
     const mesh = new THREE.Mesh(geometry, material);
@@ -26,7 +25,6 @@ export function createTerrain(scene, world) {
     mesh.castShadow = true;
     scene.add(mesh);
 
-    // الفيزياء
     if (world) {
         const shape = new CANNON.Trimesh(Array.from(pos), Array.from(geometry.index.array));
         const body = new CANNON.Body({ mass: 0 });
