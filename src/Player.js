@@ -123,19 +123,20 @@ export class Player {
             moveVector.normalize();
             const nextPos = this.playerModel.position.clone().addScaledVector(moveVector, speed * dt);
             
-            // ✅ فحص تصادم صارم (Strict Collision)
             const playerBox = new THREE.Box3().setFromCenterAndSize(
                 nextPos.clone().add(new THREE.Vector3(0, 1, 0)), 
                 new THREE.Vector3(0.8, 2, 0.8)
             );
 
             let collision = false;
+            let collidingObj = null;
+
             this.engine.objects.forEach(obj => {
                 if (obj !== this.playerModel && obj.userData.type !== 'vfx' && obj.userData.type !== 'light') {
                     const objBox = new THREE.Box3().setFromObject(obj);
-                    // إذا تقاطع الصندوق، فهناك تصادم حتمي
                     if (playerBox.intersectsBox(objBox)) {
                         collision = true;
+                        collidingObj = obj;
                     }
                 }
             });
@@ -145,16 +146,10 @@ export class Player {
                 const angle = Math.atan2(moveVector.x, moveVector.z);
                 this.playerModel.rotation.y = angle;
             } else {
-                // إطلاق حدث التصادم (مرة واحدة)
-                this.engine.objects.forEach(obj => {
-                    if (obj !== this.playerModel && obj.userData.logic && obj.userData.logic.length > 0 && !obj.userData.hasCollided) {
-                        const objBox = new THREE.Box3().setFromObject(obj);
-                        if (playerBox.intersectsBox(objBox)) {
-                            this.engine.logic.triggerEvent(obj, 'onCollide');
-                            obj.userData.hasCollided = true;
-                        }
-                    }
-                });
+                if (collidingObj && collidingObj.userData.logic && !collidingObj.userData.hasCollided) {
+                    this.engine.logic.triggerEvent(collidingObj, 'onCollide');
+                    collidingObj.userData.hasCollided = true;
+                }
             }
         }
 
