@@ -1,17 +1,16 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Physics } from './Physics.js?v=115';
-import { Serializer } from './Serializer.js?v=115';
-import { Animator } from './Animator.js?v=115';
-import { LogicManager } from './Logic.js?v=115';
-import { Environment } from './Environment.js?v=115';
+import { Physics } from './Physics.js?v=116';
+import { Serializer } from './Serializer.js?v=116';
+import { Animator } from './Animator.js?v=116';
+import { LogicManager } from './Logic.js?v=116';
+import { Environment } from './Environment.js?v=116';
 
 export class Engine {
     constructor(canvas) {
         this.canvas = canvas;
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x87CEEB);
 
         this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
         this.camera.position.set(6, 6, 8);
@@ -22,12 +21,26 @@ export class Engine {
         this.orbit = new OrbitControls(this.camera, this.renderer.domElement);
         this.orbit.target.set(0, 1, 0);
 
-        // ✅ استخدام البيئة الجديدة
-        this.environment = new Environment(this.scene);
+        // ✅ استدعاء البيئة الجديدة (السماء والظلال والانعكاسات)
+        this.environment = new Environment(this);
 
-        const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({ color: 0x4a6e52 }));
+        // ✅ أرضية احترافية (لون داكن + شبكة مضيئة)
+        const groundGeo = new THREE.PlaneGeometry(200, 200);
+        const groundMat = new THREE.MeshStandardMaterial({ 
+            color: 0x2e4a35, 
+            roughness: 0.8, 
+            metalness: 0.2 
+        });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
         ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true; // ✅ استقبال الظل
         this.scene.add(ground);
+
+        const grid = new THREE.GridHelper(200, 100, 0x00e5ff, 0x111111);
+        grid.position.y = 0.01;
+        grid.material.opacity = 0.15;
+        grid.material.transparent = true;
+        this.scene.add(grid);
 
         this.physics = new Physics(this);
         this.logic = new LogicManager(this);
@@ -50,9 +63,13 @@ export class Engine {
         if (type === 'cube') {
             mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), material);
             mesh.position.y = 0.5;
+            mesh.castShadow = true; // ✅ رماية الظل
+            mesh.receiveShadow = true;
         } else if (type === 'sphere') {
             mesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), material);
             mesh.position.y = 0.5;
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
         } else if (type === 'character') {
             mesh = new THREE.Group();
             mesh.userData.isCharacter = true;
@@ -67,6 +84,13 @@ export class Engine {
             this.loader.load('models/character.glb', (gltf) => {
                 mesh.remove(placeholder); 
                 const model = gltf.scene;
+                // ✅ تطبيق الظلال على كل أجزاء الشخصية
+                model.traverse((child) => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                });
                 mesh.add(model);
                 
                 if (gltf.animations && gltf.animations.length > 0) {
@@ -154,7 +178,7 @@ export class Engine {
             });
         }
         this.physics.update(dt);
-        this.environment.update(dt); // ✅ تحديث المطر
+        this.environment.update(dt);
     }
 
     render() { this.renderer.render(this.scene, this.camera); }
