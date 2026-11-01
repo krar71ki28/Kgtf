@@ -9,9 +9,9 @@ export class LogicManager {
             this.engine.removeObject(obj);
         } else if (action === 'addScore') {
             this.score += 10;
-            alert('النقاط: ' + this.score);
+            this.engine.ui.updateScore(this.score); // ✅ تحديث الواجهة
         } else if (action === 'playSound') {
-            this.engine.audio.playSFX(); // ✅ تشغيل الصوت
+            this.engine.audio.playSFX(); 
         }
     }
 

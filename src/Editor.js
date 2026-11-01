@@ -10,6 +10,16 @@ export class Editor {
     }
 
     setupUI() {
+        // ✅ ربط التبويبات (Outliner / UI)
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.style.color = '#888');
+                document.querySelectorAll('.tab-pane').forEach(p => p.style.display = 'none');
+                btn.style.color = '#00e5ff';
+                document.getElementById(btn.dataset.target).style.display = 'block';
+            };
+        });
+
         const btnAdd = document.getElementById('btn-add-menu');
         const addMenu = document.getElementById('add-menu');
         btnAdd.onclick = (e) => { e.stopPropagation(); addMenu.classList.toggle('show'); };
@@ -25,11 +35,18 @@ export class Editor {
         document.getElementById('btn-clear-scene').onclick = () => this.engine.clearScene();
         document.getElementById('btn-save').onclick = () => this.engine.saveScene();
 
-        // ✅ ربط زر الصوت (كتم/تشغيل)
         document.getElementById('btn-audio').onclick = () => {
             const isMuted = this.engine.audio.toggleMute();
             document.getElementById('btn-audio').innerText = isMuted ? '🔇' : '🔊';
         };
+
+        // ✅ ربط أزرار الواجهة (UI)
+        document.getElementById('btn-add-text').onclick = () => {
+            const text = document.getElementById('ui-text-input').value;
+            this.engine.ui.addText(text);
+            document.getElementById('ui-text-input').value = '';
+        };
+        document.getElementById('btn-clear-ui').onclick = () => this.engine.ui.clearUI();
 
         const bindProp = (id, cb) => {
             document.getElementById(id).addEventListener('input', (e) => {
@@ -58,16 +75,9 @@ export class Editor {
         });
 
         const timeSlider = document.getElementById('env-time');
-        const timeDisplay = document.getElementById('time-display');
         if (timeSlider) {
             timeSlider.addEventListener('input', (e) => {
-                const time = parseFloat(e.target.value);
-                this.engine.environment.updateSun(time);
-                if (timeDisplay) {
-                    const h = Math.floor(time);
-                    const m = Math.floor((time - h) * 60);
-                    timeDisplay.innerText = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-                }
+                this.engine.environment.updateSun(parseFloat(e.target.value));
             });
         }
 
