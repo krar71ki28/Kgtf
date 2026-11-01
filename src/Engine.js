@@ -1,15 +1,16 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Physics } from './Physics.js?v=119';
-import { Serializer } from './Serializer.js?v=119';
-import { Animator } from './Animator.js?v=119';
-import { LogicManager } from './Logic.js?v=119';
-import { Environment } from './Environment.js?v=119';
+import { Physics } from './Physics.js?v=123';
+import { Serializer } from './Serializer.js?v=123';
+import { Animator } from './Animator.js?v=123';
+import { LogicManager } from './Logic.js?v=123';
+import { Environment } from './Environment.js?v=123';
 
-// ✅ أدوات Post-Processing
+// ✅ استيراد N8AOPass (مكتبة SSAO)
+import { N8AOPass } from 'https://unpkg.com/n8ao@latest/dist/N8AO.js';
+
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
@@ -22,42 +23,38 @@ export class Engine {
         this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
         this.camera.position.set(6, 6, 8);
 
-        // ✅ إعداد الريندرر (Tone Mapping سينمائي)
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        // ✅ تقليل التعرض لـ 0.6 (بدلاً من 1.0) لمنع حرق الصورة
         this.renderer.toneMappingExposure = 0.6;
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
         this.orbit = new OrbitControls(this.camera, this.renderer.domElement);
         this.orbit.target.set(0, 1, 0);
 
-        // ✅ استدعاء البيئة (السماء، الشمس، الظلال)
         this.environment = new Environment(this);
 
-        // ✅ إعداد Post-Processing (خط معالجة الرسم)
+        // ✅ خط معالجة الرسم مع SSAO
         this.composer = new EffectComposer(this.renderer);
-        this.composer.addPass(new RenderPass(this.scene, this.camera));
         
-        // Bloom (توهج خفيف جداً، ولا يعمل إلا على الإضاءة القوية)
-        this.bloomPass = new UnrealBloomPass(
-            new THREE.Vector2(window.innerWidth, window.innerHeight), 
-            0.2, 0.4, 0.9 // strength, radius, threshold
-        );
+        // 1. SSAO (يحل محل RenderPass)
+        const n8aopass = new N8AOPass(this.scene, this.camera, window.innerWidth, window.innerHeight);
+        n8aopass.configuration.gammaCorrection = false; // لأن OutputPass سيتولى التصحيح
+        this.composer.addPass(n8aopass);
+
+        // 2. Bloom (توهج)
+        this.bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.2, 0.4, 0.9);
         this.composer.addPass(this.bloomPass);
 
-        // SMAA (تنعيم الحواف)
+        // 3. SMAA (تنعيم الحواف)
         const smaaPass = new SMAAPass(window.innerWidth * this.renderer.getPixelRatio(), window.innerHeight * this.renderer.getPixelRatio());
         this.composer.addPass(smaaPass);
 
-        // Output (تطبيق الألوان النهائي)
+        // 4. Output (التصحيح النهائي)
         this.composer.addPass(new OutputPass());
 
-        // أرضية احترافية (داكنة مع شبكة)
-        const groundGeo = new THREE.PlaneGeometry(200, 200);
-        const groundMat = new THREE.MeshStandardMaterial({ color: 0x2e4a35, roughness: 0.8, metalness: 0.2 });
-        const ground = new THREE.Mesh(groundGeo, groundMat);
+        // الأرضية والشبكة
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({ color: 0x2e4a35, roughness: 0.8, metalness: 0.2 }));
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
         this.scene.add(ground);
