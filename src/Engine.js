@@ -1,11 +1,18 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Physics } from './Physics.js?v=116';
-import { Serializer } from './Serializer.js?v=116';
-import { Animator } from './Animator.js?v=116';
-import { LogicManager } from './Logic.js?v=116';
-import { Environment } from './Environment.js?v=116';
+import { Physics } from './Physics.js?v=117';
+import { Serializer } from './Serializer.js?v=117';
+import { Animator } from './Animator.js?v=117';
+import { LogicManager } from './Logic.js?v=117';
+import { Environment } from './Environment.js?v=117';
+
+// ✅ استيراد أدوات Post-Processing
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 
 export class Engine {
     constructor(canvas) {
@@ -15,25 +22,42 @@ export class Engine {
         this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
         this.camera.position.set(6, 6, 8);
 
-        this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        // ✅ إعداد الريندرر مع Tone Mapping السينمائي (مثل Unreal)
+        this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this.renderer.toneMappingExposure = 1.0;
+        this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
         this.orbit = new OrbitControls(this.camera, this.renderer.domElement);
         this.orbit.target.set(0, 1, 0);
 
-        // ✅ استدعاء البيئة الجديدة (السماء والظلال والانعكاسات)
         this.environment = new Environment(this);
 
-        // ✅ أرضية احترافية (لون داكن + شبكة مضيئة)
+        // ✅ إعداد خط معالجة الرسم (Post-Processing Pipeline)
+        this.composer = new EffectComposer(this.renderer);
+        this.composer.addPass(new RenderPass(this.scene, this.camera));
+        
+        // Bloom (توهج الإضاءة)
+        this.bloomPass = new UnrealBloomPass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight), 
+            0.4, 0.4, 0.85
+        );
+        this.composer.addPass(this.bloomPass);
+
+        // SMAA (تنعيم الحواف)
+        const smaaPass = new SMAAPass(window.innerWidth * this.renderer.getPixelRatio(), window.innerHeight * this.renderer.getPixelRatio());
+        this.composer.addPass(smaaPass);
+
+        // Output (تطبيق الألوان النهائي)
+        this.composer.addPass(new OutputPass());
+
+        // أرضية احترافية
         const groundGeo = new THREE.PlaneGeometry(200, 200);
-        const groundMat = new THREE.MeshStandardMaterial({ 
-            color: 0x2e4a35, 
-            roughness: 0.8, 
-            metalness: 0.2 
-        });
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x2e4a35, roughness: 0.8, metalness: 0.2 });
         const ground = new THREE.Mesh(groundGeo, groundMat);
         ground.rotation.x = -Math.PI / 2;
-        ground.receiveShadow = true; // ✅ استقبال الظل
+        ground.receiveShadow = true;
         this.scene.add(ground);
 
         const grid = new THREE.GridHelper(200, 100, 0x00e5ff, 0x111111);
@@ -63,34 +87,23 @@ export class Engine {
         if (type === 'cube') {
             mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), material);
             mesh.position.y = 0.5;
-            mesh.castShadow = true; // ✅ رماية الظل
-            mesh.receiveShadow = true;
+            mesh.castShadow = true; mesh.receiveShadow = true;
         } else if (type === 'sphere') {
             mesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), material);
             mesh.position.y = 0.5;
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
+            mesh.castShadow = true; mesh.receiveShadow = true;
         } else if (type === 'character') {
             mesh = new THREE.Group();
             mesh.userData.isCharacter = true;
             
-            const placeholder = new THREE.Mesh(
-                new THREE.CapsuleGeometry(0.4, 1.2, 4, 8), 
-                new THREE.MeshStandardMaterial({ color: 0xffaa00 })
-            );
+            const placeholder = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1.2, 4, 8), new THREE.MeshStandardMaterial({ color: 0xffaa00 }));
             placeholder.position.y = 1;
             mesh.add(placeholder);
             
             this.loader.load('models/character.glb', (gltf) => {
                 mesh.remove(placeholder); 
                 const model = gltf.scene;
-                // ✅ تطبيق الظلال على كل أجزاء الشخصية
-                model.traverse((child) => {
-                    if (child.isMesh) {
-                        child.castShadow = true;
-                        child.receiveShadow = true;
-                    }
-                });
+                model.traverse((child) => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
                 mesh.add(model);
                 
                 if (gltf.animations && gltf.animations.length > 0) {
@@ -100,9 +113,7 @@ export class Engine {
                 
                 if (this.onSceneChangeCallback) this.onSceneChangeCallback();
                 if (this.onSelectCallback && this.selectedObj === mesh) this.onSelectCallback(mesh);
-            }, undefined, (err) => {
-                console.warn('لم يتم العثور على ملف character.glb.');
-            });
+            }, undefined, (err) => { console.warn('GLB Error'); });
         }
 
         mesh.userData.type = type;
@@ -150,9 +161,7 @@ export class Engine {
                 data.forEach(d => Serializer.deserialize(d, this));
                 this.selectObject(null);
                 return;
-            } catch (e) {
-                console.error("Load failed:", e);
-            }
+            } catch (e) { console.error("Load failed:", e); }
         }
         this.clearScene();
         this.createObject('cube');
@@ -168,6 +177,7 @@ export class Engine {
         this.camera.aspect = c.clientWidth / c.clientHeight; 
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(c.clientWidth, c.clientHeight, false);
+        this.composer.setSize(c.clientWidth, c.clientHeight); // ✅ تحديث الـ Composer
     }
 
     update(dt) {
@@ -181,5 +191,8 @@ export class Engine {
         this.environment.update(dt);
     }
 
-    render() { this.renderer.render(this.scene, this.camera); }
+    // ✅ استخدام الـ Composer بدلاً من الريندرر المباشر
+    render() { 
+        this.composer.render(); 
+    }
 }
