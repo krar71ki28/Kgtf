@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>KGTF ENGINE v4.0</title>
+<title>KGTF ENGINE v4.0.2</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=112">
+<link rel="stylesheet" href="style.css?v=114">
 </head>
 <body>
     <header id="header">
@@ -38,7 +38,9 @@
         <div id="object-list"></div>
         
         <div id="inspector" style="display:none; padding:10px; background:#1a1a20; border-top:1px solid #333; overflow-y:auto;">
-            <div class="prop-row" id="anim-container" style="display:none; margin-bottom: 10px;">
+            
+            <!-- ✅ قائمة الأنميشن نقلت للأعلى لتكون واضحة -->
+            <div class="prop-row" id="anim-container" style="display:none; margin-bottom: 15px; background:#25252b; padding:8px; border-radius:5px;">
                 <label style="color:#00e5ff; font-weight:bold;">الحركة</label>
                 <select id="anim-select" style="flex:1; background:#121215; color:#fff; border:1px solid #444; padding:4px; border-radius:4px;"></select>
             </div>
@@ -51,7 +53,6 @@
                 <label style="color:#ffaa00; font-weight:bold;">تفعيل الجاذبية</label>
             </div>
 
-            <!-- ✅ قسم البرمجة المرئية (Logic) -->
             <div id="logic-section" style="display:none; margin-top:15px; padding-top:10px; border-top:1px solid #444;">
                 <label style="color:#4ade80; font-weight:bold; display:block; margin-bottom:5px;">البرمجة المرئية</label>
                 <div class="prop-row">
@@ -77,6 +78,6 @@
         "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js"
     } }
     </script>
-    <script type="module" src="src/main.js?v=112"></script>
+    <script type="module" src="src/main.js?v=114"></script>
 </body>
 </html>

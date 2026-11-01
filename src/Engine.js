@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Physics } from './Physics.js?v=112';
-import { Serializer } from './Serializer.js?v=112';
-import { Animator } from './Animator.js?v=112';
-import { LogicManager } from './Logic.js?v=112';
+import { Physics } from './Physics.js?v=114';
+import { Serializer } from './Serializer.js?v=114';
+import { Animator } from './Animator.js?v=114';
+import { LogicManager } from './Logic.js?v=114';
 
 export class Engine {
     constructor(canvas) {
@@ -57,7 +57,6 @@ export class Engine {
             mesh.position.y = 0.5;
         } else if (type === 'character') {
             mesh = new THREE.Group();
-            mesh.position.y = 0; 
             mesh.userData.isCharacter = true;
             
             const placeholder = new THREE.Mesh(
@@ -70,16 +69,15 @@ export class Engine {
             this.loader.load('models/character.glb', (gltf) => {
                 mesh.remove(placeholder); 
                 const model = gltf.scene;
-                model.scale.set(1, 1, 1); 
                 mesh.add(model);
                 
                 if (gltf.animations && gltf.animations.length > 0) {
                     mesh.userData.animator = new Animator(model, gltf.animations);
                     mesh.userData.animationNames = gltf.animations.map(clip => clip.name);
-                    mesh.userData.animator.play('idle');
                 }
                 
                 if (this.onSceneChangeCallback) this.onSceneChangeCallback();
+                if (this.onSelectCallback && this.selectedObj === mesh) this.onSelectCallback(mesh);
             }, undefined, (err) => {
                 console.warn('لم يتم العثور على ملف character.glb.');
             });
@@ -87,7 +85,7 @@ export class Engine {
 
         mesh.userData.type = type;
         mesh.userData.physicsEnabled = false;
-        mesh.userData.logic = []; // ✅ مصفوفة الأحداث
+        mesh.userData.logic = [];
         
         this.scene.add(mesh);
         this.objects.push(mesh);
@@ -153,6 +151,10 @@ export class Engine {
     update(dt) {
         if (!document.body.classList.contains('play-mode')) {
             this.orbit.update();
+            // ✅ تحديث الأنميشن داخل المحرر لكسر وضعية T-Pose
+            this.objects.forEach(o => {
+                if (o.userData.animator) o.userData.animator.update(dt);
+            });
         }
         this.physics.update(dt);
     }
