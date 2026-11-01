@@ -1,3 +1,4 @@
+import { createTerrain } from './Terrain.js';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -21,6 +22,9 @@ export class Engine {
     constructor(canvas) {
         this.canvas = canvas;
         this.scene = new THREE.Scene();
+        // --- Auto-injected Terrain ---
+        const pWorld = this.world || this.physicsWorld || (this.physics && this.physics.world);
+        if (this.scene) { createTerrain(this.scene, pWorld); }
 
         this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
         this.camera.position.set(6, 6, 8);
