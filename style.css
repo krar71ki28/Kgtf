@@ -1,15 +1,29 @@
-* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; font-family: 'Cairo', sans-serif; }
+* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Cairo', sans-serif; }
 body { background: #121215; color: #fff; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-#header { height: 50px; background: #1a1a20; display: flex; align-items: center; padding: 0 10px; z-index: 100; }
-.icon-btn { background: #333; color: #fff; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; }
 
-#viewport-container { flex: 1; position: relative; background: #000; touch-action: none; overflow: hidden; }
+#header { height: 50px; background: #1a1a20; display: flex; align-items: center; padding: 0 10px; justify-content: space-between; z-index: 100; }
+.header-tools { display: flex; gap: 10px; }
+.icon-btn { background: #333; color: #fff; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; }
+.play-btn { background: #4ade80; color: #000; border: none; width: 40px; height: 40px; border-radius: 5px; font-size: 18px; font-weight: bold; cursor: pointer; }
+
+.dropdown { position: relative; }
+.dropdown-content { display: none; position: absolute; top: 45px; right: 0; background: #222; border: 1px solid #444; border-radius: 5px; flex-direction: column; z-index: 200; width: 150px; }
+.dropdown-content.show { display: flex; }
+.add-btn { background: none; border: none; color: #fff; padding: 10px; text-align: right; border-bottom: 1px solid #333; cursor: pointer; }
+.add-btn:hover { background: #333; }
+
+#viewport-container { flex: 1; position: relative; background: #87CEEB; touch-action: none; overflow: hidden; }
 #viewport { width: 100%; height: 100%; display: block; }
+
+#inspector-panel { height: 200px; background: #121215; border-top: 1px solid #333; display: flex; flex-direction: column; }
+.panel-header { padding: 10px; background: #1a1a20; border-bottom: 1px solid #333; font-weight: bold; color: #aaa; }
+#object-list { display: flex; gap: 10px; padding: 10px; overflow-x: auto; }
+.obj-item { background: #2a2a35; padding: 5px 15px; border-radius: 5px; cursor: pointer; font-size: 12px; border: 1px solid transparent; }
+.obj-item.selected { border-color: #00e5ff; color: #00e5ff; }
+.prop-row { display: flex; justify-content: space-between; margin-bottom: 8px; align-items: center; }
 
 #play-ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
 #play-ui > * { pointer-events: auto; }
-
 #joystick-zone { position: absolute; bottom: 40px; left: 40px; width: 130px; height: 130px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; touch-action: none; }
 #joystick-knob { position: absolute; top: 50%; left: 50%; width: 50px; height: 50px; background: #00e5ff; border-radius: 50%; transform: translate(-50%, -50%); }
-
 #btn-jump { position: absolute; bottom: 50px; right: 40px; width: 80px; height: 80px; background: rgba(74,222,128,0.2); border: 2px solid #4ade80; border-radius: 50%; color: #4ade80; font-weight: bold; font-size: 16px; display: flex; align-items: center; justify-content: center; }

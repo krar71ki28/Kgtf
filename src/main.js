@@ -1,8 +1,10 @@
-import { Engine } from './Engine.js?v=100';
-import { Player } from './Player.js?v=100';
+import { Engine } from './Engine.js?v=101';
+import { Editor } from './Editor.js?v=101';
+import { Player } from './Player.js?v=101';
 
 const canvas = document.getElementById('viewport');
 const engine = new Engine(canvas);
+const editor = new Editor(engine);
 const player = new Player(engine);
 
 let lastTime = performance.now();
