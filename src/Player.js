@@ -20,7 +20,15 @@ export class Player {
 
     setupControls() {
         document.getElementById('btn-play').addEventListener('click', () => this.startPlay());
-        document.getElementById('exit-play').addEventListener('click', () => this.stopPlay());
+        
+        // زر الخروج يستخدم click لضمان الاستقرار
+        const btnExit = document.getElementById('exit-play');
+        if(btnExit) {
+            btnExit.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.stopPlay();
+            });
+        }
 
         window.addEventListener('keydown', (e) => { 
             this.keys[e.code] = true; 
@@ -33,7 +41,7 @@ export class Player {
         });
         window.addEventListener('keyup', (e) => this.keys[e.code] = false);
 
-        // --- الجويستيك (حماية كاملة) ---
+        // --- الجويستيك (حماية مطلقة) ---
         let joyActive = false, joyDir = {x:0, y:0};
         const joyZone = document.getElementById('joystick-zone'), joyKnob = document.getElementById('joystick-knob');
         
@@ -89,7 +97,7 @@ export class Player {
 
         canvas.addEventListener('touchstart', (e) => {
             if (!this.isPlaying) return;
-            e.preventDefault(); // منع تمرير الشاشة
+            e.preventDefault(); 
             if (e.touches.length === 2) {
                 initialPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
             } else if (e.touches.length === 1) {
@@ -151,7 +159,7 @@ export class Player {
         this.isPlaying = true;
         this.playerModel.visible = true;
         
-        // ✅ إجبار الشخصية على النزول للأرض وتوجيهها
+        // إجبار الشخصية على النزول للأرض وتوجيهها
         this.playerModel.position.set(0, 0, 0);
         this.playerModel.rotation.set(0, 0, 0);
         this.velocityY = 0;
@@ -162,7 +170,7 @@ export class Player {
         this.engine.selectObject(null); 
         this.engine.orbit.enabled = false;
         
-        this.cameraYaw = Math.PI; // الكاميرا خلف الشخصية
+        this.cameraYaw = Math.PI; 
         this.cameraPitch = 0.3;
         this.targetDist = 4.5;
         
@@ -208,11 +216,9 @@ export class Player {
 
         if (isMoving) {
             moveVector.normalize(); 
-            const nextPos = this.playerModel.position.clone();
-            nextPos.addScaledVector(moveVector, speed * dt);
-
-            // حركة حرة تماماً
-            this.playerModel.position.copy(nextPos);
+            // حركة حرة مطلقة (لا يوجد فحص تصادم يعيق الحركة)
+            this.playerModel.position.x += moveVector.x * speed * dt;
+            this.playerModel.position.z += moveVector.z * speed * dt;
             
             if (this.cameraMode === 'RPG') {
                 const targetRot = Math.atan2(moveVector.x, moveVector.z); 
