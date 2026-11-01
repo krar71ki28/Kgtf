@@ -33,14 +33,19 @@ export class Player {
         });
         window.addEventListener('keyup', (e) => this.keys[e.code] = false);
 
-        // --- الجويستيك ---
+        // --- الجويستيك (حماية كاملة) ---
         let joyActive = false, joyDir = {x:0, y:0};
         const joyZone = document.getElementById('joystick-zone'), joyKnob = document.getElementById('joystick-knob');
         
         if(joyZone && joyKnob) {
-            joyZone.addEventListener('touchstart', (e) => { e.stopPropagation(); joyActive = true; });
+            joyZone.addEventListener('touchstart', (e) => { 
+                e.preventDefault(); e.stopPropagation(); 
+                joyActive = true; 
+            }, { passive: false });
+
             joyZone.addEventListener('touchmove', (e) => {
-                e.stopPropagation(); if(!joyActive) return;
+                e.preventDefault(); e.stopPropagation(); 
+                if(!joyActive) return;
                 const rect = joyZone.getBoundingClientRect();
                 let dx = e.touches[0].clientX - (rect.left + rect.width/2);
                 let dy = e.touches[0].clientY - (rect.top + rect.height/2);
@@ -48,28 +53,32 @@ export class Player {
                 if(dist > 40) { dx = (dx/dist)*40; dy = (dy/dist)*40; }
                 joyKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
                 joyDir.x = dx/40; joyDir.y = dy/40;
-            });
+            }, { passive: false });
+
             joyZone.addEventListener('touchend', (e) => { 
-                e.stopPropagation(); joyActive = false; joyKnob.style.transform = `translate(-50%, -50%)`; joyDir = {x:0, y:0}; 
-            });
+                e.preventDefault(); e.stopPropagation(); 
+                joyActive = false; 
+                joyKnob.style.transform = `translate(-50%, -50%)`; 
+                joyDir = {x:0, y:0}; 
+            }, { passive: false });
         }
         
         // --- زر القفز ---
         const btnJump = document.getElementById('btn-jump');
-        if(btnJump) btnJump.addEventListener('pointerdown', (e) => { 
+        if(btnJump) btnJump.addEventListener('touchstart', (e) => { 
             e.preventDefault(); e.stopPropagation(); 
             if(this.isPlaying && this.isGrounded) { this.velocityY = 8; this.isGrounded = false; } 
-        });
+        }, { passive: false });
 
         // --- زر الكاميرا ---
         const btnCamMode = document.getElementById('btn-camera-mode');
         if (btnCamMode) {
             btnCamMode.innerText = this.cameraMode;
-            btnCamMode.addEventListener('pointerdown', (e) => {
+            btnCamMode.addEventListener('touchstart', (e) => {
                 e.preventDefault(); e.stopPropagation();
                 this.cameraMode = this.cameraMode === 'TPS' ? 'RPG' : 'TPS';
                 btnCamMode.innerText = this.cameraMode;
-            });
+            }, { passive: false });
         }
 
         // --- التحكم بالكاميرا من الشاشة ---
@@ -80,16 +89,18 @@ export class Player {
 
         canvas.addEventListener('touchstart', (e) => {
             if (!this.isPlaying) return;
+            e.preventDefault(); // منع تمرير الشاشة
             if (e.touches.length === 2) {
                 initialPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
             } else if (e.touches.length === 1) {
                 isDraggingCam = true;
                 lastCamPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
             }
-        });
+        }, { passive: false });
         
         canvas.addEventListener('touchmove', (e) => {
             if (!this.isPlaying) return;
+            e.preventDefault();
             if (e.touches.length === 2 && initialPinchDist > 0) {
                 const currentPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                 const delta = initialPinchDist - currentPinchDist;
@@ -100,8 +111,12 @@ export class Player {
                 this.updateCameraRotation(touch.clientX - lastCamPos.x, touch.clientY - lastCamPos.y);
                 lastCamPos = { x: touch.clientX, y: touch.clientY };
             }
-        });
-        canvas.addEventListener('touchend', () => { isDraggingCam = false; initialPinchDist = 0; });
+        }, { passive: false });
+        
+        canvas.addEventListener('touchend', (e) => { 
+            e.preventDefault();
+            isDraggingCam = false; initialPinchDist = 0; 
+        }, { passive: false });
 
         canvas.addEventListener('mousedown', (e) => {
             if (!this.isPlaying) return;
@@ -132,17 +147,22 @@ export class Player {
     startPlay() {
         this.playerModel = this.engine.objects.find(o => o.userData.isCharacter);
         if (!this.playerModel) { alert('أضف شخصية أولاً!'); return; }
+        
         this.isPlaying = true;
         this.playerModel.visible = true;
+        
+        // ✅ إجبار الشخصية على النزول للأرض وتوجيهها
+        this.playerModel.position.set(0, 0, 0);
+        this.playerModel.rotation.set(0, 0, 0);
+        this.velocityY = 0;
+        this.isGrounded = true;
         
         document.body.classList.add('play-mode');
         document.getElementById('play-ui').style.display = 'block';
         this.engine.selectObject(null); 
         this.engine.orbit.enabled = false;
         
-        // ✅ إصلاح NaN (حماية الكاميرا من القيم الخاطئة)
-        let rotY = this.playerModel.rotation.y;
-        this.cameraYaw = isNaN(rotY) ? Math.PI : rotY + Math.PI; 
+        this.cameraYaw = Math.PI; // الكاميرا خلف الشخصية
         this.cameraPitch = 0.3;
         this.targetDist = 4.5;
         
@@ -162,9 +182,6 @@ export class Player {
 
     update(dt) {
         if (!this.isPlaying || !this.playerModel) return;
-        
-        // ✅ حماية إضافية
-        if (isNaN(this.cameraYaw)) this.cameraYaw = 0;
         
         const speed = 5;
         const forward = new THREE.Vector3(-Math.sin(this.cameraYaw), 0, -Math.cos(this.cameraYaw)).normalize();
@@ -194,7 +211,7 @@ export class Player {
             const nextPos = this.playerModel.position.clone();
             nextPos.addScaledVector(moveVector, speed * dt);
 
-            // ✅ تم إزالة فحص التصادم المسبب للمشكلة (سنعيده بنظام Cannon-es لاحقاً)
+            // حركة حرة تماماً
             this.playerModel.position.copy(nextPos);
             
             if (this.cameraMode === 'RPG') {
@@ -212,10 +229,13 @@ export class Player {
             this.playerModel.rotation.y = this.cameraYaw;
         }
 
+        // الجاذبية
         this.velocityY -= 24 * dt; 
         this.playerModel.position.y += this.velocityY * dt;
         if (this.playerModel.position.y <= 0) { 
-            this.playerModel.position.y = 0; this.velocityY = 0; this.isGrounded = true; 
+            this.playerModel.position.y = 0; 
+            this.velocityY = 0; 
+            this.isGrounded = true; 
         }
 
         // الكاميرا
@@ -253,6 +273,7 @@ export class Player {
             this.engine.camera.lookAt(anchorPos);
         }
 
+        // الأنميشن
         if (this.playerModel.userData.animator && !isFirstPerson) {
             let targetState = 'idle';
             if (!this.isGrounded) targetState = 'jump';
