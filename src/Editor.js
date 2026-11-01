@@ -24,23 +24,28 @@ export class Editor {
 
         document.getElementById('btn-clear-scene').onclick = () => this.engine.clearScene();
 
+        // ✅ مزامنة الخصائص مع الفيزياء
         const bindProp = (id, cb) => {
             document.getElementById(id).addEventListener('input', (e) => {
                 if (this.engine.selectedObj) cb(this.engine.selectedObj, parseFloat(e.target.value) || e.target.value);
             });
         };
-        bindProp('prop-x', (o, v) => { o.position.x = v; if (o.userData.body) o.userData.body.position.x = v; });
-        bindProp('prop-z', (o, v) => { o.position.z = v; if (o.userData.body) o.userData.body.position.z = v; });
+        bindProp('prop-x', (o, v) => { 
+            o.position.x = v; 
+            if (o.userData.body) { o.userData.body.position.x = v; o.userData.body.velocity.set(0,0,0); } 
+        });
+        bindProp('prop-z', (o, v) => { 
+            o.position.z = v; 
+            if (o.userData.body) { o.userData.body.position.z = v; o.userData.body.velocity.set(0,0,0); } 
+        });
         
         document.getElementById('prop-color').addEventListener('input', (e) => {
             if (this.engine.selectedObj) this.engine.selectedObj.material.color.set(e.target.value);
         });
 
-        // ✅ تفعيل الجاذبية
         document.getElementById('prop-physics').addEventListener('change', (e) => {
             if (this.engine.selectedObj && this.engine.selectedObj.userData.body) {
                 this.engine.selectedObj.userData.physicsEnabled = e.target.checked;
-                // إذا كانت الجاذبية مفعلة، نعطي المجسم كتلة (وزن)
                 this.engine.selectedObj.userData.body.mass = e.target.checked ? 1 : 0;
                 this.engine.selectedObj.userData.body.updateMassProperties();
             }
