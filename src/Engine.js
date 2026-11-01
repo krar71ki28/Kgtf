@@ -1,15 +1,15 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Physics } from './Physics.js?v=401';
-import { Serializer } from './Serializer.js?v=401';
-import { Animator } from './Animator.js?v=401';
-import { LogicManager } from './Logic.js?v=401';
-import { Environment } from './Environment.js?v=401';
-import { AudioManager } from './Audio.js?v=401';
-import { UIManager } from './UI.js?v=401';
-import { VFXManager } from './VFX.js?v=401';
-import { AIManager } from './AI.js?v=401'; // ✅ استيراد AI
+import { Physics } from './Physics.js?v=404';
+import { Serializer } from './Serializer.js?v=404';
+import { Animator } from './Animator.js?v=404';
+import { LogicManager } from './Logic.js?v=404';
+import { Environment } from './Environment.js?v=404';
+import { AudioManager } from './Audio.js?v=404';
+import { UIManager } from './UI.js?v=404';
+import { VFXManager } from './VFX.js?v=404';
+import { AIManager } from './AI.js?v=404'; // ✅ استيراد AI
 
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';

@@ -14,22 +14,27 @@ export class AIManager {
     }
 
     spawnEnemy() {
-        if (!this.engine.playerModel) return;
+        // ✅ إصلاح: البحث عن اللاعب بطريقة صحيحة داخل المشهد
+        const playerModel = this.engine.objects.find(o => o.userData.isCharacter);
+        if (!playerModel) {
+            console.warn("Cannot spawn enemy: Player not found");
+            return;
+        }
 
         const enemy = this.engine.createObject('cube');
         if (!enemy) return;
         
-        enemy.material.color.setHex(0xff3333); // أحمر
+        enemy.material.color.setHex(0xff3333);
         enemy.userData.type = 'enemy';
-        enemy.userData.health = 100; // ✅ إضافة الصحة
+        enemy.userData.health = 100;
         enemy.userData.isEnemy = true;
         
         const angle = Math.random() * Math.PI * 2;
         const distance = 8 + Math.random() * 4;
         enemy.position.set(
-            this.engine.playerModel.position.x + Math.cos(angle) * distance,
+            playerModel.position.x + Math.cos(angle) * distance,
             0.5,
-            this.engine.playerModel.position.z + Math.sin(angle) * distance
+            playerModel.position.z + Math.sin(angle) * distance
         );
 
         this.enemies.push(enemy);
@@ -38,7 +43,6 @@ export class AIManager {
     takeDamage(enemy, amount) {
         if (enemy.userData.health !== undefined) {
             enemy.userData.health -= amount;
-            // تأثير وميض عند الإصابة
             enemy.material.emissive.setHex(0xffffff);
             setTimeout(() => { if(enemy.material) enemy.material.emissive.setHex(0x000000); }, 100);
 
@@ -50,7 +54,7 @@ export class AIManager {
 
     killEnemy(enemy) {
         this.engine.vfx.spawnExplosion(enemy.position);
-        this.engine.logic.score += 50; // مكافأة القتل
+        this.engine.logic.score += 50;
         this.engine.ui.updateScore(this.engine.logic.score);
         
         this.engine.removeObject(enemy);
@@ -66,10 +70,13 @@ export class AIManager {
             }
         }
 
+        // ✅ إصلاح: البحث عن اللاعب في كل إطار
+        const playerModel = this.engine.objects.find(o => o.userData.isCharacter);
+        
         this.enemies.forEach(enemy => {
-            if (!this.engine.playerModel || !enemy.parent) return; // التأكد من أن العدو موجود
+            if (!playerModel || !enemy.parent) return; 
 
-            const direction = new THREE.Vector3().subVectors(this.engine.playerModel.position, enemy.position);
+            const direction = new THREE.Vector3().subVectors(playerModel.position, enemy.position);
             direction.y = 0;
 
             const distance = direction.length();
