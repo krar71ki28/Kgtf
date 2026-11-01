@@ -19,7 +19,7 @@ export function createTerrain(scene, world) {
         for (let j = 0; j <= segments; j++) {
             const x = vertices[index];
             const z = vertices[index + 2];
-            const y = Math.sin(x * 0.1) * Math.cos(z * 0.1) * 2.5;
+            const y = Math.sin(x * 0.1) * Math.cos(z * 0.1) * 2.5; // التلال
             vertices[index + 1] = y;
             matrix[i].push(y);
             index += 3;
@@ -42,14 +42,14 @@ export function createTerrain(scene, world) {
         const heightfieldShape = new CANNON.Heightfield(matrix, { elementSize });
         const heightfieldBody = new CANNON.Body({ mass: 0 });
         heightfieldBody.addShape(heightfieldShape);
-        heightfieldBody.position.set(-width / 2, 0, depth / 2);
+        
+        // إصلاح الفيزياء: رفع الجسم الفيزيائي قليلاً (0.1) لمنع المجسم من الغرق والطمس
+        heightfieldBody.position.set(-width / 2, 0.1, depth / 2); 
         heightfieldBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+        
         world.addBody(heightfieldBody);
-        console.log('⛰️ Terrain Physics Added');
-    } else {
-        console.warn('⚠️ Physics World not found. Terrain added visually only.');
+        console.log('⛰️ Terrain Physics Added (No Clipping)');
     }
 
-    console.log('⛰️ Terrain System Loaded Successfully');
     return terrainMesh;
 }
