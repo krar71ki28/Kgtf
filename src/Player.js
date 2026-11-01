@@ -70,6 +70,26 @@ export class Player {
         canvas.addEventListener('touchend', () => { isDragging = false; });
     }
 
+    // ✅ دالة فحص التصادم (ترجع المجسم إذا كان هناك تصادم)
+    checkCollision(pos) {
+        const playerBox = new THREE.Box3().setFromCenterAndSize(
+            pos.clone().add(new THREE.Vector3(0, 1, 0)), 
+            new THREE.Vector3(0.7, 1.9, 0.7) // تصغير الصندوق قليلاً لانزلاق أفضل
+        );
+
+        for (let i = 0; i < this.engine.objects.length; i++) {
+            const obj = this.engine.objects[i];
+            if (obj !== this.playerModel && obj.userData.type !== 'vfx' && obj.userData.type !== 'light') {
+                obj.updateMatrixWorld(true); // إجبار تحديث مصفوفة المجسم
+                const objBox = new THREE.Box3().setFromObject(obj);
+                if (playerBox.intersectsBox(objBox)) {
+                    return obj; // إرجاع المجسم المتصادم
+                }
+            }
+        }
+        return null;
+    }
+
     startPlay() {
         this.playerModel = this.engine.objects.find(o => o.userData.isCharacter);
         if (!this.playerModel) { alert('أضف شخصية أولاً!'); return; }
@@ -121,36 +141,43 @@ export class Player {
 
         if (isMoving) {
             moveVector.normalize();
-            const nextPos = this.playerModel.position.clone().addScaledVector(moveVector, speed * dt);
             
-            const playerBox = new THREE.Box3().setFromCenterAndSize(
-                nextPos.clone().add(new THREE.Vector3(0, 1, 0)), 
-                new THREE.Vector3(0.8, 2, 0.8)
-            );
+            // ✅ نظام الانزلاق: فحص الحركة على المحورين X و Z بشكل منفصل
+            const nextX = this.playerModel.position.clone().add(new THREE.Vector3(moveVector.x * speed * dt, 0, 0));
+            const nextZ = this.playerModel.position.clone().add(new THREE.Vector3(0, 0, moveVector.z * speed * dt));
 
-            let collision = false;
-            let collidingObj = null;
+            const collidedX = this.checkCollision(nextX);
+            const collidedZ = this.checkCollision(nextZ);
 
-            this.engine.objects.forEach(obj => {
-                if (obj !== this.playerModel && obj.userData.type !== 'vfx' && obj.userData.type !== 'light') {
-                    const objBox = new THREE.Box3().setFromObject(obj);
-                    if (playerBox.intersectsBox(objBox)) {
-                        collision = true;
-                        collidingObj = obj;
-                    }
-                }
-            });
+            if (!collidedX) this.playerModel.position.x = nextX.x;
+            if (!collidedZ) this.playerModel.position.z = nextZ.z;
 
-            if (!collision) {
-                this.playerModel.position.copy(nextPos);
+            // إطلاق حدث الاصطدام
+            const collidedObj = collidedX || collidedZ;
+            if (collidedObj && collidedObj.userData.logic && !collidedObj.userData.hasCollided) {
+                this.engine.logic.triggerEvent(collidedObj, 'onCollide');
+                collidedObj.userData.hasCollided = true;
+            }
+
+            // إذا كان هناك أي تصادم، لا تقم بتدوير الشخصية (لمنع الاهتزاز)
+            if (!collidedX && !collidedZ) {
                 const angle = Math.atan2(moveVector.x, moveVector.z);
                 this.playerModel.rotation.y = angle;
             } else {
-                if (collidingObj && collidingObj.userData.logic && !collidingObj.userData.hasCollided) {
-                    this.engine.logic.triggerEvent(collidingObj, 'onCollide');
-                    collidingObj.userData.hasCollided = true;
-                }
+                // إذا اصطدمت، حاول الانزلاق نحو الاتجاه الأقل تصادماً
+                const angle = Math.atan2(moveVector.x, moveVector.z);
+                this.playerModel.rotation.y += (angle - this.playerModel.rotation.y) * 5 * dt;
             }
+        }
+
+        // ✅ نظام الطرد (إذا كانت الشخصية داخل مكعب، اطردها للخارج)
+        const currentCollision = this.checkCollision(this.playerModel.position);
+        if (currentCollision) {
+            const pushDir = this.playerModel.position.clone().sub(currentCollision.position);
+            pushDir.y = 0;
+            if (pushDir.lengthSq() === 0) pushDir.set(1, 0, 0);
+            pushDir.normalize();
+            this.playerModel.position.add(pushDir.multiplyScalar(3 * dt));
         }
 
         this.velocityY -= 20 * dt; 
