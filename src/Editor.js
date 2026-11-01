@@ -10,13 +10,21 @@ export class Editor {
     }
 
     setupUI() {
-        // ✅ ربط التبويبات (Outliner / UI)
+        // ✅ ربط التبويبات
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.onclick = () => {
-                document.querySelectorAll('.tab-btn').forEach(b => b.style.color = '#888');
-                document.querySelectorAll('.tab-pane').forEach(p => p.style.display = 'none');
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.style.color = '#888';
+                    b.classList.remove('active');
+                });
+                document.querySelectorAll('.tab-pane').forEach(p => {
+                    p.style.display = 'none';
+                    p.classList.remove('active');
+                });
                 btn.style.color = '#00e5ff';
+                btn.classList.add('active');
                 document.getElementById(btn.dataset.target).style.display = 'block';
+                document.getElementById(btn.dataset.target).classList.add('active');
             };
         });
 
@@ -40,13 +48,20 @@ export class Editor {
             document.getElementById('btn-audio').innerText = isMuted ? '🔇' : '🔊';
         };
 
-        // ✅ ربط أزرار الواجهة (UI)
+        // ✅ ربط أزرار الواجهة (UI) - الآن تعمل مع custom-hud
         document.getElementById('btn-add-text').onclick = () => {
             const text = document.getElementById('ui-text-input').value;
-            this.engine.ui.addText(text);
-            document.getElementById('ui-text-input').value = '';
+            if (text.trim() !== '') {
+                this.engine.ui.addText(text);
+                document.getElementById('ui-text-input').value = '';
+                alert('تم إضافة النص بنجاح!');
+            } else {
+                alert('الرجاء كتابة نص أولاً!');
+            }
         };
-        document.getElementById('btn-clear-ui').onclick = () => this.engine.ui.clearUI();
+        document.getElementById('btn-clear-ui').onclick = () => {
+            this.engine.ui.clearUI();
+        };
 
         const bindProp = (id, cb) => {
             document.getElementById(id).addEventListener('input', (e) => {

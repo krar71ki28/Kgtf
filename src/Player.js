@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import * as CANNON from 'cannon-es';
 
 export class Player {
     constructor(engine) {
@@ -85,7 +84,6 @@ export class Player {
         this.cameraYaw = 0;
         this.engine.selectObject(null);
         
-        // ✅ فك حظر الصوت وتشغيل الموسيقى
         this.engine.audio.unlock();
         this.engine.audio.playBGM();
     }
@@ -123,16 +121,41 @@ export class Player {
             moveVector.normalize();
             const nextPos = this.playerModel.position.clone().addScaledVector(moveVector, speed * dt);
             
-            const ray = new CANNON.RaycastResult();
-            const from = new CANNON.Vec3(this.playerModel.position.x, 1, this.playerModel.position.z);
-            const to = new CANNON.Vec3(nextPos.x, 1, nextPos.z);
-            
-            this.engine.physics.world.raycastClosest(from, to, { skipBackfaces: true }, ray);
-            
-            if (!ray.hasHit) {
+            // ✅ فحص التصادم بـ Box3 (مضمون ولا يخترق)
+            const playerBox = new THREE.Box3().setFromCenterAndSize(
+                nextPos.clone().add(new THREE.Vector3(0, 1, 0)), 
+                new THREE.Vector3(0.8, 2, 0.8)
+            );
+            const currentBox = new THREE.Box3().setFromCenterAndSize(
+                this.playerModel.position.clone().add(new THREE.Vector3(0, 1, 0)), 
+                new THREE.Vector3(0.8, 2, 0.8)
+            );
+
+            let collision = false;
+            this.engine.objects.forEach(obj => {
+                if (obj !== this.playerModel && obj.userData.type !== 'vfx' && obj.userData.type !== 'light') {
+                    const objBox = new THREE.Box3().setFromObject(obj);
+                    // إذا كنا سنصطدم الآن، ولم نكن نصطدم سابقاً
+                    if (playerBox.intersectsBox(objBox) && !currentBox.intersectsBox(objBox)) {
+                        collision = true;
+                    }
+                }
+            });
+
+            if (!collision) {
                 this.playerModel.position.copy(nextPos);
                 const angle = Math.atan2(moveVector.x, moveVector.z);
                 this.playerModel.rotation.y = angle;
+            } else {
+                // ✅ إطلاق حدث الاصطدام
+                this.engine.objects.forEach(obj => {
+                    if (obj !== this.playerModel && obj.userData.logic && obj.userData.logic.length > 0) {
+                        const objBox = new THREE.Box3().setFromObject(obj);
+                        if (playerBox.intersectsBox(objBox)) {
+                            this.engine.logic.triggerEvent(obj, 'onCollide');
+                        }
+                    }
+                });
             }
         }
 
@@ -164,20 +187,5 @@ export class Player {
             }
             this.playerModel.userData.animator.update(dt);
         }
-
-        // فحص التصادم وإطلاق الحدث
-        const playerBox = new THREE.Box3().setFromCenterAndSize(
-            this.playerModel.position.clone().add(new THREE.Vector3(0, 1, 0)), 
-            new THREE.Vector3(0.8, 2, 0.8)
-        );
-
-        this.engine.objects.forEach(obj => {
-            if (obj !== this.playerModel && obj.userData.logic && obj.userData.logic.length > 0) {
-                const objBox = new THREE.Box3().setFromObject(obj);
-                if (playerBox.intersectsBox(objBox)) {
-                    this.engine.logic.triggerEvent(obj, 'onCollide');
-                }
-            }
-        });
     }
 }

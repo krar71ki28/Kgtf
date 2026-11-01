@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>KGTF ENGINE v5.5</title>
+<title>KGTF ENGINE v5.6</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=130">
+<link rel="stylesheet" href="style.css?v=131">
 </head>
 <body>
     <header id="header">
@@ -28,11 +28,13 @@
     <main id="viewport-container">
         <canvas id="viewport"></canvas>
         
+        <!-- ✅ تم نقل custom-hud ليكون ظاهراً في المحرر واللعب -->
+        <div id="custom-hud" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:500;"></div>
+
         <div id="play-ui" style="display:none;">
             <button id="exit-play" style="position:absolute; top:20px; left:20px; z-index:1000; padding:10px; background:red; color:white; border:none; border-radius:5px;">✕ إيقاف</button>
             <div id="joystick-zone"><div id="joystick-knob"></div></div>
             <button id="btn-jump">قفز</button>
-            <div id="custom-hud" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:500;"></div>
         </div>
     </main>
 
@@ -42,8 +44,9 @@
             <button class="tab-btn" data-target="tab-ui" style="flex:1; padding:8px; background:none; border:none; color:#888; font-weight:bold; cursor:pointer;">UI / HUD</button>
         </div>
 
-        <div class="panel-content" style="flex:1; overflow-y:auto;">
-            <div id="tab-outliner" class="tab-pane active">
+        <div class="panel-content" style="flex:1; overflow-y:auto; position:relative;">
+            <!-- ✅ تبويب Outliner -->
+            <div id="tab-outliner" class="tab-pane active" style="display:block;">
                 <div id="object-list" style="padding:10px;"></div>
                 <div id="inspector" style="display:none; padding:10px; background:#1a1a20; border-top:1px solid #333;">
                     <div class="prop-row" id="anim-container" style="display:none; margin-bottom: 15px; background:#25252b; padding:8px; border-radius:5px;">
@@ -69,7 +72,7 @@
                             <select id="logic-action" style="flex:1; background:#121215; color:#fff; border:1px solid #444; padding:4px;">
                                 <option value="playSound">تشغيل صوت</option>
                                 <option value="addScore">إضافة نقاط</option>
-                                <option value="spawnVFX">تأثير انفجار</option> <!-- ✅ إضافة جديدة -->
+                                <option value="spawnVFX">تأثير انفجار</option>
                                 <option value="destroy">تدمير</option>
                             </select>
                         </div>
@@ -79,6 +82,7 @@
                 </div>
             </div>
 
+            <!-- ✅ تبويب UI / HUD -->
             <div id="tab-ui" class="tab-pane" style="display:none; padding:10px;">
                 <div class="prop-row" style="margin-bottom:10px;">
                     <input type="text" id="ui-text-input" placeholder="اكتب نصاً..." style="flex:1; padding:6px; background:#121215; color:#fff; border:1px solid #444; border-radius:4px;">
@@ -96,6 +100,6 @@
         "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js"
     } }
     </script>
-    <script type="module" src="src/main.js?v=130"></script>
+    <script type="module" src="src/main.js?v=131"></script>
 </body>
 </html>
