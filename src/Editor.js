@@ -51,7 +51,21 @@ export class Editor {
             }
         });
 
-        // ✅ ربط زر المطر
+        // ✅ ربط شريط الوقت
+        const timeSlider = document.getElementById('env-time');
+        const timeDisplay = document.getElementById('time-display');
+        if (timeSlider) {
+            timeSlider.addEventListener('input', (e) => {
+                const time = parseFloat(e.target.value);
+                this.engine.environment.updateSun(time);
+                if (timeDisplay) {
+                    const h = Math.floor(time);
+                    const m = Math.floor((time - h) * 60);
+                    timeDisplay.innerText = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                }
+            });
+        }
+
         document.getElementById('env-rain').addEventListener('change', (e) => {
             this.engine.environment.toggleRain(e.target.checked);
         });

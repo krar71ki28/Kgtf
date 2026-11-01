@@ -11,30 +11,21 @@ export class Environment {
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-        // 1. السماء
         this.sky = new Sky();
         this.sky.scale.setScalar(450000);
         this.scene.add(this.sky);
 
-        const sunPos = new THREE.Vector3();
-        const phi = THREE.MathUtils.degToRad(90 - 45);
-        const theta = THREE.MathUtils.degToRad(180);
-        sunPos.setFromSphericalCoords(1, phi, theta);
-
+        // إعدادات السماء الأساسية
         this.sky.material.uniforms['turbidity'].value = 8;
         this.sky.material.uniforms['rayleigh'].value = 4;
         this.sky.material.uniforms['mieCoefficient'].value = 0.005;
         this.sky.material.uniforms['mieDirectionalG'].value = 0.7;
-        this.sky.material.uniforms['sunPosition'].value.copy(sunPos);
 
-        // ✅ إضافة الضباب الجوي (يخفي البعيد ويعطي عمق)
-        // 0x87CEEB هو نفس لون السماء تقريباً
-        // 0.015 هي الكثافة (يمكن زيادتها لجعل الضباب أكثر كثافة)
+        // الضباب
         this.scene.fog = new THREE.FogExp2(0x87CEEB, 0.015);
 
-        // 2. الشمس
+        // الشمس
         this.sun = new THREE.DirectionalLight(0xfff5e6, 2.0);
-        this.sun.position.copy(sunPos).multiplyScalar(100);
         this.sun.castShadow = true;
         this.sun.shadow.mapSize.width = 2048;
         this.sun.shadow.mapSize.height = 2048;
@@ -47,11 +38,11 @@ export class Environment {
         this.sun.shadow.bias = -0.0005;
         this.scene.add(this.sun);
 
-        // 3. إضاءة محيطة
+        // إضاءة محيطة
         this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8);
         this.scene.add(this.hemiLight);
 
-        // 4. مجس الانعكاس (Reflection Probe)
+        // مجس الانعكاس
         this.cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256, {
             generateMipmaps: true,
             minFilter: THREE.LinearMipmapLinearFilter,
@@ -59,6 +50,43 @@ export class Environment {
         this.cubeCamera = new THREE.CubeCamera(0.1, 1000, this.cubeRenderTarget);
         this.cubeCamera.position.set(0, 2, 0);
         this.scene.add(this.cubeCamera);
+
+        // ✅ تحديث الوقت (الافتراضي 12:00 ظهراً)
+        this.updateSun(12);
+    }
+
+    // ✅ دالة تحديث الشمس والسماء بناءً على الوقت
+    updateSun(timeOfDay) {
+        // تحويل الوقت إلى زاوية (0-24 ساعة)
+        const elevation = Math.sin((timeOfDay - 6) / 12 * Math.PI) * 90;
+        const phi = THREE.MathUtils.degToRad(90 - elevation);
+        const theta = THREE.MathUtils.degToRad(180);
+        const sunPos = new THREE.Vector3().setFromSphericalCoords(1, phi, theta);
+
+        // تحديث موقع الشمس في السماء
+        this.sky.material.uniforms['sunPosition'].value.copy(sunPos);
+        this.sun.position.copy(sunPos).multiplyScalar(100);
+
+        // ✅ تغيير الإضاءة والألوان بناءً على الوقت
+        if (elevation < 0) {
+            // ليل
+            this.sun.intensity = 0.1;
+            this.sun.color.setHex(0x445588);
+            this.hemiLight.intensity = 0.2;
+            this.scene.fog.color.setHex(0x050510);
+        } else if (elevation < 20) {
+            // شروق / غروب
+            this.sun.intensity = 1.5;
+            this.sun.color.setHex(0xff6600);
+            this.hemiLight.intensity = 0.5;
+            this.scene.fog.color.setHex(0xffaa00);
+        } else {
+            // نهار
+            this.sun.intensity = 2.0;
+            this.sun.color.setHex(0xfff5e6);
+            this.hemiLight.intensity = 0.8;
+            this.scene.fog.color.setHex(0x87CEEB);
+        }
 
         this.updateEnvironmentMap();
     }
@@ -82,16 +110,12 @@ export class Environment {
             const mat = new THREE.PointsMaterial({ color: 0xaaaaaa, size: 0.15, transparent: true, opacity: 0.7 });
             this.rainSystem = new THREE.Points(geo, mat);
             this.scene.add(this.rainSystem);
-            
-            // ✅ عند المطر، نزيد كثافة الضباب قليلاً لجو عاصف
             this.scene.fog.density = 0.03; 
         } else if (!enabled && this.rainSystem) {
             this.scene.remove(this.rainSystem);
             this.rainSystem.geometry.dispose();
             this.rainSystem.material.dispose();
             this.rainSystem = null;
-            
-            // إعادة الضباب لوضعه الطبيعي
             this.scene.fog.density = 0.015;
         }
     }
