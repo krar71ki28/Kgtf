@@ -1,7 +1,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Cairo', sans-serif; }
 body { background: #0e0e12; color: #d1d1d6; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-#header { height: 55px; background: #15151a; display: flex; align-items: center; padding: 0 15px; justify-content: space-between; z-index: 100; border-bottom: 1px solid #2a2a2f; }
+#header { height: 55px; background: #15151a; display: flex; align-items: center; padding: 0 15px; justify-content: space-between; z-index: 100; border-bottom: 1px solid #2a2a2f; flex-shrink: 0; }
 .header-tools { display: flex; gap: 8px; }
 .icon-btn { background: #202028; color: #ccc; border: 1px solid #3a3a42; width: 38px; height: 38px; border-radius: 6px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.15s; }
 .icon-btn:hover { background: #2a2a32; color: #fff; border-color: #00e5ff; }
@@ -16,9 +16,11 @@ body { background: #0e0e12; color: #d1d1d6; height: 100vh; display: flex; flex-d
 #viewport-container { flex: 1; position: relative; background: #87CEEB; touch-action: none; overflow: hidden; }
 #viewport { width: 100%; height: 100%; display: block; }
 
-/* ✅ زيادة الارتفاع لضمان ظهور زر إضافة الحدث */
-#inspector-panel { height: 340px; background: #15151a; border-top: 1px solid #2a2a2f; display: flex; flex-direction: column; }
-.panel-header { padding: 12px; background: #1a1a1f; border-bottom: 1px solid #2a2a2f; font-weight: bold; color: #888; font-size: 12px; letter-spacing: 1px; }
+/* ✅ الحل: اللوحة السفلية تأخذ 45% من الشاشة، وتسمح بالتمرير الداخلي */
+#inspector-panel { height: 45vh; background: #15151a; border-top: 1px solid #2a2a2f; display: flex; flex-direction: column; flex-shrink: 0; }
+#panel-tabs { display: flex; background: #1a1a1f; border-bottom: 1px solid #2a2a2f; flex-shrink: 0; }
+.panel-content { flex: 1; overflow-y: auto; position: relative; padding-bottom: 20px; }
+
 #object-list { display: flex; gap: 8px; padding: 10px; overflow-x: auto; height: 55px; flex-shrink: 0; }
 .obj-item { background: #202028; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; border: 1px solid #3a3a42; color: #bbb; transition: 0.15s; }
 .obj-item:hover { border-color: #00e5ff; color: #fff; }
