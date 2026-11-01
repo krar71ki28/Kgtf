@@ -10,6 +10,8 @@ export class LogicManager {
         } else if (action === 'addScore') {
             this.score += 10;
             alert('النقاط: ' + this.score);
+        } else if (action === 'playSound') {
+            this.engine.audio.playSFX(); // ✅ تشغيل الصوت
         }
     }
 

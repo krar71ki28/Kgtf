@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>KGTF ENGINE v5.0</title>
+<title>KGTF ENGINE v5.3</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=124">
+<link rel="stylesheet" href="style.css?v=127">
 </head>
 <body>
     <header id="header">
@@ -19,6 +19,8 @@
                 </div>
             </div>
             <button class="icon-btn" id="btn-save" style="color:#ffaa00;">💾 حفظ</button>
+            <!-- ✅ زر الصوت -->
+            <button class="icon-btn" id="btn-audio" style="color:#00e5ff;">🔊</button>
             <button class="icon-btn" id="btn-clear-scene" style="color:#ff5577;">مسح الكل</button>
         </div>
         <button class="play-btn" id="btn-play">▶</button>
@@ -70,6 +72,7 @@
                         <option value="onStart">عند البدء</option>
                     </select>
                     <select id="logic-action" style="flex:1; background:#121215; color:#fff; border:1px solid #444; padding:4px;">
+                        <option value="playSound">تشغيل صوت</option>
                         <option value="addScore">إضافة نقاط</option>
                         <option value="destroy">تدمير</option>
                     </select>
@@ -87,6 +90,6 @@
         "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js"
     } }
     </script>
-    <script type="module" src="src/main.js?v=124"></script>
+    <script type="module" src="src/main.js?v=127"></script>
 </body>
 </html>

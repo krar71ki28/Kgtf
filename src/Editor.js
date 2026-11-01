@@ -25,6 +25,12 @@ export class Editor {
         document.getElementById('btn-clear-scene').onclick = () => this.engine.clearScene();
         document.getElementById('btn-save').onclick = () => this.engine.saveScene();
 
+        // ✅ ربط زر الصوت (كتم/تشغيل)
+        document.getElementById('btn-audio').onclick = () => {
+            const isMuted = this.engine.audio.toggleMute();
+            document.getElementById('btn-audio').innerText = isMuted ? '🔇' : '🔊';
+        };
+
         const bindProp = (id, cb) => {
             document.getElementById(id).addEventListener('input', (e) => {
                 if (this.engine.selectedObj) cb(this.engine.selectedObj, parseFloat(e.target.value) || e.target.value);
@@ -51,7 +57,6 @@ export class Editor {
             }
         });
 
-        // ✅ ربط شريط الوقت
         const timeSlider = document.getElementById('env-time');
         const timeDisplay = document.getElementById('time-display');
         if (timeSlider) {
