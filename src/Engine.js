@@ -1,19 +1,18 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Physics } from './Physics.js?v=124';
-import { Serializer } from './Serializer.js?v=124';
-import { Animator } from './Animator.js?v=124';
-import { LogicManager } from './Logic.js?v=124';
-import { Environment } from './Environment.js?v=124';
+import { Physics } from './Physics.js?v=126';
+import { Serializer } from './Serializer.js?v=126';
+import { Animator } from './Animator.js?v=126';
+import { LogicManager } from './Logic.js?v=126';
+import { Environment } from './Environment.js?v=126';
 
-// ✅ استيراد أدوات Post-Processing + God Rays
+// ✅ خط رسم مستقر: Bloom + SMAA فقط (بدون God Rays أو SSAO)
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
-import { GodRaysPass } from 'three/addons/postprocessing/GodRaysPass.js'; // ✅ God Rays
 
 export class Engine {
     constructor(canvas) {
@@ -34,44 +33,36 @@ export class Engine {
 
         this.environment = new Environment(this);
 
-        // ✅ خط معالجة الرسم مع God Rays
+        // ✅ خط معالجة الرسم المستقر
         this.composer = new EffectComposer(this.renderer);
-        
-        // 1. RenderPass (بدلاً من SSAO حالياً لتجنب التعقيد)
         this.composer.addPass(new RenderPass(this.scene, this.camera));
 
-        // 2. God Rays (أشعة الشمس)
-        this.godRaysPass = new GodRaysPass(this.scene, this.camera, {
-            sun: this.environment.sun,
-            exposure: 0.6,
-            decay: 0.95,
-            weight: 0.5,
-            density: 0.8,
-            samples: 50,
-            blur: true
-        });
-        this.composer.addPass(this.godRaysPass);
-
-        // 3. Bloom (توهج)
+        // Bloom (توهج خفيف)
         this.bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.2, 0.4, 0.9);
         this.composer.addPass(this.bloomPass);
 
-        // 4. SMAA (تنعيم الحواف)
+        // SMAA (تنعيم الحواف)
         const smaaPass = new SMAAPass(window.innerWidth * this.renderer.getPixelRatio(), window.innerHeight * this.renderer.getPixelRatio());
         this.composer.addPass(smaaPass);
 
-        // 5. Output (التصحيح النهائي)
+        // Output (التصحيح النهائي)
         this.composer.addPass(new OutputPass());
 
-        // الأرضية والشبكة
-        const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({ color: 0x2e4a35, roughness: 0.8, metalness: 0.2 }));
+        // ✅ أرضية احترافية بنسيج إجرائي (Procedural Grass Texture)
+        const groundTexture = this.createGrassTexture();
+        const groundMat = new THREE.MeshStandardMaterial({ 
+            map: groundTexture,
+            roughness: 0.9, 
+            metalness: 0.1 
+        });
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), groundMat);
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
         this.scene.add(ground);
 
         const grid = new THREE.GridHelper(200, 100, 0x00e5ff, 0x111111);
         grid.position.y = 0.01;
-        grid.material.opacity = 0.15;
+        grid.material.opacity = 0.1;
         grid.material.transparent = true;
         this.scene.add(grid);
 
@@ -87,6 +78,36 @@ export class Engine {
         this.resize();
         
         this.loadScene();
+    }
+
+    // ✅ دالة توليد نسيج العشب برمجياً
+    createGrassTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#2e4a35';
+        ctx.fillRect(0, 0, 256, 256);
+
+        for (let i = 0; i < 5000; i++) {
+            const x = Math.random() * 256;
+            const y = Math.random() * 256;
+            const size = Math.random() * 3 + 1;
+            
+            const r = Math.floor(30 + Math.random() * 20);
+            const g = Math.floor(60 + Math.random() * 40);
+            const b = Math.floor(30 + Math.random() * 20);
+            
+            ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+            ctx.fillRect(x, y, size, size);
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(50, 50);
+        return texture;
     }
 
     createObject(type) {
@@ -162,16 +183,8 @@ export class Engine {
     }
 
     loadScene() {
-        const raw = localStorage.getItem('kgtf_saved_scene');
-        if (raw) {
-            try {
-                const data = JSON.parse(raw);
-                this.clearScene();
-                data.forEach(d => Serializer.deserialize(d, this));
-                this.selectObject(null);
-                return;
-            } catch (e) { console.error("Load failed:", e); }
-        }
+        // مسح المشهد القديم قسرياً لتجنب التعارضات
+        localStorage.removeItem('kgtf_saved_scene');
         this.clearScene();
         this.createObject('cube');
     }
