@@ -7,30 +7,33 @@ export class VFXManager {
     }
 
     spawnExplosion(position) {
-        const count = 50;
+        const count = 100; // زيادة عدد الجسيمات
         const geo = new THREE.BufferGeometry();
         const positions = new Float32Array(count * 3);
         const velocities = [];
         
         for (let i = 0; i < count; i++) {
             positions[i * 3] = position.x;
-            positions[i * 3 + 1] = position.y;
+            positions[i * 3 + 1] = position.y + 0.5;
             positions[i * 3 + 2] = position.z;
             
+            // سرعات أعلى
             velocities.push(new THREE.Vector3(
-                (Math.random() - 0.5) * 10,
-                (Math.random() - 0.5) * 10,
-                (Math.random() - 0.5) * 10
+                (Math.random() - 0.5) * 15,
+                (Math.random() - 0.5) * 15,
+                (Math.random() - 0.5) * 15
             ));
         }
         
         geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        // جسيمات نارية كبيرة
         const mat = new THREE.PointsMaterial({ 
-            color: 0xffaa00, 
-            size: 0.3, 
+            color: 0xff4400, 
+            size: 0.5, 
             transparent: true, 
             opacity: 1.0,
-            blending: THREE.AdditiveBlending
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
         });
         const points = new THREE.Points(geo, mat);
         this.scene.add(points);
@@ -38,7 +41,7 @@ export class VFXManager {
         this.activeEffects.push({ 
             points, 
             velocities, 
-            life: 1.0, 
+            life: 1.5, // عمر أطول
             material: mat 
         });
     }
@@ -54,11 +57,11 @@ export class VFXManager {
                 positions[j * 3] += effect.velocities[j].x * dt;
                 positions[j * 3 + 1] += effect.velocities[j].y * dt;
                 positions[j * 3 + 2] += effect.velocities[j].z * dt;
-                effect.velocities[j].y -= 9.8 * dt; // الجاذبية
+                effect.velocities[j].y -= 9.8 * dt; 
             }
             
             effect.points.geometry.attributes.position.needsUpdate = true;
-            effect.material.opacity = Math.max(0, effect.life);
+            effect.material.opacity = Math.max(0, effect.life / 1.5); // تلاشي أبطأ
             
             if (effect.life <= 0) {
                 this.scene.remove(effect.points);
