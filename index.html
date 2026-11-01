@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>KGTF ENGINE v3.6</title>
+<title>KGTF ENGINE v3.9.6</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=108">
+<link rel="stylesheet" href="style.css?v=111">
 </head>
 <body>
     <header id="header">
@@ -36,7 +36,14 @@
     <aside id="inspector-panel">
         <div class="panel-header"><span class="panel-title">OUTLINER</span></div>
         <div id="object-list"></div>
+        
         <div id="inspector" style="display:none; padding:10px; background:#1a1a20; border-top:1px solid #333;">
+            <!-- ✅ قائمة الأنميشن تعود من جديد -->
+            <div class="prop-row" id="anim-container" style="display:none; margin-bottom: 15px; background: #25252b; padding: 8px; border-radius: 5px;">
+                <label style="color:#00e5ff; font-weight:bold;">الحركة</label>
+                <select id="anim-select" style="flex:1; background:#121215; color:#fff; border:1px solid #444; padding:4px; border-radius:4px;"></select>
+            </div>
+
             <div class="prop-row"><label>اللون</label><input type="color" id="prop-color" value="#00e5ff"></div>
             <div class="prop-row"><label>X</label><input type="range" id="prop-x" min="-20" max="20" step="0.1"></div>
             <div class="prop-row"><label>Z</label><input type="range" id="prop-z" min="-20" max="20" step="0.1"></div>
@@ -54,6 +61,6 @@
         "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js"
     } }
     </script>
-    <script type="module" src="src/main.js?v=108"></script>
+    <script type="module" src="src/main.js?v=111"></script>
 </body>
 </html>

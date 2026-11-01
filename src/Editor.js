@@ -50,6 +50,16 @@ export class Editor {
                 this.engine.selectedObj.userData.body.updateMassProperties();
             }
         });
+
+        // ✅ ربط قائمة الأنميشن
+        const animSelect = document.getElementById('anim-select');
+        if (animSelect) {
+            animSelect.onchange = (e) => {
+                if (this.engine.selectedObj && this.engine.selectedObj.userData.animator) {
+                    this.engine.selectedObj.userData.animator.play(e.target.value, 0.1);
+                }
+            };
+        }
     }
 
     updateOutliner() {
@@ -66,6 +76,9 @@ export class Editor {
 
     updateInspector(obj) {
         const insp = document.getElementById('inspector');
+        const animContainer = document.getElementById('anim-container');
+        const animSelect = document.getElementById('anim-select');
+        
         if (!obj) { insp.style.display = 'none'; return; }
         insp.style.display = 'block';
         
@@ -75,6 +88,20 @@ export class Editor {
         
         if(obj.material && obj.material.color) {
             document.getElementById('prop-color').value = '#' + obj.material.color.getHexString();
+        }
+
+        // ✅ إظهار وإخفاء قائمة الأنميشن بناءً على وجود الحركات
+        if (obj.userData.animationNames && obj.userData.animationNames.length > 0) {
+            animContainer.style.display = 'flex';
+            animSelect.innerHTML = '';
+            obj.userData.animationNames.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.innerText = name;
+                animSelect.appendChild(opt);
+            });
+        } else {
+            animContainer.style.display = 'none';
         }
     }
 }

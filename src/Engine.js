@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Physics } from './Physics.js?v=107';
-import { Serializer } from './Serializer.js?v=107';
+import { Physics } from './Physics.js?v=111';
+import { Serializer } from './Serializer.js?v=111';
+import { Animator } from './Animator.js?v=111';
 
 export class Engine {
     constructor(canvas) {
@@ -53,12 +54,10 @@ export class Engine {
             mesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), material);
             mesh.position.y = 0.5;
         } else if (type === 'character') {
-            // ✅ الحل الهندسي: استخدام Group كحاوية بدلاً من Mesh
             mesh = new THREE.Group();
-            mesh.position.y = 0; // نضع الحاوية على الأرض
+            mesh.position.y = 0; 
             mesh.userData.isCharacter = true;
             
-            // 1. إنشاء الكبسولة المؤقتة
             const placeholder = new THREE.Mesh(
                 new THREE.CapsuleGeometry(0.4, 1.2, 4, 8), 
                 new THREE.MeshStandardMaterial({ color: 0xffaa00 })
@@ -66,18 +65,22 @@ export class Engine {
             placeholder.position.y = 1;
             mesh.add(placeholder);
             
-            // 2. تحميل الشخصية الحقيقية
             this.loader.load('models/character.glb', (gltf) => {
-                mesh.remove(placeholder); // حذف الكبسولة نهائياً
+                mesh.remove(placeholder); 
                 const model = gltf.scene;
-                
-                // إصلاح حجم وموقع الشخصية لتناسب المحرك
                 model.scale.set(1, 1, 1); 
-                
                 mesh.add(model);
+                
+                if (gltf.animations && gltf.animations.length > 0) {
+                    mesh.userData.animator = new Animator(model, gltf.animations);
+                    // ✅ حفظ أسماء الحركات عشان الـ Editor يعرضها
+                    mesh.userData.animationNames = gltf.animations.map(clip => clip.name);
+                    mesh.userData.animator.play('idle');
+                }
+                
                 if (this.onSceneChangeCallback) this.onSceneChangeCallback();
             }, undefined, (err) => {
-                console.warn('لم يتم العثور على ملف character.glb، سنستخدم الكبسولة المؤقتة.');
+                console.warn('لم يتم العثور على ملف character.glb.');
             });
         }
 
