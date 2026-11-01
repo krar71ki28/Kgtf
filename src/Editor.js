@@ -51,6 +51,11 @@ export class Editor {
             }
         });
 
+        // ✅ ربط زر المطر
+        document.getElementById('env-rain').addEventListener('change', (e) => {
+            this.engine.environment.toggleRain(e.target.checked);
+        });
+
         const animSelect = document.getElementById('anim-select');
         if (animSelect) {
             animSelect.onchange = (e) => {
@@ -60,7 +65,6 @@ export class Editor {
             };
         }
 
-        // ✅ ربط زر إضافة المنطق
         document.getElementById('btn-add-logic').onclick = () => {
             if (!this.engine.selectedObj) return;
             const ev = document.getElementById('logic-event').value;
@@ -105,6 +109,7 @@ export class Editor {
         const insp = document.getElementById('inspector');
         const animContainer = document.getElementById('anim-container');
         const logicSection = document.getElementById('logic-section');
+        const animSelect = document.getElementById('anim-select');
         
         if (!obj) { insp.style.display = 'none'; return; }
         insp.style.display = 'block';
@@ -119,7 +124,6 @@ export class Editor {
 
         if (obj.userData.animationNames && obj.userData.animationNames.length > 0) {
             animContainer.style.display = 'flex';
-            const animSelect = document.getElementById('anim-select');
             animSelect.innerHTML = '';
             obj.userData.animationNames.forEach(name => {
                 const opt = document.createElement('option');
@@ -131,7 +135,6 @@ export class Editor {
             animContainer.style.display = 'none';
         }
 
-        // إظهار قسم المنطق
         logicSection.style.display = 'block';
         this.updateLogicList();
     }

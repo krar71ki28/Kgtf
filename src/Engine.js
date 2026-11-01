@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Physics } from './Physics.js?v=114';
-import { Serializer } from './Serializer.js?v=114';
-import { Animator } from './Animator.js?v=114';
-import { LogicManager } from './Logic.js?v=114';
+import { Physics } from './Physics.js?v=115';
+import { Serializer } from './Serializer.js?v=115';
+import { Animator } from './Animator.js?v=115';
+import { LogicManager } from './Logic.js?v=115';
+import { Environment } from './Environment.js?v=115';
 
 export class Engine {
     constructor(canvas) {
@@ -21,11 +22,8 @@ export class Engine {
         this.orbit = new OrbitControls(this.camera, this.renderer.domElement);
         this.orbit.target.set(0, 1, 0);
 
-        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
-        this.scene.add(hemiLight);
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
-        dirLight.position.set(10, 20, 10);
-        this.scene.add(dirLight);
+        // ✅ استخدام البيئة الجديدة
+        this.environment = new Environment(this.scene);
 
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({ color: 0x4a6e52 }));
         ground.rotation.x = -Math.PI / 2;
@@ -151,12 +149,12 @@ export class Engine {
     update(dt) {
         if (!document.body.classList.contains('play-mode')) {
             this.orbit.update();
-            // ✅ تحديث الأنميشن داخل المحرر لكسر وضعية T-Pose
             this.objects.forEach(o => {
                 if (o.userData.animator) o.userData.animator.update(dt);
             });
         }
         this.physics.update(dt);
+        this.environment.update(dt); // ✅ تحديث المطر
     }
 
     render() { this.renderer.render(this.scene, this.camera); }
