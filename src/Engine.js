@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Physics } from './Physics.js?v=106';
 import { Serializer } from './Serializer.js?v=106';
 
@@ -29,6 +30,7 @@ export class Engine {
         this.scene.add(ground);
 
         this.physics = new Physics(this);
+        this.loader = new GLTFLoader(); // أداة تحميل الـ GLB
         this.objects = [];
         this.selectedObj = null;
         this.onSelectCallback = null;
@@ -51,9 +53,21 @@ export class Engine {
             mesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), material);
             mesh.position.y = 0.5;
         } else if (type === 'character') {
+            // ✅ هنا نستخدم مجسم مؤقت وننتظر تحميل الشخصية الحقيقية
             mesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1.2, 4, 8), new THREE.MeshStandardMaterial({ color: 0xffaa00 }));
             mesh.position.y = 1;
             mesh.userData.isCharacter = true;
+            
+            // تحميل الشخصية الحقيقية من مجلد models (كما في مشروعك)
+            this.loader.load('models/character.glb', (gltf) => {
+                mesh.clear(); // مسح الكبسولة المؤقتة
+                const model = gltf.scene;
+                model.scale.set(1, 1, 1); // تعديل الحجم إذا لزم الأمر
+                mesh.add(model);
+                if (this.onSceneChangeCallback) this.onSceneChangeCallback();
+            }, undefined, (err) => {
+                console.warn('لم يتم العثور على ملف character.glb، سنستخدم الكبسولة المؤقتة.');
+            });
         }
 
         mesh.userData.type = type;
@@ -99,12 +113,11 @@ export class Engine {
                 this.clearScene();
                 data.forEach(d => Serializer.deserialize(d, this));
                 this.selectObject(null);
-                return; // نجح التحميل
+                return;
             } catch (e) {
                 console.error("Load failed, creating default cube:", e);
             }
         }
-        // إذا لم يوجد حفظ، أو فشل التحميل، ننشئ مكعب افتراضي
         this.clearScene();
         this.createObject('cube');
     }
