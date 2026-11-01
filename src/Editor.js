@@ -51,7 +51,6 @@ export class Editor {
             }
         });
 
-        // ✅ ربط قائمة الأنميشن
         const animSelect = document.getElementById('anim-select');
         if (animSelect) {
             animSelect.onchange = (e) => {
@@ -60,6 +59,17 @@ export class Editor {
                 }
             };
         }
+
+        // ✅ ربط زر إضافة المنطق
+        document.getElementById('btn-add-logic').onclick = () => {
+            if (!this.engine.selectedObj) return;
+            const ev = document.getElementById('logic-event').value;
+            const ac = document.getElementById('logic-action').value;
+            
+            if (!this.engine.selectedObj.userData.logic) this.engine.selectedObj.userData.logic = [];
+            this.engine.selectedObj.userData.logic.push({ event: ev, action: ac });
+            this.updateLogicList();
+        };
     }
 
     updateOutliner() {
@@ -74,10 +84,27 @@ export class Editor {
         });
     }
 
+    updateLogicList() {
+        const list = document.getElementById('logic-list');
+        list.innerHTML = '';
+        if (!this.engine.selectedObj || !this.engine.selectedObj.userData.logic) return;
+        
+        this.engine.selectedObj.userData.logic.forEach((l, i) => {
+            const div = document.createElement('div');
+            div.style.cssText = 'background:#2a2a35; padding:5px; margin-bottom:5px; border-radius:3px; display:flex; justify-content:space-between;';
+            div.innerHTML = `<span>${l.event} ➔ ${l.action}</span> <button style="background:red; color:white; border:none; border-radius:3px;">X</button>`;
+            div.querySelector('button').onclick = () => {
+                this.engine.selectedObj.userData.logic.splice(i, 1);
+                this.updateLogicList();
+            };
+            list.appendChild(div);
+        });
+    }
+
     updateInspector(obj) {
         const insp = document.getElementById('inspector');
         const animContainer = document.getElementById('anim-container');
-        const animSelect = document.getElementById('anim-select');
+        const logicSection = document.getElementById('logic-section');
         
         if (!obj) { insp.style.display = 'none'; return; }
         insp.style.display = 'block';
@@ -90,9 +117,9 @@ export class Editor {
             document.getElementById('prop-color').value = '#' + obj.material.color.getHexString();
         }
 
-        // ✅ إظهار وإخفاء قائمة الأنميشن بناءً على وجود الحركات
         if (obj.userData.animationNames && obj.userData.animationNames.length > 0) {
             animContainer.style.display = 'flex';
+            const animSelect = document.getElementById('anim-select');
             animSelect.innerHTML = '';
             obj.userData.animationNames.forEach(name => {
                 const opt = document.createElement('option');
@@ -103,5 +130,9 @@ export class Editor {
         } else {
             animContainer.style.display = 'none';
         }
+
+        // إظهار قسم المنطق
+        logicSection.style.display = 'block';
+        this.updateLogicList();
     }
 }

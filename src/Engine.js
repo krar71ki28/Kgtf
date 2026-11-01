@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Physics } from './Physics.js?v=111';
-import { Serializer } from './Serializer.js?v=111';
-import { Animator } from './Animator.js?v=111';
+import { Physics } from './Physics.js?v=112';
+import { Serializer } from './Serializer.js?v=112';
+import { Animator } from './Animator.js?v=112';
+import { LogicManager } from './Logic.js?v=112';
 
 export class Engine {
     constructor(canvas) {
@@ -31,6 +32,7 @@ export class Engine {
         this.scene.add(ground);
 
         this.physics = new Physics(this);
+        this.logic = new LogicManager(this);
         this.loader = new GLTFLoader(); 
         this.objects = [];
         this.selectedObj = null;
@@ -73,7 +75,6 @@ export class Engine {
                 
                 if (gltf.animations && gltf.animations.length > 0) {
                     mesh.userData.animator = new Animator(model, gltf.animations);
-                    // ✅ حفظ أسماء الحركات عشان الـ Editor يعرضها
                     mesh.userData.animationNames = gltf.animations.map(clip => clip.name);
                     mesh.userData.animator.play('idle');
                 }
@@ -86,6 +87,7 @@ export class Engine {
 
         mesh.userData.type = type;
         mesh.userData.physicsEnabled = false;
+        mesh.userData.logic = []; // ✅ مصفوفة الأحداث
         
         this.scene.add(mesh);
         this.objects.push(mesh);

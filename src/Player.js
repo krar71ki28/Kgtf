@@ -92,6 +92,10 @@ export class Player {
         document.getElementById('play-ui').style.display = 'none';
         this.engine.orbit.enabled = true; 
         this.engine.camera.position.set(6, 6, 8); 
+        
+        if (this.playerModel && this.playerModel.userData.animator) {
+            this.playerModel.userData.animator.play('idle');
+        }
     }
 
     update(dt) {
@@ -128,8 +132,8 @@ export class Player {
 
         this.velocityY -= 20 * dt; 
         this.playerModel.position.y += this.velocityY * dt;
-        if (this.playerModel.position.y <= 1) { 
-            this.playerModel.position.y = 1; 
+        if (this.playerModel.position.y <= 0) { 
+            this.playerModel.position.y = 0; 
             this.velocityY = 0; 
             this.isGrounded = true; 
         }
@@ -143,5 +147,31 @@ export class Player {
         const targetCamPos = this.playerModel.position.clone().add(camOffset).add(new THREE.Vector3(0, 1.5, 0));
         this.engine.camera.position.lerp(targetCamPos, 10 * dt);
         this.engine.camera.lookAt(this.playerModel.position.clone().add(new THREE.Vector3(0, 1.5, 0)));
+
+        if (this.playerModel.userData.animator) {
+            if (!this.isGrounded) {
+                this.playerModel.userData.animator.play('jump');
+            } else if (isMoving) {
+                this.playerModel.userData.animator.play('walk');
+            } else {
+                this.playerModel.userData.animator.play('idle');
+            }
+            this.playerModel.userData.animator.update(dt);
+        }
+
+        // ✅ فحص التصادم وإطلاق الأحداث
+        const playerBox = new THREE.Box3().setFromCenterAndSize(
+            this.playerModel.position.clone().add(new THREE.Vector3(0, 1, 0)), 
+            new THREE.Vector3(0.8, 2, 0.8)
+        );
+
+        this.engine.objects.forEach(obj => {
+            if (obj !== this.playerModel && obj.userData.logic && obj.userData.logic.length > 0) {
+                const objBox = new THREE.Box3().setFromObject(obj);
+                if (playerBox.intersectsBox(objBox)) {
+                    this.engine.logic.triggerEvent(obj, 'onCollide');
+                }
+            }
+        });
     }
 }
