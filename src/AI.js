@@ -1,11 +1,10 @@
 import * as THREE from 'three';
-import * as CANNON from 'cannon-es';
 
 export class AIManager {
     constructor(engine) {
         this.engine = engine;
         this.enemies = [];
-        this.spawnInterval = 5; // كل 5 ثواني
+        this.spawnInterval = 5; 
         this.timeSinceLastSpawn = 0;
         this.isSpawning = false;
     }
@@ -17,14 +16,14 @@ export class AIManager {
     spawnEnemy() {
         if (!this.engine.playerModel) return;
 
-        // إنشاء عدو (مكعب أحمر)
         const enemy = this.engine.createObject('cube');
         if (!enemy) return;
         
-        enemy.material.color.setHex(0xff0000); // لون أحمر
+        enemy.material.color.setHex(0xff3333); // أحمر
         enemy.userData.type = 'enemy';
+        enemy.userData.health = 100; // ✅ إضافة الصحة
+        enemy.userData.isEnemy = true;
         
-        // إعطاؤه سرعة وموقعاً عشوائياً بعيداً عن اللاعب
         const angle = Math.random() * Math.PI * 2;
         const distance = 8 + Math.random() * 4;
         enemy.position.set(
@@ -34,11 +33,31 @@ export class AIManager {
         );
 
         this.enemies.push(enemy);
-        console.log('Enemy spawned at:', enemy.position);
+    }
+
+    takeDamage(enemy, amount) {
+        if (enemy.userData.health !== undefined) {
+            enemy.userData.health -= amount;
+            // تأثير وميض عند الإصابة
+            enemy.material.emissive.setHex(0xffffff);
+            setTimeout(() => { if(enemy.material) enemy.material.emissive.setHex(0x000000); }, 100);
+
+            if (enemy.userData.health <= 0) {
+                this.killEnemy(enemy);
+            }
+        }
+    }
+
+    killEnemy(enemy) {
+        this.engine.vfx.spawnExplosion(enemy.position);
+        this.engine.logic.score += 50; // مكافأة القتل
+        this.engine.ui.updateScore(this.engine.logic.score);
+        
+        this.engine.removeObject(enemy);
+        this.enemies = this.enemies.filter(e => e !== enemy);
     }
 
     update(dt) {
-        // توليد الأعداء تلقائياً
         if (this.isSpawning) {
             this.timeSinceLastSpawn += dt;
             if (this.timeSinceLastSpawn >= this.spawnInterval) {
@@ -47,19 +66,17 @@ export class AIManager {
             }
         }
 
-        // تحريك الأعداء نحو اللاعب
         this.enemies.forEach(enemy => {
-            if (!this.engine.playerModel) return;
+            if (!this.engine.playerModel || !enemy.parent) return; // التأكد من أن العدو موجود
 
             const direction = new THREE.Vector3().subVectors(this.engine.playerModel.position, enemy.position);
-            direction.y = 0; // الحركة على المستوى الأفقي فقط
+            direction.y = 0;
 
             const distance = direction.length();
-            if (distance > 1.5) { // التوقف عند مسافة قريبة
+            if (distance > 1.5) { 
                 direction.normalize();
                 const speed = 2 * dt;
                 
-                // ✅ تجنب العوائق باستخدام Raycaster (مستوحى من Three.js AI)
                 const raycaster = new THREE.Raycaster(enemy.position.clone().add(new THREE.Vector3(0, 0.5, 0)), direction, 0, 1.5);
                 const obstacles = this.engine.objects.filter(o => o !== enemy && o.userData.type !== 'enemy' && o.userData.type !== 'vfx' && o.userData.type !== 'light' && o.userData.type !== 'character');
                 const hits = raycaster.intersectObjects(obstacles, true);
@@ -68,13 +85,11 @@ export class AIManager {
                     enemy.position.x += direction.x * speed;
                     enemy.position.z += direction.z * speed;
                 } else {
-                    // إذا كان هناك عائق، يحاول الالتفاف حوله
                     const perpDir = new THREE.Vector3(-direction.z, 0, direction.x);
                     enemy.position.x += perpDir.x * speed;
                     enemy.position.z += perpDir.z * speed;
                 }
 
-                // تدوير العدو نحو الحركة
                 const angle = Math.atan2(direction.x, direction.z);
                 enemy.rotation.y = angle;
             }

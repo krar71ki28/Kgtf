@@ -19,6 +19,15 @@ export class Player {
         document.getElementById('btn-play').onclick = () => this.startPlay();
         document.getElementById('exit-play').onclick = () => this.stopPlay();
 
+        // ✅ زر إطلاق النار
+        const btnShoot = document.getElementById('btn-shoot');
+        if (btnShoot) {
+            btnShoot.addEventListener('touchstart', (e) => {
+                e.preventDefault(); e.stopPropagation();
+                this.shoot();
+            }, { passive: false });
+        }
+
         let joyActive = false;
         this.joyDir = { x: 0, y: 0 };
         const joyZone = document.getElementById('joystick-zone');
@@ -70,21 +79,41 @@ export class Player {
         canvas.addEventListener('touchend', () => { isDragging = false; });
     }
 
-    // ✅ دالة فحص التصادم (ترجع المجسم إذا كان هناك تصادم)
+    shoot() {
+        if (!this.isPlaying || !this.playerModel) return;
+        
+        this.engine.audio.playSFX(); // صوت الإطلاق
+
+        // ✅ Raycast من الكاميرا إلى الأمام
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(new THREE.Vector2(0, 0), this.engine.camera); // منتصف الشاشة
+        
+        // نبحث عن الأعداء فقط
+        const enemies = this.engine.ai.enemies;
+        const hits = raycaster.intersectObjects(enemies, true);
+
+        if (hits.length > 0) {
+            let hitObj = hits[0].object;
+            while (hitObj.parent && !hitObj.userData.isEnemy) hitObj = hitObj.parent;
+            
+            if (hitObj.userData.isEnemy) {
+                this.engine.ai.takeDamage(hitObj, 34); // 3 طلقات لقتل العدو
+            }
+        }
+    }
+
     checkCollision(pos) {
         const playerBox = new THREE.Box3().setFromCenterAndSize(
             pos.clone().add(new THREE.Vector3(0, 1, 0)), 
-            new THREE.Vector3(0.7, 1.9, 0.7) // تصغير الصندوق قليلاً لانزلاق أفضل
+            new THREE.Vector3(0.7, 1.9, 0.7)
         );
 
         for (let i = 0; i < this.engine.objects.length; i++) {
             const obj = this.engine.objects[i];
-            if (obj !== this.playerModel && obj.userData.type !== 'vfx' && obj.userData.type !== 'light') {
-                obj.updateMatrixWorld(true); // إجبار تحديث مصفوفة المجسم
+            if (obj !== this.playerModel && obj.userData.type !== 'vfx' && obj.userData.type !== 'light' && obj.userData.type !== 'enemy') {
+                obj.updateMatrixWorld(true);
                 const objBox = new THREE.Box3().setFromObject(obj);
-                if (playerBox.intersectsBox(objBox)) {
-                    return obj; // إرجاع المجسم المتصادم
-                }
+                if (playerBox.intersectsBox(objBox)) return obj;
             }
         }
         return null;
@@ -142,7 +171,6 @@ export class Player {
         if (isMoving) {
             moveVector.normalize();
             
-            // ✅ نظام الانزلاق: فحص الحركة على المحورين X و Z بشكل منفصل
             const nextX = this.playerModel.position.clone().add(new THREE.Vector3(moveVector.x * speed * dt, 0, 0));
             const nextZ = this.playerModel.position.clone().add(new THREE.Vector3(0, 0, moveVector.z * speed * dt));
 
@@ -152,25 +180,18 @@ export class Player {
             if (!collidedX) this.playerModel.position.x = nextX.x;
             if (!collidedZ) this.playerModel.position.z = nextZ.z;
 
-            // إطلاق حدث الاصطدام
             const collidedObj = collidedX || collidedZ;
             if (collidedObj && collidedObj.userData.logic && !collidedObj.userData.hasCollided) {
                 this.engine.logic.triggerEvent(collidedObj, 'onCollide');
                 collidedObj.userData.hasCollided = true;
             }
 
-            // إذا كان هناك أي تصادم، لا تقم بتدوير الشخصية (لمنع الاهتزاز)
             if (!collidedX && !collidedZ) {
                 const angle = Math.atan2(moveVector.x, moveVector.z);
                 this.playerModel.rotation.y = angle;
-            } else {
-                // إذا اصطدمت، حاول الانزلاق نحو الاتجاه الأقل تصادماً
-                const angle = Math.atan2(moveVector.x, moveVector.z);
-                this.playerModel.rotation.y += (angle - this.playerModel.rotation.y) * 5 * dt;
             }
         }
 
-        // ✅ نظام الطرد (إذا كانت الشخصية داخل مكعب، اطردها للخارج)
         const currentCollision = this.checkCollision(this.playerModel.position);
         if (currentCollision) {
             const pushDir = this.playerModel.position.clone().sub(currentCollision.position);
