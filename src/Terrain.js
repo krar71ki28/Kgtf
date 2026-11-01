@@ -2,50 +2,38 @@ import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 
 export function createTerrain(scene, world) {
-    const width = 100;
-    const depth = 100;
-    const segments = 50; 
-
+    const width = 100, depth = 100, segments = 32;
+    
+    // الرسم
     const geometry = new THREE.PlaneGeometry(width, depth, segments, segments);
     geometry.rotateX(-Math.PI / 2);
-
-    const vertices = geometry.attributes.position.array;
-    const indices = geometry.index.array; // نحتاج الفهارس للـ Trimesh
-
-    // تعديل ارتفاع التضاريس (التلال)
-    for (let i = 0; i < vertices.length; i += 3) {
-        const x = vertices[i];
-        const z = vertices[i + 2];
-        // دالة رياضية للتلال
-        const y = Math.sin(x * 0.1) * Math.cos(z * 0.1) * 3.0; 
-        vertices[i + 1] = y;
+    const pos = geometry.attributes.position.array;
+    
+    for (let i = 0; i < pos.length; i += 3) {
+        const x = pos[i], z = pos[i+2];
+        pos[i+1] = Math.sin(x * 0.1) * Math.cos(z * 0.1) * 2.0; // تلال
     }
     geometry.computeVertexNormals();
 
-    // الرسم (Visual)
-    const material = new THREE.MeshStandardMaterial({ 
-        color: 0x3e6b48, 
-        roughness: 0.8,
-        metalness: 0.1,
-        flatShading: false
-    });
-    const terrainMesh = new THREE.Mesh(geometry, material);
-    terrainMesh.receiveShadow = true;
-    terrainMesh.castShadow = true;
-    scene.add(terrainMesh);
+    const material = new THREE.MeshStandardMaterial({ color: 0x3e6b48, roughness: 0.9 });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.receiveShadow = true;
+    mesh.castShadow = true;
+    scene.add(mesh);
 
-    // الفيزياء (Physics)
+    // الفيزياء (Trimesh)
     if (world) {
-        // استخدام Trimesh بدلاً من Heightfield لنسخ الرسم حرفياً
-        const trimeshShape = new CANNON.Trimesh(vertices, indices);
-        const trimeshBody = new CANNON.Body({ mass: 0 });
-        trimeshBody.addShape(trimeshShape);
+        // تحويل البيانات لمصفوفات عادية
+        const vertices = Array.from(pos);
+        const indices = Array.from(geometry.index.array);
         
-        // إزاحة طفيفة جداً للأعلى (0.2) لمنع الكيوب من الغوص
-        trimeshBody.position.set(0, 0.2, 0); 
+        const shape = new CANNON.Trimesh(vertices, indices);
+        const body = new CANNON.Body({ mass: 0 });
+        body.addShape(shape);
+        // إزاحة الفيزياء للأسفل قليلاً لضمان أن المجسم يقف فوقها وليس بداخلها
+        body.position.set(0, -0.1, 0); 
         
-        world.addBody(trimeshBody);
-        console.log('⛰️ Terrain Physics (Trimesh) Added - Perfect Match');
+        world.addBody(body);
     }
-    return terrainMesh;
+    return mesh;
 }
