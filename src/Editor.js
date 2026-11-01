@@ -10,21 +10,22 @@ export class Editor {
     }
 
     setupUI() {
-        // ✅ حيلة ذكية: إضافة خيار الانفجار للقائمة برمجياً (لتجاوز كاش الـ HTML)
+        // إضافة خيار "توليد عدو" برمجياً
         const logicActionSelect = document.getElementById('logic-action');
-        if (logicActionSelect && !document.querySelector('option[value="spawnVFX"]')) {
-            const vfxOption = document.createElement('option');
-            vfxOption.value = 'spawnVFX';
-            vfxOption.innerText = 'تأثير انفجار';
-            logicActionSelect.appendChild(vfxOption);
+        if (logicActionSelect && !document.querySelector('option[value="spawnEnemy"]')) {
+            const enemyOption = document.createElement('option');
+            enemyOption.value = 'spawnEnemy';
+            enemyOption.innerText = 'توليد عدو';
+            logicActionSelect.appendChild(enemyOption);
         }
 
         // ربط التبويبات
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.onclick = () => {
                 document.querySelectorAll('.tab-btn').forEach(b => {
-                    b.style.color = '#888';
+                    b.style.color = '#777';
                     b.classList.remove('active');
+                    b.style.borderBottom = 'none';
                 });
                 document.querySelectorAll('.tab-pane').forEach(p => {
                     p.style.display = 'none';
@@ -32,6 +33,7 @@ export class Editor {
                 });
                 btn.style.color = '#00e5ff';
                 btn.classList.add('active');
+                btn.style.borderBottom = '2px solid #00e5ff';
                 document.getElementById(btn.dataset.target).style.display = 'block';
                 document.getElementById(btn.dataset.target).classList.add('active');
             };
@@ -48,6 +50,10 @@ export class Editor {
                 addMenu.classList.remove('show');
             };
         });
+
+        document.getElementById('btn-spawn-enemy').onclick = () => {
+            this.engine.ai.spawnEnemy();
+        };
 
         document.getElementById('btn-clear-scene').onclick = () => this.engine.clearScene();
         document.getElementById('btn-save').onclick = () => this.engine.saveScene();
@@ -145,8 +151,8 @@ export class Editor {
         
         this.engine.selectedObj.userData.logic.forEach((l, i) => {
             const div = document.createElement('div');
-            div.style.cssText = 'background:#2a2a35; padding:5px; margin-bottom:5px; border-radius:3px; display:flex; justify-content:space-between;';
-            div.innerHTML = `<span>${l.event} ➔ ${l.action}</span> <button style="background:red; color:white; border:none; border-radius:3px;">X</button>`;
+            div.style.cssText = 'background:#202028; padding:8px; margin-bottom:6px; border-radius:4px; display:flex; justify-content:space-between; border:1px solid #3a3a42;';
+            div.innerHTML = `<span style="color:#ccc;">${l.event} ➔ ${l.action}</span> <button style="background:#ff4d4d; color:white; border:none; border-radius:3px; cursor:pointer;">X</button>`;
             div.querySelector('button').onclick = () => {
                 this.engine.selectedObj.userData.logic.splice(i, 1);
                 this.updateLogicList();

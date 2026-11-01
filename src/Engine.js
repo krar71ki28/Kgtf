@@ -1,14 +1,15 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Physics } from './Physics.js?v=130';
-import { Serializer } from './Serializer.js?v=130';
-import { Animator } from './Animator.js?v=130';
-import { LogicManager } from './Logic.js?v=130';
-import { Environment } from './Environment.js?v=130';
-import { AudioManager } from './Audio.js?v=130';
-import { UIManager } from './UI.js?v=130';
-import { VFXManager } from './VFX.js?v=130'; // ✅ استيراد VFX
+import { Physics } from './Physics.js?v=400';
+import { Serializer } from './Serializer.js?v=400';
+import { Animator } from './Animator.js?v=400';
+import { LogicManager } from './Logic.js?v=400';
+import { Environment } from './Environment.js?v=400';
+import { AudioManager } from './Audio.js?v=400';
+import { UIManager } from './UI.js?v=400';
+import { VFXManager } from './VFX.js?v=400';
+import { AIManager } from './AI.js?v=400'; // ✅ استيراد AI
 
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -36,7 +37,8 @@ export class Engine {
         this.environment = new Environment(this);
         this.audio = new AudioManager(this.camera);
         this.ui = new UIManager();
-        this.vfx = new VFXManager(this.scene); // ✅ تهيئة VFX
+        this.vfx = new VFXManager(this.scene);
+        this.ai = new AIManager(this); // ✅ تهيئة AI
 
         this.composer = new EffectComposer(this.renderer);
         this.composer.addPass(new RenderPass(this.scene, this.camera));
@@ -186,7 +188,8 @@ export class Engine {
         }
         this.physics.update(dt);
         this.environment.update(dt);
-        this.vfx.update(dt); // ✅ تحديث VFX
+        this.vfx.update(dt);
+        this.ai.update(dt); // ✅ تحديث AI
     }
 
     render() { this.composer.render(); }

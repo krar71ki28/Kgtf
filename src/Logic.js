@@ -13,9 +13,10 @@ export class LogicManager {
         } else if (action === 'playSound') {
             this.engine.audio.playSFX(); 
         } else if (action === 'spawnVFX') {
-            // ✅ إنشاء انفجار وتدمير المجسم تلقائياً
             this.engine.vfx.spawnExplosion(obj.position);
             this.engine.removeObject(obj); 
+        } else if (action === 'spawnEnemy') {
+            this.engine.ai.spawnEnemy(); // ✅ توليد عدو
         }
     }
 

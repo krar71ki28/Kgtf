@@ -3,27 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>KGTF ENGINE v7.0</title>
+<title>KGTF ENGINE v8.0</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=300">
+<link rel="stylesheet" href="style.css?v=400">
 </head>
 <body>
-    <!-- تم حذف الشريط الأحمر -->
     <header id="header">
         <div class="header-tools">
             <div class="dropdown">
-                <button class="icon-btn" id="btn-add-menu" style="color:#4ade80;">➕ إضافة</button>
+                <button class="icon-btn" id="btn-add-menu" title="إضافة">➕</button>
                 <div class="dropdown-content" id="add-menu">
                     <button class="add-btn" data-type="cube">📦 مكعب</button>
                     <button class="add-btn" data-type="sphere">🔴 كرة</button>
-                    <button class="add-btn" data-type="character">🏃 شخصية (لعب)</button>
+                    <button class="add-btn" data-type="character">🏃 شخصية</button>
                 </div>
             </div>
-            <button class="icon-btn" id="btn-save" style="color:#ffaa00;">💾 حفظ</button>
-            <button class="icon-btn" id="btn-audio" style="color:#00e5ff;">🔊</button>
-            <button class="icon-btn" id="btn-clear-scene" style="color:#ff5577;">مسح الكل</button>
+            <button class="icon-btn" id="btn-spawn-enemy" title="توليد عدو">👾</button>
+            <button class="icon-btn" id="btn-save" title="حفظ">💾</button>
+            <button class="icon-btn" id="btn-audio" title="الصوت">🔊</button>
+            <button class="icon-btn" id="btn-clear-scene" title="مسح الكل">🗑️</button>
         </div>
-        <button class="play-btn" id="btn-play">▶</button>
+        <button class="play-btn" id="btn-play" title="تشغيل">▶</button>
     </header>
 
     <main id="viewport-container">
@@ -31,61 +31,61 @@
         <div id="custom-hud" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:500;"></div>
 
         <div id="play-ui" style="display:none;">
-            <button id="exit-play" style="position:absolute; top:20px; left:20px; z-index:1000; padding:10px; background:red; color:white; border:none; border-radius:5px;">✕ إيقاف</button>
+            <button id="exit-play" style="position:absolute; top:20px; left:20px; z-index:1000; padding:10px; background:#ff4d4d; color:white; border:none; border-radius:5px; font-weight:bold;">✕ إيقاف</button>
             <div id="joystick-zone"><div id="joystick-knob"></div></div>
             <button id="btn-jump">قفز</button>
         </div>
     </main>
 
     <aside id="inspector-panel">
-        <div id="panel-tabs" style="display:flex; background:#1a1a20; border-bottom:1px solid #333;">
-            <button class="tab-btn active" data-target="tab-outliner" style="flex:1; padding:8px; background:none; border:none; color:#00e5ff; font-weight:bold; cursor:pointer;">Outliner</button>
-            <button class="tab-btn" data-target="tab-ui" style="flex:1; padding:8px; background:none; border:none; color:#888; font-weight:bold; cursor:pointer;">UI / HUD</button>
+        <div id="panel-tabs" style="display:flex; background:#1a1a1f; border-bottom:1px solid #2a2a2f;">
+            <button class="tab-btn active" data-target="tab-outliner" style="flex:1; padding:10px; background:none; border:none; color:#00e5ff; font-weight:bold; cursor:pointer; border-bottom:2px solid #00e5ff;">Outliner</button>
+            <button class="tab-btn" data-target="tab-ui" style="flex:1; padding:10px; background:none; border:none; color:#777; font-weight:bold; cursor:pointer;">UI / HUD</button>
         </div>
 
         <div class="panel-content" style="flex:1; overflow-y:auto; position:relative;">
             <div id="tab-outliner" class="tab-pane active" style="display:block;">
                 <div id="object-list" style="padding:10px;"></div>
-                <div id="inspector" style="display:none; padding:10px; background:#1a1a20; border-top:1px solid #333;">
-                    <div class="prop-row" id="anim-container" style="display:none; margin-bottom: 15px; background:#25252b; padding:8px; border-radius:5px;">
+                <div id="inspector" style="display:none; padding:15px; background:#15151a; border-top:1px solid #2a2a2f;">
+                    <div class="prop-row" id="anim-container" style="display:none; margin-bottom: 15px; background:#202028; padding:10px; border-radius:6px; border:1px solid #2a2a2f;">
                         <label style="color:#00e5ff; font-weight:bold;">الحركة</label>
-                        <select id="anim-select" style="flex:1; background:#121215; color:#fff; border:1px solid #444; padding:4px; border-radius:4px;"></select>
+                        <select id="anim-select" style="flex:1; background:#0a0a0f; color:#fff; border:1px solid #3a3a42; padding:6px; border-radius:4px;"></select>
                     </div>
                     <div class="prop-row"><label>اللون</label><input type="color" id="prop-color" value="#00e5ff"></div>
                     <div class="prop-row"><label>X</label><input type="range" id="prop-x" min="-20" max="20" step="0.1"></div>
                     <div class="prop-row"><label>Z</label><input type="range" id="prop-z" min="-20" max="20" step="0.1"></div>
                     <div class="prop-row" style="margin-top: 10px;"><input type="checkbox" id="prop-physics"><label style="color:#ffaa00; font-weight:bold;">تفعيل الجاذبية</label></div>
-                    <div class="prop-row" style="margin-top: 10px; border-top: 1px solid #444; padding-top: 10px;">
+                    <div class="prop-row" style="margin-top: 10px; border-top: 1px solid #2a2a2f; padding-top: 10px;">
                         <label style="color:#00e5ff; font-weight:bold;">الوقت</label>
                         <input type="range" id="env-time" min="0" max="24" step="0.1" value="12" style="flex:1; accent-color:#00e5ff;">
                     </div>
                     <div class="prop-row" style="margin-top: 10px;"><input type="checkbox" id="env-rain"><label style="color:#00e5ff; font-weight:bold;">تفعيل المطر</label></div>
-                    <div id="logic-section" style="display:none; margin-top:15px; padding-top:10px; border-top:1px solid #444;">
-                        <label style="color:#4ade80; font-weight:bold; display:block; margin-bottom:5px;">البرمجة المرئية</label>
+                    <div id="logic-section" style="display:none; margin-top:15px; padding-top:15px; border-top:1px solid #2a2a2f;">
+                        <label style="color:#4ade80; font-weight:bold; display:block; margin-bottom:8px;">البرمجة المرئية</label>
                         <div class="prop-row">
-                            <select id="logic-event" style="flex:1; background:#121215; color:#fff; border:1px solid #444; padding:4px; margin-left:5px;">
+                            <select id="logic-event" style="flex:1; background:#0a0a0f; color:#fff; border:1px solid #3a3a42; padding:6px; border-radius:4px; margin-left:5px;">
                                 <option value="onCollide">عند الاصطدام</option>
                                 <option value="onStart">عند البدء</option>
                             </select>
-                            <select id="logic-action" style="flex:1; background:#121215; color:#fff; border:1px solid #444; padding:4px;">
+                            <select id="logic-action" style="flex:1; background:#0a0a0f; color:#fff; border:1px solid #3a3a42; padding:6px; border-radius:4px;">
                                 <option value="playSound">تشغيل صوت</option>
                                 <option value="addScore">إضافة نقاط</option>
                                 <option value="spawnVFX">تأثير انفجار</option>
                                 <option value="destroy">تدمير</option>
                             </select>
                         </div>
-                        <button id="btn-add-logic" style="width:100%; margin-top:5px; background:#4ade80; color:#000; font-weight:bold; padding:5px; border:none; border-radius:4px;">إضافة حدث</button>
+                        <button id="btn-add-logic" style="width:100%; margin-top:8px; background:#4ade80; color:#000; font-weight:bold; padding:8px; border:none; border-radius:4px; cursor:pointer;">إضافة حدث</button>
                         <div id="logic-list" style="margin-top:10px; font-size:12px; color:#aaa;"></div>
                     </div>
                 </div>
             </div>
 
-            <div id="tab-ui" class="tab-pane" style="display:none; padding:10px;">
-                <div class="prop-row" style="margin-bottom:10px;">
-                    <input type="text" id="ui-text-input" placeholder="اكتب نصاً..." style="flex:1; padding:6px; background:#121215; color:#fff; border:1px solid #444; border-radius:4px;">
+            <div id="tab-ui" class="tab-pane" style="display:none; padding:15px;">
+                <div class="prop-row" style="margin-bottom:15px;">
+                    <input type="text" id="ui-text-input" placeholder="اكتب نصاً..." style="flex:1; padding:8px; background:#0a0a0f; color:#fff; border:1px solid #3a3a42; border-radius:4px;">
                 </div>
-                <button id="btn-add-text" style="width:100%; background:#3b82f6; color:#fff; padding:8px; border:none; border-radius:4px; font-weight:bold;">إضافة نص للشاشة</button>
-                <button id="btn-clear-ui" style="width:100%; background:#ff5577; color:#fff; padding:8px; border:none; border-radius:4px; font-weight:bold; margin-top:5px;">مسح النصوص</button>
+                <button id="btn-add-text" style="width:100%; background:#3b82f6; color:#fff; padding:10px; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">إضافة نص للشاشة</button>
+                <button id="btn-clear-ui" style="width:100%; background:#ff4d4d; color:#fff; padding:10px; border:none; border-radius:4px; font-weight:bold; margin-top:8px; cursor:pointer;">مسح النصوص</button>
             </div>
         </div>
     </aside>
@@ -97,6 +97,6 @@
         "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js"
     } }
     </script>
-    <script type="module" src="src/main.js?v=300"></script>
+    <script type="module" src="src/main.js?v=400"></script>
 </body>
 </html>

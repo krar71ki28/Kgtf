@@ -1,30 +1,36 @@
 * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Cairo', sans-serif; }
-body { background: #121215; color: #fff; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+body { background: #0e0e12; color: #d1d1d6; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-#header { height: 50px; background: #1a1a20; display: flex; align-items: center; padding: 0 10px; justify-content: space-between; z-index: 100; }
-.header-tools { display: flex; gap: 10px; }
-.icon-btn { background: #333; color: #fff; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; }
-.play-btn { background: #4ade80; color: #000; border: none; width: 40px; height: 40px; border-radius: 5px; font-size: 18px; font-weight: bold; cursor: pointer; }
+#header { height: 55px; background: #15151a; display: flex; align-items: center; padding: 0 15px; justify-content: space-between; z-index: 100; border-bottom: 1px solid #2a2a2f; }
+.header-tools { display: flex; gap: 8px; }
+.icon-btn { background: #202028; color: #ccc; border: 1px solid #3a3a42; width: 38px; height: 38px; border-radius: 6px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.15s; }
+.icon-btn:hover { background: #2a2a32; color: #fff; border-color: #00e5ff; }
+.play-btn { background: #4ade80; color: #000; border: none; width: 45px; height: 45px; border-radius: 8px; font-size: 20px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(74,222,128,0.3); }
 
 .dropdown { position: relative; }
-.dropdown-content { display: none; position: absolute; top: 45px; right: 0; background: #222; border: 1px solid #444; border-radius: 5px; flex-direction: column; z-index: 200; width: 150px; }
+.dropdown-content { display: none; position: absolute; top: 45px; right: 0; background: #1e1e24; border: 1px solid #3a3a42; border-radius: 8px; flex-direction: column; z-index: 200; width: 160px; box-shadow: 0 10px 30px rgba(0,0,0,0.7); }
 .dropdown-content.show { display: flex; }
-.add-btn { background: none; border: none; color: #fff; padding: 10px; text-align: right; border-bottom: 1px solid #333; cursor: pointer; }
-.add-btn:hover { background: #333; }
+.add-btn { background: none; border: none; color: #ccc; padding: 12px; text-align: right; border-bottom: 1px solid #2a2a2f; cursor: pointer; font-size: 14px; }
+.add-btn:hover { background: #2a2a32; color: #00e5ff; }
 
 #viewport-container { flex: 1; position: relative; background: #87CEEB; touch-action: none; overflow: hidden; }
 #viewport { width: 100%; height: 100%; display: block; }
 
-/* ✅ زيادة ارتفاع اللوحة السفلية لتظهر كل الخيارات */
-#inspector-panel { height: 280px; background: #121215; border-top: 1px solid #333; display: flex; flex-direction: column; }
-.panel-header { padding: 10px; background: #1a1a20; border-bottom: 1px solid #333; font-weight: bold; color: #aaa; }
-#object-list { display: flex; gap: 10px; padding: 10px; overflow-x: auto; height: 50px; flex-shrink: 0; }
-.obj-item { background: #2a2a35; padding: 5px 15px; border-radius: 5px; cursor: pointer; font-size: 12px; border: 1px solid transparent; }
-.obj-item.selected { border-color: #00e5ff; color: #00e5ff; }
-.prop-row { display: flex; justify-content: space-between; margin-bottom: 8px; align-items: center; }
+#inspector-panel { height: 280px; background: #15151a; border-top: 1px solid #2a2a2f; display: flex; flex-direction: column; }
+.panel-header { padding: 12px; background: #1a1a1f; border-bottom: 1px solid #2a2a2f; font-weight: bold; color: #888; font-size: 12px; letter-spacing: 1px; }
+#object-list { display: flex; gap: 8px; padding: 10px; overflow-x: auto; height: 55px; flex-shrink: 0; }
+.obj-item { background: #202028; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; border: 1px solid #3a3a42; color: #bbb; transition: 0.15s; }
+.obj-item:hover { border-color: #00e5ff; color: #fff; }
+.obj-item.selected { border-color: #00e5ff; color: #00e5ff; background: rgba(0,229,255,0.1); }
+.prop-row { display: flex; justify-content: space-between; margin-bottom: 12px; align-items: center; gap: 10px; }
+.prop-row label { font-size: 13px; color: #aaa; min-width: 50px; }
+.prop-row input[type="range"] { flex: 1; accent-color: #00e5ff; height: 4px; background: #2a2a32; border-radius: 2px; }
+.prop-row input[type="color"] { width: 40px; height: 30px; border: none; background: none; cursor: pointer; }
+.prop-row select { background: #0a0a0f; color: #fff; border: 1px solid #3a3a42; padding: 6px; border-radius: 4px; font-size: 13px; }
+.prop-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: #00e5ff; cursor: pointer; }
 
 #play-ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
 #play-ui > * { pointer-events: auto; }
-#joystick-zone { position: absolute; bottom: 40px; left: 40px; width: 130px; height: 130px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; touch-action: none; }
-#joystick-knob { position: absolute; top: 50%; left: 50%; width: 50px; height: 50px; background: #00e5ff; border-radius: 50%; transform: translate(-50%, -50%); }
-#btn-jump { position: absolute; bottom: 50px; right: 40px; width: 80px; height: 80px; background: rgba(74,222,128,0.2); border: 2px solid #4ade80; border-radius: 50%; color: #4ade80; font-weight: bold; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+#joystick-zone { position: absolute; bottom: 40px; left: 40px; width: 130px; height: 130px; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.2); border-radius: 50%; touch-action: none; }
+#joystick-knob { position: absolute; top: 50%; left: 50%; width: 55px; height: 55px; background: #00e5ff; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px rgba(0,229,255,0.5); }
+#btn-jump { position: absolute; bottom: 50px; right: 40px; width: 80px; height: 80px; background: rgba(74,222,128,0.1); border: 2px solid #4ade80; border-radius: 50%; color: #4ade80; font-weight: bold; font-size: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 0 15px rgba(74,222,128,0.2); }
