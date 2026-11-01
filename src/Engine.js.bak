@@ -1,3 +1,4 @@
+import { setupLighting } from './Lighting.js';
 import { createTerrain } from './Terrain.js';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -22,6 +23,8 @@ export class Engine {
     constructor(canvas) {
         this.canvas = canvas;
         this.scene = new THREE.Scene();
+        // --- Auto-injected Lighting ---
+        if (this.scene) { setupLighting(this.scene, this.renderer); }
         // --- Auto-injected Terrain ---
         const pWorld = this.world || this.physicsWorld || (this.physics && this.physics.world);
         if (this.scene) { createTerrain(this.scene, pWorld); }

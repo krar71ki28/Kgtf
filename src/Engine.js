@@ -23,6 +23,8 @@ export class Engine {
     constructor(canvas) {
         this.canvas = canvas;
         this.scene = new THREE.Scene();
+        // --- Auto-injected Cinematic Lighting ---
+        if (this.scene) { setupLighting(this.scene, this.renderer); }
         // --- Auto-injected Lighting ---
         if (this.scene) { setupLighting(this.scene, this.renderer); }
         // --- Auto-injected Terrain ---
