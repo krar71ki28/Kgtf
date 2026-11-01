@@ -21,7 +21,6 @@ export class Player {
     setupControls() {
         document.getElementById('btn-play').addEventListener('click', () => this.startPlay());
         
-        // زر الخروج يستخدم click لضمان الاستقرار
         const btnExit = document.getElementById('exit-play');
         if(btnExit) {
             btnExit.addEventListener('click', (e) => {
@@ -33,15 +32,9 @@ export class Player {
         window.addEventListener('keydown', (e) => { 
             this.keys[e.code] = true; 
             if (e.code === 'Space' && this.isPlaying && this.isGrounded) { this.velocityY = 8; this.isGrounded = false; } 
-            if (e.code === 'KeyV' && this.isPlaying) {
-                this.cameraMode = this.cameraMode === 'TPS' ? 'RPG' : 'TPS';
-                const btn = document.getElementById('btn-camera-mode');
-                if(btn) btn.innerText = this.cameraMode;
-            }
         });
         window.addEventListener('keyup', (e) => this.keys[e.code] = false);
 
-        // --- الجويستيك (حماية مطلقة) ---
         let joyActive = false, joyDir = {x:0, y:0};
         const joyZone = document.getElementById('joystick-zone'), joyKnob = document.getElementById('joystick-knob');
         
@@ -71,25 +64,12 @@ export class Player {
             }, { passive: false });
         }
         
-        // --- زر القفز ---
         const btnJump = document.getElementById('btn-jump');
         if(btnJump) btnJump.addEventListener('touchstart', (e) => { 
             e.preventDefault(); e.stopPropagation(); 
             if(this.isPlaying && this.isGrounded) { this.velocityY = 8; this.isGrounded = false; } 
         }, { passive: false });
 
-        // --- زر الكاميرا ---
-        const btnCamMode = document.getElementById('btn-camera-mode');
-        if (btnCamMode) {
-            btnCamMode.innerText = this.cameraMode;
-            btnCamMode.addEventListener('touchstart', (e) => {
-                e.preventDefault(); e.stopPropagation();
-                this.cameraMode = this.cameraMode === 'TPS' ? 'RPG' : 'TPS';
-                btnCamMode.innerText = this.cameraMode;
-            }, { passive: false });
-        }
-
-        // --- التحكم بالكاميرا من الشاشة ---
         const canvas = this.engine.renderer.domElement;
         let isDraggingCam = false;
         let lastCamPos = { x: 0, y: 0 };
@@ -116,7 +96,8 @@ export class Player {
                 initialPinchDist = currentPinchDist;
             } else if (e.touches.length === 1 && isDraggingCam) {
                 const touch = e.touches[0];
-                this.updateCameraRotation(touch.clientX - lastCamPos.x, touch.clientY - lastCamPos.y);
+                this.cameraYaw -= (touch.clientX - lastCamPos.x) * 0.005;
+                this.cameraPitch = Math.max(-0.5, Math.min(1.2, this.cameraPitch + (touch.clientY - lastCamPos.y) * 0.005));
                 lastCamPos = { x: touch.clientX, y: touch.clientY };
             }
         }, { passive: false });
@@ -126,30 +107,7 @@ export class Player {
             isDraggingCam = false; initialPinchDist = 0; 
         }, { passive: false });
 
-        canvas.addEventListener('mousedown', (e) => {
-            if (!this.isPlaying) return;
-            e.preventDefault();
-            isDraggingCam = true;
-            lastCamPos = { x: e.clientX, y: e.clientY };
-        });
-        canvas.addEventListener('mousemove', (e) => {
-            if (!isDraggingCam || !this.isPlaying) return;
-            this.updateCameraRotation(e.clientX - lastCamPos.x, e.clientY - lastCamPos.y);
-            lastCamPos = { x: e.clientX, y: e.clientY };
-        });
-        window.addEventListener('mouseup', () => isDraggingCam = false);
-        canvas.addEventListener('wheel', (e) => {
-            if (!this.isPlaying) return;
-            e.preventDefault();
-            this.targetDist = Math.max(0.5, Math.min(8, this.targetDist + e.deltaY * 0.01));
-        }, { passive: false });
-
         this.getJoyDir = () => joyActive ? joyDir : {x:0, y:0};
-    }
-
-    updateCameraRotation(dx, dy) {
-        this.cameraYaw -= dx * 0.005; 
-        this.cameraPitch = Math.max(-0.5, Math.min(1.2, this.cameraPitch + dy * 0.005));
     }
 
     startPlay() {
@@ -158,8 +116,6 @@ export class Player {
         
         this.isPlaying = true;
         this.playerModel.visible = true;
-        
-        // إجبار الشخصية على النزول للأرض وتوجيهها
         this.playerModel.position.set(0, 0, 0);
         this.playerModel.rotation.set(0, 0, 0);
         this.velocityY = 0;
@@ -209,42 +165,38 @@ export class Player {
         }
 
         const isMoving = moveVector.lengthSq() > 0;
-        this.currentDist += (this.targetDist - this.currentDist) * 10 * dt;
+        
+        // ✅ تحديث شاشة التشخيص
+        const debug = document.getElementById('debug-info');
+        if (debug) {
+            debug.innerHTML = `Joy: ${joy.x.toFixed(2)}, ${joy.y.toFixed(2)}<br>` +
+                              `Move: ${moveVector.x.toFixed(2)}, ${moveVector.z.toFixed(2)}<br>` +
+                              `isPlaying: ${this.isPlaying}`;
+        }
 
+        this.currentDist += (this.targetDist - this.currentDist) * 10 * dt;
         const isFirstPerson = this.currentDist < 0.8;
         this.playerModel.visible = !isFirstPerson;
 
         if (isMoving) {
             moveVector.normalize(); 
-            // حركة حرة مطلقة (لا يوجد فحص تصادم يعيق الحركة)
+            // حركة حرة مطلقة
             this.playerModel.position.x += moveVector.x * speed * dt;
             this.playerModel.position.z += moveVector.z * speed * dt;
             
-            if (this.cameraMode === 'RPG') {
-                const targetRot = Math.atan2(moveVector.x, moveVector.z); 
-                let diff = targetRot - this.playerModel.rotation.y;
-                while (diff < -Math.PI) diff += Math.PI * 2;
-                while (diff > Math.PI) diff -= Math.PI * 2;
-                this.playerModel.rotation.y += diff * 10 * dt;
-            } else if (this.cameraMode === 'TPS') {
-                this.playerModel.rotation.y = this.cameraYaw;
-            }
+            const targetRot = Math.atan2(moveVector.x, moveVector.z); 
+            let diff = targetRot - this.playerModel.rotation.y;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            this.playerModel.rotation.y += diff * 10 * dt;
         }
 
-        if (isFirstPerson) {
-            this.playerModel.rotation.y = this.cameraYaw;
-        }
-
-        // الجاذبية
         this.velocityY -= 24 * dt; 
         this.playerModel.position.y += this.velocityY * dt;
         if (this.playerModel.position.y <= 0) { 
-            this.playerModel.position.y = 0; 
-            this.velocityY = 0; 
-            this.isGrounded = true; 
+            this.playerModel.position.y = 0; this.velocityY = 0; this.isGrounded = true; 
         }
 
-        // الكاميرا
         const camHeight = 1.5; 
         const anchorPos = this.playerModel.position.clone().add(new THREE.Vector3(0, camHeight, 0));
         
@@ -253,39 +205,7 @@ export class Player {
         const offsetY = Math.sin(this.cameraPitch) * this.currentDist;
         
         let targetCamPos = anchorPos.clone().add(new THREE.Vector3(offsetX, offsetY, offsetZ));
-
-        if (!isFirstPerson) {
-            const dirToCam = targetCamPos.clone().sub(anchorPos).normalize();
-            this.engine.raycaster = new THREE.Raycaster(anchorPos, dirToCam, 0, this.currentDist);
-            const obstacles = this.engine.objects.filter(o => o !== this.playerModel && o.userData.type !== 'vfx' && o.userData.type !== 'light');
-            const hits = this.engine.raycaster.intersectObjects(obstacles, true);
-            
-            if (hits.length > 0) {
-                const safeDist = Math.max(0.5, hits[0].distance - 0.2);
-                targetCamPos = anchorPos.clone().add(dirToCam.multiplyScalar(safeDist));
-            }
-        }
-
-        if (isFirstPerson) {
-            this.engine.camera.position.lerp(anchorPos, this.cameraLag * dt);
-            const lookDir = new THREE.Vector3(
-                -Math.sin(this.cameraYaw) * Math.cos(this.cameraPitch),
-                -Math.sin(this.cameraPitch),
-                -Math.cos(this.cameraYaw) * Math.cos(this.cameraPitch)
-            );
-            this.engine.camera.lookAt(anchorPos.clone().add(lookDir));
-        } else {
-            this.engine.camera.position.lerp(targetCamPos, this.cameraLag * dt);
-            this.engine.camera.lookAt(anchorPos);
-        }
-
-        // الأنميشن
-        if (this.playerModel.userData.animator && !isFirstPerson) {
-            let targetState = 'idle';
-            if (!this.isGrounded) targetState = 'jump';
-            else if (isMoving) targetState = 'walk';
-            
-            this.playerModel.userData.animator.play(targetState, 0.2);
-        }
+        this.engine.camera.position.lerp(targetCamPos, this.cameraLag * dt);
+        this.engine.camera.lookAt(anchorPos);
     }
 }
