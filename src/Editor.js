@@ -10,7 +10,6 @@ export class Editor {
     }
 
     setupUI() {
-        // قائمة الإضافة
         const btnAdd = document.getElementById('btn-add-menu');
         const addMenu = document.getElementById('add-menu');
         btnAdd.onclick = (e) => { e.stopPropagation(); addMenu.classList.toggle('show'); };
@@ -23,19 +22,28 @@ export class Editor {
             };
         });
 
-        // مسح الكل
         document.getElementById('btn-clear-scene').onclick = () => this.engine.clearScene();
 
-        // الخصائص
         const bindProp = (id, cb) => {
             document.getElementById(id).addEventListener('input', (e) => {
                 if (this.engine.selectedObj) cb(this.engine.selectedObj, parseFloat(e.target.value) || e.target.value);
             });
         };
-        bindProp('prop-x', (o, v) => o.position.x = v);
-        bindProp('prop-z', (o, v) => o.position.z = v);
+        bindProp('prop-x', (o, v) => { o.position.x = v; if (o.userData.body) o.userData.body.position.x = v; });
+        bindProp('prop-z', (o, v) => { o.position.z = v; if (o.userData.body) o.userData.body.position.z = v; });
+        
         document.getElementById('prop-color').addEventListener('input', (e) => {
             if (this.engine.selectedObj) this.engine.selectedObj.material.color.set(e.target.value);
+        });
+
+        // ✅ تفعيل الجاذبية
+        document.getElementById('prop-physics').addEventListener('change', (e) => {
+            if (this.engine.selectedObj && this.engine.selectedObj.userData.body) {
+                this.engine.selectedObj.userData.physicsEnabled = e.target.checked;
+                // إذا كانت الجاذبية مفعلة، نعطي المجسم كتلة (وزن)
+                this.engine.selectedObj.userData.body.mass = e.target.checked ? 1 : 0;
+                this.engine.selectedObj.userData.body.updateMassProperties();
+            }
         });
     }
 
@@ -58,6 +66,8 @@ export class Editor {
         
         document.getElementById('prop-x').value = obj.position.x;
         document.getElementById('prop-z').value = obj.position.z;
+        document.getElementById('prop-physics').checked = obj.userData.physicsEnabled || false;
+        
         if(obj.material && obj.material.color) {
             document.getElementById('prop-color').value = '#' + obj.material.color.getHexString();
         }

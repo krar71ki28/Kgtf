@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { Physics } from './Physics.js?v=102';
 
 export class Engine {
     constructor(canvas) {
@@ -26,6 +27,7 @@ export class Engine {
         ground.rotation.x = -Math.PI / 2;
         this.scene.add(ground);
 
+        this.physics = new Physics(this);
         this.objects = [];
         this.selectedObj = null;
         this.onSelectCallback = null;
@@ -34,7 +36,6 @@ export class Engine {
         window.addEventListener('resize', () => this.resize());
         this.resize();
         
-        // إنشاء مكعب افتراضي
         this.createObject('cube');
     }
 
@@ -55,8 +56,11 @@ export class Engine {
         }
 
         mesh.userData.type = type;
+        mesh.userData.physicsEnabled = false; // افتراضياً الجاذبية مقفلة
+        
         this.scene.add(mesh);
         this.objects.push(mesh);
+        this.physics.addNode(mesh);
         this.selectObject(mesh);
         if (this.onSceneChangeCallback) this.onSceneChangeCallback();
         return mesh;
@@ -64,13 +68,17 @@ export class Engine {
 
     removeObject(obj) {
         this.scene.remove(obj);
+        this.physics.removeNode(obj);
         this.objects = this.objects.filter(o => o !== obj);
         this.selectObject(null);
         if (this.onSceneChangeCallback) this.onSceneChangeCallback();
     }
 
     clearScene() {
-        this.objects.forEach(o => this.scene.remove(o));
+        this.objects.forEach(o => {
+            this.scene.remove(o);
+            this.physics.removeNode(o);
+        });
         this.objects = [];
         this.selectObject(null);
         if (this.onSceneChangeCallback) this.onSceneChangeCallback();
@@ -92,6 +100,8 @@ export class Engine {
         if (!document.body.classList.contains('play-mode')) {
             this.orbit.update();
         }
+        // تحديث الفيزياء دائماً لكي تسقط المجسمات
+        this.physics.update(dt);
     }
 
     render() { this.renderer.render(this.scene, this.camera); }

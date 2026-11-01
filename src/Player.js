@@ -44,7 +44,6 @@ export class Player {
     }
 
     startPlay() {
-        // البحث عن شخصية
         this.playerModel = this.engine.objects.find(o => o.userData.isCharacter);
         if (!this.playerModel) { alert('أضف شخصية أولاً من زر الإضافة!'); return; }
         
@@ -55,8 +54,8 @@ export class Player {
         
         this.velocityY = 0;
         this.isGrounded = true;
-        this.engine.camera.position.set(0, 3, 6); // كاميرا خلف الشخصية
-        this.engine.selectObject(null); // إلغاء تحديد
+        this.engine.camera.position.set(0, 3, 6); 
+        this.engine.selectObject(null);
     }
 
     stopPlay() {
@@ -76,13 +75,28 @@ export class Player {
         if (!this.isPlaying || !this.playerModel) return;
         
         const speed = 5;
-        if (this.joyDir.x !== 0 || this.joyDir.y !== 0) {
-            this.playerModel.position.x += this.joyDir.x * speed * dt;
-            this.playerModel.position.z -= this.joyDir.y * speed * dt;
+        let moveX = this.joyDir.x * speed * dt;
+        let moveZ = -this.joyDir.y * speed * dt;
+
+        // ✅ فحص تصادم بسيط (Box3) بدلاً من تعقيدات الفيزياء
+        if (moveX !== 0 || moveZ !== 0) {
+            const nextPos = this.playerModel.position.clone().add(new THREE.Vector3(moveX, 0, moveZ));
+            const playerBox = new THREE.Box3().setFromCenterAndSize(nextPos, new THREE.Vector3(0.8, 1.8, 0.8));
             
-            // تدوير الشخصية نحو اتجاه الحركة
-            const angle = Math.atan2(this.joyDir.x, -this.joyDir.y);
-            this.playerModel.rotation.y = angle;
+            let collision = false;
+            this.engine.objects.forEach(obj => {
+                if (obj.userData.type !== 'character') {
+                    const objBox = new THREE.Box3().setFromObject(obj);
+                    if (playerBox.intersectsBox(objBox)) collision = true;
+                }
+            });
+
+            if (!collision) {
+                this.playerModel.position.x += moveX;
+                this.playerModel.position.z += moveZ;
+                const angle = Math.atan2(this.joyDir.x, -this.joyDir.y);
+                this.playerModel.rotation.y = angle;
+            }
         }
 
         // الجاذبية
@@ -94,7 +108,6 @@ export class Player {
             this.isGrounded = true; 
         }
 
-        // الكاميرا تتبع الشخصية
         const targetCamPos = this.playerModel.position.clone().add(new THREE.Vector3(0, 3, 6));
         this.engine.camera.position.lerp(targetCamPos, 5 * dt);
         this.engine.camera.lookAt(this.playerModel.position);

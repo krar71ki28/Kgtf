@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>KGTF ENGINE</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=101">
+<link rel="stylesheet" href="style.css?v=102">
 </head>
 <body>
     <header id="header">
@@ -44,12 +44,21 @@
             <div class="prop-row"><label>اللون</label><input type="color" id="prop-color" value="#00e5ff"></div>
             <div class="prop-row"><label>X</label><input type="range" id="prop-x" min="-20" max="20" step="0.1"></div>
             <div class="prop-row"><label>Z</label><input type="range" id="prop-z" min="-20" max="20" step="0.1"></div>
+            <!-- خيار الجاذبية -->
+            <div class="prop-row" style="justify-content: flex-start; gap: 10px; margin-top: 10px;">
+                <input type="checkbox" id="prop-physics" style="width:20px; height:20px;">
+                <label style="color:#ffaa00; font-weight:bold;">تفعيل الجاذبية</label>
+            </div>
         </div>
     </aside>
 
     <script type="importmap">
-    { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
+    { "imports": { 
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js", 
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+        "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js"
+    } }
     </script>
-    <script type="module" src="src/main.js?v=101"></script>
+    <script type="module" src="src/main.js?v=102"></script>
 </body>
 </html>
