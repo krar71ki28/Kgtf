@@ -1,4 +1,3 @@
-import { applyFix } from './FixClipping.js';
 import { setupLighting } from './Lighting.js';
 import { createTerrain } from './Terrain.js';
 import * as THREE from 'three';
@@ -24,8 +23,6 @@ export class Engine {
     constructor(canvas) {
         this.canvas = canvas;
         this.scene = new THREE.Scene();
-        window.scene = this.scene; // Force Global Exposure
-        window.engine = this;      // Force Global Exposure
         // --- Unreal Engine Lighting Preset ---
         if (this.scene) { setupLighting(this.scene, this.renderer); }
         // --- Auto-injected Lighting ---
