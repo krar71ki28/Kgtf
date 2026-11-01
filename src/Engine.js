@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Physics } from './Physics.js?v=106';
-import { Serializer } from './Serializer.js?v=106';
+import { Physics } from './Physics.js?v=107';
+import { Serializer } from './Serializer.js?v=107';
 
 export class Engine {
     constructor(canvas) {
@@ -30,7 +30,7 @@ export class Engine {
         this.scene.add(ground);
 
         this.physics = new Physics(this);
-        this.loader = new GLTFLoader(); // أداة تحميل الـ GLB
+        this.loader = new GLTFLoader(); 
         this.objects = [];
         this.selectedObj = null;
         this.onSelectCallback = null;
@@ -53,16 +53,27 @@ export class Engine {
             mesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), material);
             mesh.position.y = 0.5;
         } else if (type === 'character') {
-            // ✅ هنا نستخدم مجسم مؤقت وننتظر تحميل الشخصية الحقيقية
-            mesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1.2, 4, 8), new THREE.MeshStandardMaterial({ color: 0xffaa00 }));
-            mesh.position.y = 1;
+            // ✅ الحل الهندسي: استخدام Group كحاوية بدلاً من Mesh
+            mesh = new THREE.Group();
+            mesh.position.y = 0; // نضع الحاوية على الأرض
             mesh.userData.isCharacter = true;
             
-            // تحميل الشخصية الحقيقية من مجلد models (كما في مشروعك)
+            // 1. إنشاء الكبسولة المؤقتة
+            const placeholder = new THREE.Mesh(
+                new THREE.CapsuleGeometry(0.4, 1.2, 4, 8), 
+                new THREE.MeshStandardMaterial({ color: 0xffaa00 })
+            );
+            placeholder.position.y = 1;
+            mesh.add(placeholder);
+            
+            // 2. تحميل الشخصية الحقيقية
             this.loader.load('models/character.glb', (gltf) => {
-                mesh.clear(); // مسح الكبسولة المؤقتة
+                mesh.remove(placeholder); // حذف الكبسولة نهائياً
                 const model = gltf.scene;
-                model.scale.set(1, 1, 1); // تعديل الحجم إذا لزم الأمر
+                
+                // إصلاح حجم وموقع الشخصية لتناسب المحرك
+                model.scale.set(1, 1, 1); 
+                
                 mesh.add(model);
                 if (this.onSceneChangeCallback) this.onSceneChangeCallback();
             }, undefined, (err) => {
@@ -115,7 +126,7 @@ export class Engine {
                 this.selectObject(null);
                 return;
             } catch (e) {
-                console.error("Load failed, creating default cube:", e);
+                console.error("Load failed:", e);
             }
         }
         this.clearScene();
