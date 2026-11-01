@@ -1,15 +1,15 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Physics } from './Physics.js?v=500';
-import { Serializer } from './Serializer.js?v=500';
-import { Animator } from './Animator.js?v=500';
-import { LogicManager } from './Logic.js?v=500';
-import { Environment } from './Environment.js?v=500';
-import { AudioManager } from './Audio.js?v=500';
-import { UIManager } from './UI.js?v=500';
-import { VFXManager } from './VFX.js?v=500';
-import { AIManager } from './AI.js?v=500';
+import { Physics } from './Physics.js?v=501';
+import { Serializer } from './Serializer.js?v=501';
+import { Animator } from './Animator.js?v=501';
+import { LogicManager } from './Logic.js?v=501';
+import { Environment } from './Environment.js?v=501';
+import { AudioManager } from './Audio.js?v=501';
+import { UIManager } from './UI.js?v=501';
+import { VFXManager } from './VFX.js?v=501';
+import { AIManager } from './AI.js?v=501';
 
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -25,14 +25,11 @@ export class Engine {
         this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
         this.camera.position.set(6, 6, 8);
 
-        // ✅ إعدادات الريندرر الاحترافية (مستوحاة من Three.js PBR Guide)
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 1.0; // قيمة متوازنة
+        this.renderer.toneMappingExposure = 1.0; 
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-        
-        // ✅ إعدادات الظلال الناعمة (PCFSoftShadowMap)
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -96,8 +93,45 @@ export class Engine {
         const texture = new THREE.CanvasTexture(canvas);
         texture.wrapS = THREE.RepeatWrapping; texture.wrapT = THREE.RepeatWrapping;
         texture.repeat.set(50, 50);
-        texture.colorSpace = THREE.SRGBColorSpace; // ✅ ضمان ألوان صحيحة
+        texture.colorSpace = THREE.SRGBColorSpace;
         return texture;
+    }
+
+    // ✅ دالة رفع المجسمات الخارجية (GLB)
+    loadGLB(file, position = new THREE.Vector3(0, 0, 0)) {
+        return new Promise((resolve, reject) => {
+            const url = URL.createObjectURL(file);
+            this.loader.load(url, (gltf) => {
+                URL.revokeObjectURL(url);
+                const mesh = new THREE.Group();
+                const model = gltf.scene;
+                model.traverse((child) => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
+                
+                // توسيط المجسم
+                const box = new THREE.Box3().setFromObject(model);
+                const center = box.getCenter(new THREE.Vector3());
+                model.position.sub(center);
+                model.position.y += (box.max.y - box.min.y) / 2;
+                mesh.add(model);
+
+                mesh.position.copy(position);
+                mesh.userData.type = 'glb';
+                mesh.userData.physicsEnabled = false;
+                mesh.userData.logic = [];
+                
+                if (gltf.animations && gltf.animations.length > 0) {
+                    mesh.userData.animator = new Animator(model, gltf.animations);
+                    mesh.userData.animationNames = gltf.animations.map(clip => clip.name);
+                }
+
+                this.scene.add(mesh);
+                this.objects.push(mesh);
+                this.physics.addNode(mesh);
+                this.selectObject(mesh);
+                if (this.onSceneChangeCallback) this.onSceneChangeCallback();
+                resolve(mesh);
+            }, undefined, (err) => { URL.revokeObjectURL(url); reject(err); });
+        });
     }
 
     createObject(type) {

@@ -10,16 +10,14 @@ export class Editor {
     }
 
     setupUI() {
-        // إضافة خيار "توليد عدو" برمجياً
         const logicActionSelect = document.getElementById('logic-action');
-        if (logicActionSelect && !document.querySelector('option[value="spawnEnemy"]')) {
-            const enemyOption = document.createElement('option');
-            enemyOption.value = 'spawnEnemy';
-            enemyOption.innerText = 'توليد عدو';
-            logicActionSelect.appendChild(enemyOption);
+        if (logicActionSelect && !document.querySelector('option[value="spawnVFX"]')) {
+            const vfxOption = document.createElement('option');
+            vfxOption.value = 'spawnVFX';
+            vfxOption.innerText = 'تأثير انفجار';
+            logicActionSelect.appendChild(vfxOption);
         }
 
-        // ربط التبويبات
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.onclick = () => {
                 document.querySelectorAll('.tab-btn').forEach(b => {
@@ -50,6 +48,23 @@ export class Editor {
                 addMenu.classList.remove('show');
             };
         });
+
+        // ✅ ربط زر رفع المجسم
+        const btnUpload = document.getElementById('btn-upload-model');
+        const fileInput = document.getElementById('model-upload-input');
+        if (btnUpload && fileInput) {
+            btnUpload.onclick = () => fileInput.click();
+            fileInput.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                try {
+                    await this.engine.loadGLB(file, new THREE.Vector3(0, 1, 0));
+                } catch (err) {
+                    alert('فشل رفع المجسم: ' + err.message);
+                }
+                fileInput.value = '';
+            };
+        }
 
         document.getElementById('btn-spawn-enemy').onclick = () => {
             this.engine.ai.spawnEnemy();
