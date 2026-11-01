@@ -8,26 +8,28 @@ export class Environment {
         this.renderer = engine.renderer;
         this.rainSystem = null;
 
-        this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
+        // 1. إعداد السماء الفيزيائية (محاكاة Godot PhysicalSkyMaterial)
         this.sky = new Sky();
         this.sky.scale.setScalar(450000);
         this.scene.add(this.sky);
 
-        // إعدادات السماء الأساسية
-        this.sky.material.uniforms['turbidity'].value = 8;
-        this.sky.material.uniforms['rayleigh'].value = 4;
+        const sunPos = new THREE.Vector3();
+        const phi = THREE.MathUtils.degToRad(90 - 45);
+        const theta = THREE.MathUtils.degToRad(180);
+        sunPos.setFromSphericalCoords(1, phi, theta);
+
+        // ✅ معاملات محسنة لمحاكاة سماء واقعية (مستوحاة من Unreal Sky Atmosphere)
+        this.sky.material.uniforms['turbidity'].value = 10; // غيوم خفيفة
+        this.sky.material.uniforms['rayleigh'].value = 3;   // زرقة السماء
         this.sky.material.uniforms['mieCoefficient'].value = 0.005;
         this.sky.material.uniforms['mieDirectionalG'].value = 0.7;
+        this.sky.material.uniforms['sunPosition'].value.copy(sunPos);
 
-        // الضباب
-        this.scene.fog = new THREE.FogExp2(0x87CEEB, 0.015);
-
-        // الشمس
-        this.sun = new THREE.DirectionalLight(0xfff5e6, 2.0);
+        // 2. الشمس مع ظلال ناعمة عالية الدقة
+        this.sun = new THREE.DirectionalLight(0xfff5e6, 2.5);
+        this.sun.position.copy(sunPos).multiplyScalar(100);
         this.sun.castShadow = true;
-        this.sun.shadow.mapSize.width = 2048;
+        this.sun.shadow.mapSize.width = 2048; // دقة عالية
         this.sun.shadow.mapSize.height = 2048;
         this.sun.shadow.camera.near = 0.5;
         this.sun.shadow.camera.far = 500;
@@ -35,14 +37,19 @@ export class Environment {
         this.sun.shadow.camera.right = 50;
         this.sun.shadow.camera.top = 50;
         this.sun.shadow.camera.bottom = -50;
-        this.sun.shadow.bias = -0.0005;
+        this.sun.shadow.bias = -0.0001; // تقليل التشوهات
+        this.sun.shadow.normalBias = 0.02; // تحسين الظلال على الأسطح المنحنية
         this.scene.add(this.sun);
+        this.scene.add(this.sun.target);
 
-        // إضاءة محيطة
+        // 3. إضاءة محيطة (HemisphereLight) لمحاكاة ضوء السماء المنتشر
         this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8);
         this.scene.add(this.hemiLight);
 
-        // مجس الانعكاس
+        // 4. الضباب الجوي
+        this.scene.fog = new THREE.FogExp2(0x87CEEB, 0.015);
+
+        // 5. مجس الانعكاس (Reflection Probe)
         this.cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256, {
             generateMipmaps: true,
             minFilter: THREE.LinearMipmapLinearFilter,
@@ -51,38 +58,31 @@ export class Environment {
         this.cubeCamera.position.set(0, 2, 0);
         this.scene.add(this.cubeCamera);
 
-        // ✅ تحديث الوقت (الافتراضي 12:00 ظهراً)
-        this.updateSun(12);
+        this.updateEnvironmentMap();
+        this.updateSun(12); // الوقت الافتراضي 12:00
     }
 
-    // ✅ دالة تحديث الشمس والسماء بناءً على الوقت
     updateSun(timeOfDay) {
-        // تحويل الوقت إلى زاوية (0-24 ساعة)
         const elevation = Math.sin((timeOfDay - 6) / 12 * Math.PI) * 90;
         const phi = THREE.MathUtils.degToRad(90 - elevation);
         const theta = THREE.MathUtils.degToRad(180);
         const sunPos = new THREE.Vector3().setFromSphericalCoords(1, phi, theta);
 
-        // تحديث موقع الشمس في السماء
         this.sky.material.uniforms['sunPosition'].value.copy(sunPos);
         this.sun.position.copy(sunPos).multiplyScalar(100);
 
-        // ✅ تغيير الإضاءة والألوان بناءً على الوقت
         if (elevation < 0) {
-            // ليل
             this.sun.intensity = 0.1;
             this.sun.color.setHex(0x445588);
             this.hemiLight.intensity = 0.2;
             this.scene.fog.color.setHex(0x050510);
         } else if (elevation < 20) {
-            // شروق / غروب
             this.sun.intensity = 1.5;
             this.sun.color.setHex(0xff6600);
             this.hemiLight.intensity = 0.5;
             this.scene.fog.color.setHex(0xffaa00);
         } else {
-            // نهار
-            this.sun.intensity = 2.0;
+            this.sun.intensity = 2.5;
             this.sun.color.setHex(0xfff5e6);
             this.hemiLight.intensity = 0.8;
             this.scene.fog.color.setHex(0x87CEEB);

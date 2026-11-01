@@ -1,15 +1,15 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Physics } from './Physics.js?v=404';
-import { Serializer } from './Serializer.js?v=404';
-import { Animator } from './Animator.js?v=404';
-import { LogicManager } from './Logic.js?v=404';
-import { Environment } from './Environment.js?v=404';
-import { AudioManager } from './Audio.js?v=404';
-import { UIManager } from './UI.js?v=404';
-import { VFXManager } from './VFX.js?v=404';
-import { AIManager } from './AI.js?v=404'; // ✅ استيراد AI
+import { Physics } from './Physics.js?v=500';
+import { Serializer } from './Serializer.js?v=500';
+import { Animator } from './Animator.js?v=500';
+import { LogicManager } from './Logic.js?v=500';
+import { Environment } from './Environment.js?v=500';
+import { AudioManager } from './Audio.js?v=500';
+import { UIManager } from './UI.js?v=500';
+import { VFXManager } from './VFX.js?v=500';
+import { AIManager } from './AI.js?v=500';
 
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -25,11 +25,16 @@ export class Engine {
         this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
         this.camera.position.set(6, 6, 8);
 
+        // ✅ إعدادات الريندرر الاحترافية (مستوحاة من Three.js PBR Guide)
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 0.6;
+        this.renderer.toneMappingExposure = 1.0; // قيمة متوازنة
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+        
+        // ✅ إعدادات الظلال الناعمة (PCFSoftShadowMap)
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
         this.orbit = new OrbitControls(this.camera, this.renderer.domElement);
         this.orbit.target.set(0, 1, 0);
@@ -38,7 +43,7 @@ export class Engine {
         this.audio = new AudioManager(this.camera);
         this.ui = new UIManager();
         this.vfx = new VFXManager(this.scene);
-        this.ai = new AIManager(this); // ✅ تهيئة AI
+        this.ai = new AIManager(this);
 
         this.composer = new EffectComposer(this.renderer);
         this.composer.addPass(new RenderPass(this.scene, this.camera));
@@ -91,6 +96,7 @@ export class Engine {
         const texture = new THREE.CanvasTexture(canvas);
         texture.wrapS = THREE.RepeatWrapping; texture.wrapT = THREE.RepeatWrapping;
         texture.repeat.set(50, 50);
+        texture.colorSpace = THREE.SRGBColorSpace; // ✅ ضمان ألوان صحيحة
         return texture;
     }
 
@@ -189,7 +195,7 @@ export class Engine {
         this.physics.update(dt);
         this.environment.update(dt);
         this.vfx.update(dt);
-        this.ai.update(dt); // ✅ تحديث AI
+        this.ai.update(dt);
     }
 
     render() { this.composer.render(); }
