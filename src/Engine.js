@@ -1,3 +1,4 @@
+import { applyFix } from './FixClipping.js';
 import { setupLighting } from './Lighting.js';
 import { createTerrain } from './Terrain.js';
 import * as THREE from 'three';
