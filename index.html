@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>KGTF ENGINE v9.0</title> <!-- تم تحديث العنوان -->
+<title>KGTF ENGINE v9.0</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css?v=502">
 </head>
@@ -19,11 +19,8 @@
                 </div>
             </div>
             <button class="icon-btn" id="btn-spawn-enemy" title="توليد عدو">👾</button>
-            
-            <!-- ✅ زر رفع مجسم GLB -->
             <button class="icon-btn" id="btn-upload-model" title="رفع مجسم GLB">📁</button>
             <input type="file" id="model-upload-input" accept=".glb,.gltf" style="display:none;">
-
             <button class="icon-btn" id="btn-save" title="حفظ">💾</button>
             <button class="icon-btn" id="btn-audio" title="الصوت">🔊</button>
             <button class="icon-btn" id="btn-clear-scene" title="مسح الكل">🗑️</button>
@@ -104,7 +101,10 @@
         "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js"
     } }
     </script>
+    <!-- السكربتات الأصلية الخاصة بك (بدون Cleanup و CameraFix المدمرين) -->
     <script type="module" src="src/main.js?v=502"></script>
-    <script type="module" src="src/SurgicalFix.js"></script>
+    
+    <!-- السكربت الجديد للأرضية والإضاءة -->
+    <script type="module" src="src/UnrealTerrain.js"></script>
 </body>
 </html>
