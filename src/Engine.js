@@ -1,15 +1,15 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Physics } from './Physics.js?v=501';
-import { Serializer } from './Serializer.js?v=501';
-import { Animator } from './Animator.js?v=501';
-import { LogicManager } from './Logic.js?v=501';
-import { Environment } from './Environment.js?v=501';
-import { AudioManager } from './Audio.js?v=501';
-import { UIManager } from './UI.js?v=501';
-import { VFXManager } from './VFX.js?v=501';
-import { AIManager } from './AI.js?v=501';
+import { Physics } from './Physics.js?v=502';
+import { Serializer } from './Serializer.js?v=502';
+import { Animator } from './Animator.js?v=502';
+import { LogicManager } from './Logic.js?v=502';
+import { Environment } from './Environment.js?v=502';
+import { AudioManager } from './Audio.js?v=502';
+import { UIManager } from './UI.js?v=502';
+import { VFXManager } from './VFX.js?v=502';
+import { AIManager } from './AI.js?v=502';
 
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -25,10 +25,11 @@ export class Engine {
         this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
         this.camera.position.set(6, 6, 8);
 
+        // ✅ تحسين التعرض والريندرر (مستوحى من Unreal/Godot)
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 1.0; 
+        this.renderer.toneMappingExposure = 1.2; // تعرض أعلى قليلاً لإضاءة سينمائية
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -53,8 +54,15 @@ export class Engine {
 
         this.composer.addPass(new OutputPass());
 
-        const groundTexture = this.createGrassTexture();
-        const groundMat = new THREE.MeshStandardMaterial({ map: groundTexture, roughness: 0.9, metalness: 0.1 });
+        // ✅ أرضية احترافية مع Bump Map (نتوءات)
+        const { diffuse, bump } = this.createProceduralGround();
+        const groundMat = new THREE.MeshStandardMaterial({ 
+            map: diffuse, 
+            bumpMap: bump,
+            bumpScale: 0.1, // قوة النتوءات
+            roughness: 0.9, 
+            metalness: 0.1 
+        });
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), groundMat);
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
@@ -80,24 +88,50 @@ export class Engine {
         this.loadScene();
     }
 
-    createGrassTexture() {
+    // ✅ توليد أرضية إجرائية مع نتوءات (Bump Map) لمحاكاة واقعية الأرض
+    createProceduralGround() {
+        const size = 512;
         const canvas = document.createElement('canvas');
-        canvas.width = 256; canvas.height = 256;
+        canvas.width = size; canvas.height = size;
         const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#2e4a35'; ctx.fillRect(0, 0, 256, 256);
-        for (let i = 0; i < 5000; i++) {
-            const x = Math.random() * 256; const y = Math.random() * 256; const size = Math.random() * 3 + 1;
-            const r = Math.floor(30 + Math.random() * 20); const g = Math.floor(60 + Math.random() * 40); const b = Math.floor(30 + Math.random() * 20);
-            ctx.fillStyle = `rgb(${r}, ${g}, ${b})`; ctx.fillRect(x, y, size, size);
+
+        // 1. اللون الأساسي (Diffuse)
+        ctx.fillStyle = '#2e4a35'; 
+        ctx.fillRect(0, 0, size, size);
+
+        for (let i = 0; i < 10000; i++) {
+            const x = Math.random() * size; const y = Math.random() * size; const s = Math.random() * 4 + 1;
+            const r = Math.floor(30 + Math.random() * 20); 
+            const g = Math.floor(60 + Math.random() * 40); 
+            const b = Math.floor(30 + Math.random() * 20);
+            ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+            ctx.fillRect(x, y, s, s);
         }
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.wrapS = THREE.RepeatWrapping; texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(50, 50);
-        texture.colorSpace = THREE.SRGBColorSpace;
-        return texture;
+        const diffuse = new THREE.CanvasTexture(canvas);
+        diffuse.wrapS = THREE.RepeatWrapping; diffuse.wrapT = THREE.RepeatWrapping;
+        diffuse.repeat.set(50, 50);
+        diffuse.colorSpace = THREE.SRGBColorSpace;
+
+        // 2. خريطة النتوءات (Bump Map) - باللون الرمادي
+        const bumpCanvas = document.createElement('canvas');
+        bumpCanvas.width = size; bumpCanvas.height = size;
+        const bCtx = bumpCanvas.getContext('2d');
+        bCtx.fillStyle = '#808080'; // رمادي متوسط (مستوى سطح البحر)
+        bCtx.fillRect(0, 0, size, size);
+
+        for (let i = 0; i < 10000; i++) {
+            const x = Math.random() * size; const y = Math.random() * size; const s = Math.random() * 4 + 1;
+            const val = Math.floor(Math.random() * 255);
+            bCtx.fillStyle = `rgb(${val}, ${val}, ${val})`;
+            bCtx.fillRect(x, y, s, s);
+        }
+        const bump = new THREE.CanvasTexture(bumpCanvas);
+        bump.wrapS = THREE.RepeatWrapping; bump.wrapT = THREE.RepeatWrapping;
+        bump.repeat.set(50, 50);
+
+        return { diffuse, bump };
     }
 
-    // ✅ دالة رفع المجسمات الخارجية (GLB)
     loadGLB(file, position = new THREE.Vector3(0, 0, 0)) {
         return new Promise((resolve, reject) => {
             const url = URL.createObjectURL(file);
@@ -107,7 +141,6 @@ export class Engine {
                 const model = gltf.scene;
                 model.traverse((child) => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
                 
-                // توسيط المجسم
                 const box = new THREE.Box3().setFromObject(model);
                 const center = box.getCenter(new THREE.Vector3());
                 model.position.sub(center);
