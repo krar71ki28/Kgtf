@@ -1,4 +1,3 @@
-import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 
 export class Physics {
@@ -16,7 +15,6 @@ export class Physics {
     }
 
     addNode(mesh) {
-        // لا نضيف الشخصية للفيزياء لتجنب مشاكل الحركة
         if (mesh.userData.type === 'character') return;
 
         let shape;
@@ -24,7 +22,6 @@ export class Physics {
         else if (mesh.userData.type === 'sphere') shape = new CANNON.Sphere(0.5);
         else shape = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
 
-        // إذا كانت الجاذبية غير مفعلة، نعطيه كتلة صفر (يبقى ثابتاً)
         let mass = mesh.userData.physicsEnabled ? 1 : 0;
 
         const body = new CANNON.Body({

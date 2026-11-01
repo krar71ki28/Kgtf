@@ -9,7 +9,6 @@ export class Player {
         this.isGrounded = true;
         this.playerModel = null;
         
-        // إعدادات الكاميرا
         this.cameraYaw = 0;
         this.cameraPitch = 0.3;
         this.cameraDist = 5;
@@ -21,7 +20,6 @@ export class Player {
         document.getElementById('btn-play').onclick = () => this.startPlay();
         document.getElementById('exit-play').onclick = () => this.stopPlay();
 
-        // --- الجويستيك ---
         let joyActive = false;
         this.joyDir = { x: 0, y: 0 };
         const joyZone = document.getElementById('joystick-zone');
@@ -44,13 +42,11 @@ export class Player {
             this.joyDir = {x:0, y:0}; 
         }, { passive: false });
 
-        // --- زر القفز ---
         document.getElementById('btn-jump').addEventListener('touchstart', (e) => { 
             e.preventDefault(); 
             if(this.isPlaying && this.isGrounded) { this.velocityY = 8; this.isGrounded = false; } 
         }, { passive: false });
 
-        // --- التحكم بالكاميرا (سحب الشاشة) ---
         const canvas = this.engine.renderer.domElement;
         let isDragging = false;
         let lastX = 0, lastY = 0;
@@ -66,10 +62,8 @@ export class Player {
             if (!isDragging || !this.isPlaying) return;
             const dx = e.touches[0].clientX - lastX;
             const dy = e.touches[0].clientY - lastY;
-            
             this.cameraYaw -= dx * 0.005;
             this.cameraPitch = Math.max(-0.5, Math.min(1.2, this.cameraPitch + dy * 0.005));
-            
             lastX = e.touches[0].clientX;
             lastY = e.touches[0].clientY;
         }, { passive: true });
@@ -88,7 +82,7 @@ export class Player {
         
         this.velocityY = 0;
         this.isGrounded = true;
-        this.cameraYaw = 0; // إعادة ضبط زاوية الكاميرا
+        this.cameraYaw = 0;
         this.engine.selectObject(null);
     }
 
@@ -124,24 +118,19 @@ export class Player {
             moveVector.normalize();
             const nextPos = this.playerModel.position.clone().addScaledVector(moveVector, speed * dt);
             
-            // ✅ فحص تصادم ذكي (Raycaster) لا يسبب تجميد
-            const dir = moveVector.clone();
             const ray = new CANNON.RaycastResult();
             const from = new CANNON.Vec3(this.playerModel.position.x, 1, this.playerModel.position.z);
             const to = new CANNON.Vec3(nextPos.x, 1, nextPos.z);
             
             this.engine.physics.world.raycastClosest(from, to, { skipBackfaces: true }, ray);
             
-            // إذا لم يصطدم بجسم صلب
             if (!ray.hasHit) {
                 this.playerModel.position.copy(nextPos);
-                // تدوير الشخصية
                 const angle = Math.atan2(moveVector.x, moveVector.z);
                 this.playerModel.rotation.y = angle;
             }
         }
 
-        // الجاذبية
         this.velocityY -= 20 * dt; 
         this.playerModel.position.y += this.velocityY * dt;
         if (this.playerModel.position.y <= 1) { 
@@ -150,7 +139,6 @@ export class Player {
             this.isGrounded = true; 
         }
 
-        // ✅ تحديث الكاميرا (Spring Arm)
         const camOffset = new THREE.Vector3(
             Math.sin(this.cameraYaw) * this.cameraDist * Math.cos(this.cameraPitch),
             Math.sin(this.cameraPitch) * this.cameraDist,

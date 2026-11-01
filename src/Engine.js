@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { Physics } from './Physics.js?v=102';
+import { Physics } from './Physics.js?v=103';
 
 export class Engine {
     constructor(canvas) {
@@ -56,7 +56,7 @@ export class Engine {
         }
 
         mesh.userData.type = type;
-        mesh.userData.physicsEnabled = false; // افتراضياً الجاذبية مقفلة
+        mesh.userData.physicsEnabled = false;
         
         this.scene.add(mesh);
         this.objects.push(mesh);
@@ -100,7 +100,6 @@ export class Engine {
         if (!document.body.classList.contains('play-mode')) {
             this.orbit.update();
         }
-        // تحديث الفيزياء دائماً لكي تسقط المجسمات
         this.physics.update(dt);
     }
 

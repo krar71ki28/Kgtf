@@ -24,7 +24,6 @@ export class Editor {
 
         document.getElementById('btn-clear-scene').onclick = () => this.engine.clearScene();
 
-        // ✅ مزامنة الخصائص مع الفيزياء
         const bindProp = (id, cb) => {
             document.getElementById(id).addEventListener('input', (e) => {
                 if (this.engine.selectedObj) cb(this.engine.selectedObj, parseFloat(e.target.value) || e.target.value);
