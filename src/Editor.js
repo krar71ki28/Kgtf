@@ -10,7 +10,16 @@ export class Editor {
     }
 
     setupUI() {
-        // ✅ ربط التبويبات
+        // ✅ حيلة ذكية: إضافة خيار الانفجار للقائمة برمجياً (لتجاوز كاش الـ HTML)
+        const logicActionSelect = document.getElementById('logic-action');
+        if (logicActionSelect && !document.querySelector('option[value="spawnVFX"]')) {
+            const vfxOption = document.createElement('option');
+            vfxOption.value = 'spawnVFX';
+            vfxOption.innerText = 'تأثير انفجار';
+            logicActionSelect.appendChild(vfxOption);
+        }
+
+        // ربط التبويبات
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.onclick = () => {
                 document.querySelectorAll('.tab-btn').forEach(b => {
@@ -48,7 +57,6 @@ export class Editor {
             document.getElementById('btn-audio').innerText = isMuted ? '🔇' : '🔊';
         };
 
-        // ✅ ربط أزرار الواجهة (UI) - الآن تعمل مع custom-hud
         document.getElementById('btn-add-text').onclick = () => {
             const text = document.getElementById('ui-text-input').value;
             if (text.trim() !== '') {
@@ -59,9 +67,7 @@ export class Editor {
                 alert('الرجاء كتابة نص أولاً!');
             }
         };
-        document.getElementById('btn-clear-ui').onclick = () => {
-            this.engine.ui.clearUI();
-        };
+        document.getElementById('btn-clear-ui').onclick = () => this.engine.ui.clearUI();
 
         const bindProp = (id, cb) => {
             document.getElementById(id).addEventListener('input', (e) => {
