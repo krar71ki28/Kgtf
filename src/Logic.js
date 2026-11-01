@@ -9,9 +9,12 @@ export class LogicManager {
             this.engine.removeObject(obj);
         } else if (action === 'addScore') {
             this.score += 10;
-            this.engine.ui.updateScore(this.score); // ✅ تحديث الواجهة
+            this.engine.ui.updateScore(this.score);
         } else if (action === 'playSound') {
             this.engine.audio.playSFX(); 
+        } else if (action === 'spawnVFX') {
+            // ✅ إنشاء انفجار في موقع المجسم
+            this.engine.vfx.spawnExplosion(obj.position);
         }
     }
 

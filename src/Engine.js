@@ -1,13 +1,14 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Physics } from './Physics.js?v=128';
-import { Serializer } from './Serializer.js?v=128';
-import { Animator } from './Animator.js?v=128';
-import { LogicManager } from './Logic.js?v=128';
-import { Environment } from './Environment.js?v=128';
-import { AudioManager } from './Audio.js?v=128';
-import { UIManager } from './UI.js?v=128'; // ✅ استيراد مدير الواجهة
+import { Physics } from './Physics.js?v=130';
+import { Serializer } from './Serializer.js?v=130';
+import { Animator } from './Animator.js?v=130';
+import { LogicManager } from './Logic.js?v=130';
+import { Environment } from './Environment.js?v=130';
+import { AudioManager } from './Audio.js?v=130';
+import { UIManager } from './UI.js?v=130';
+import { VFXManager } from './VFX.js?v=130'; // ✅ استيراد VFX
 
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -34,7 +35,8 @@ export class Engine {
 
         this.environment = new Environment(this);
         this.audio = new AudioManager(this.camera);
-        this.ui = new UIManager(); // ✅ تهيئة مدير الواجهة
+        this.ui = new UIManager();
+        this.vfx = new VFXManager(this.scene); // ✅ تهيئة VFX
 
         this.composer = new EffectComposer(this.renderer);
         this.composer.addPass(new RenderPass(this.scene, this.camera));
@@ -184,6 +186,7 @@ export class Engine {
         }
         this.physics.update(dt);
         this.environment.update(dt);
+        this.vfx.update(dt); // ✅ تحديث VFX
     }
 
     render() { this.composer.render(); }
