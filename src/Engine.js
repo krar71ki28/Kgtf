@@ -1,19 +1,19 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Physics } from './Physics.js?v=123';
-import { Serializer } from './Serializer.js?v=123';
-import { Animator } from './Animator.js?v=123';
-import { LogicManager } from './Logic.js?v=123';
-import { Environment } from './Environment.js?v=123';
+import { Physics } from './Physics.js?v=124';
+import { Serializer } from './Serializer.js?v=124';
+import { Animator } from './Animator.js?v=124';
+import { LogicManager } from './Logic.js?v=124';
+import { Environment } from './Environment.js?v=124';
 
-// ✅ استيراد N8AOPass (مكتبة SSAO)
-import { N8AOPass } from 'https://unpkg.com/n8ao@latest/dist/N8AO.js';
-
+// ✅ استيراد أدوات Post-Processing + God Rays
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
+import { GodRaysPass } from 'three/addons/postprocessing/GodRaysPass.js'; // ✅ God Rays
 
 export class Engine {
     constructor(canvas) {
@@ -34,23 +34,33 @@ export class Engine {
 
         this.environment = new Environment(this);
 
-        // ✅ خط معالجة الرسم مع SSAO
+        // ✅ خط معالجة الرسم مع God Rays
         this.composer = new EffectComposer(this.renderer);
         
-        // 1. SSAO (يحل محل RenderPass)
-        const n8aopass = new N8AOPass(this.scene, this.camera, window.innerWidth, window.innerHeight);
-        n8aopass.configuration.gammaCorrection = false; // لأن OutputPass سيتولى التصحيح
-        this.composer.addPass(n8aopass);
+        // 1. RenderPass (بدلاً من SSAO حالياً لتجنب التعقيد)
+        this.composer.addPass(new RenderPass(this.scene, this.camera));
 
-        // 2. Bloom (توهج)
+        // 2. God Rays (أشعة الشمس)
+        this.godRaysPass = new GodRaysPass(this.scene, this.camera, {
+            sun: this.environment.sun,
+            exposure: 0.6,
+            decay: 0.95,
+            weight: 0.5,
+            density: 0.8,
+            samples: 50,
+            blur: true
+        });
+        this.composer.addPass(this.godRaysPass);
+
+        // 3. Bloom (توهج)
         this.bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.2, 0.4, 0.9);
         this.composer.addPass(this.bloomPass);
 
-        // 3. SMAA (تنعيم الحواف)
+        // 4. SMAA (تنعيم الحواف)
         const smaaPass = new SMAAPass(window.innerWidth * this.renderer.getPixelRatio(), window.innerHeight * this.renderer.getPixelRatio());
         this.composer.addPass(smaaPass);
 
-        // 4. Output (التصحيح النهائي)
+        // 5. Output (التصحيح النهائي)
         this.composer.addPass(new OutputPass());
 
         // الأرضية والشبكة
