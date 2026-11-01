@@ -8,26 +8,30 @@ export class Environment {
         this.renderer = engine.renderer;
         this.rainSystem = null;
 
+        // تفعيل الظلال
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
+        // إنشاء السماء
         this.sky = new Sky();
         this.sky.scale.setScalar(450000);
         this.scene.add(this.sky);
 
+        // إعداد موقع الشمس
         const sunPos = new THREE.Vector3();
         const phi = THREE.MathUtils.degToRad(90 - 45);
         const theta = THREE.MathUtils.degToRad(180); 
         sunPos.setFromSphericalCoords(1, phi, theta);
 
-        this.sky.material.uniforms['turbidity'].value = 10; 
-        this.sky.material.uniforms['rayleigh'].value = 3;   
+        // ✅ إعدادات السماء الفيزيائية (زيادة الزرقة)
+        this.sky.material.uniforms['turbidity'].value = 8; // غيوم أخف
+        this.sky.material.uniforms['rayleigh'].value = 4;   // زرقة أعمق
         this.sky.material.uniforms['mieCoefficient'].value = 0.005;
         this.sky.material.uniforms['mieDirectionalG'].value = 0.7;
         this.sky.material.uniforms['sunPosition'].value.copy(sunPos);
 
-        // ✅ تقليل شدة الشمس من 3.0 إلى 1.5 (لون دافئ وطبيعي)
-        this.sun = new THREE.DirectionalLight(0xfff5e6, 1.5);
+        // ✅ تقليل شدة الشمس لـ 2.0 (قيمة احترافية)
+        this.sun = new THREE.DirectionalLight(0xfff5e6, 2.0);
         this.sun.position.copy(sunPos).multiplyScalar(100);
         this.sun.castShadow = true;
         this.sun.shadow.mapSize.width = 2048;
@@ -38,12 +42,14 @@ export class Environment {
         this.sun.shadow.camera.right = 50;
         this.sun.shadow.camera.top = 50;
         this.sun.shadow.camera.bottom = -50;
+        this.sun.shadow.bias = -0.0005; // منع تشوهات الظل
         this.scene.add(this.sun);
 
-        // ✅ زيادة الإضاءة المحيطة قليلاً (لتعويض تقليل الشمس)
-        this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+        // ✅ إضاءة محيطة (Hemisphere) لملء الظلال
+        this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8);
         this.scene.add(this.hemiLight);
 
+        // ✅ توليد انعكاسات بيئية (PBR Environment)
         const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
         this.scene.environment = pmremGenerator.fromScene(this.sky).texture;
     }

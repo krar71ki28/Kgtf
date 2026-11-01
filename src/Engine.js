@@ -1,13 +1,13 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Physics } from './Physics.js?v=117';
-import { Serializer } from './Serializer.js?v=117';
-import { Animator } from './Animator.js?v=117';
-import { LogicManager } from './Logic.js?v=117';
-import { Environment } from './Environment.js?v=117';
+import { Physics } from './Physics.js?v=119';
+import { Serializer } from './Serializer.js?v=119';
+import { Animator } from './Animator.js?v=119';
+import { LogicManager } from './Logic.js?v=119';
+import { Environment } from './Environment.js?v=119';
 
-// ✅ استيراد أدوات Post-Processing
+// ✅ أدوات Post-Processing
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -22,26 +22,28 @@ export class Engine {
         this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
         this.camera.position.set(6, 6, 8);
 
-        // ✅ إعداد الريندرر مع Tone Mapping السينمائي (مثل Unreal)
+        // ✅ إعداد الريندرر (Tone Mapping سينمائي)
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 0.5;
+        // ✅ تقليل التعرض لـ 0.6 (بدلاً من 1.0) لمنع حرق الصورة
+        this.renderer.toneMappingExposure = 0.6;
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
         this.orbit = new OrbitControls(this.camera, this.renderer.domElement);
         this.orbit.target.set(0, 1, 0);
 
+        // ✅ استدعاء البيئة (السماء، الشمس، الظلال)
         this.environment = new Environment(this);
 
-        // ✅ إعداد خط معالجة الرسم (Post-Processing Pipeline)
+        // ✅ إعداد Post-Processing (خط معالجة الرسم)
         this.composer = new EffectComposer(this.renderer);
         this.composer.addPass(new RenderPass(this.scene, this.camera));
         
-        // Bloom (توهج الإضاءة)
+        // Bloom (توهج خفيف جداً، ولا يعمل إلا على الإضاءة القوية)
         this.bloomPass = new UnrealBloomPass(
             new THREE.Vector2(window.innerWidth, window.innerHeight), 
-            0.2, 0.4, 0.95
+            0.2, 0.4, 0.9 // strength, radius, threshold
         );
         this.composer.addPass(this.bloomPass);
 
@@ -52,7 +54,7 @@ export class Engine {
         // Output (تطبيق الألوان النهائي)
         this.composer.addPass(new OutputPass());
 
-        // أرضية احترافية
+        // أرضية احترافية (داكنة مع شبكة)
         const groundGeo = new THREE.PlaneGeometry(200, 200);
         const groundMat = new THREE.MeshStandardMaterial({ color: 0x2e4a35, roughness: 0.8, metalness: 0.2 });
         const ground = new THREE.Mesh(groundGeo, groundMat);
@@ -177,7 +179,7 @@ export class Engine {
         this.camera.aspect = c.clientWidth / c.clientHeight; 
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(c.clientWidth, c.clientHeight, false);
-        this.composer.setSize(c.clientWidth, c.clientHeight); // ✅ تحديث الـ Composer
+        this.composer.setSize(c.clientWidth, c.clientHeight);
     }
 
     update(dt) {
@@ -191,7 +193,6 @@ export class Engine {
         this.environment.update(dt);
     }
 
-    // ✅ استخدام الـ Composer بدلاً من الريندرر المباشر
     render() { 
         this.composer.render(); 
     }
