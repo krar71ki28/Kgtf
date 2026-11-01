@@ -5,186 +5,32 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>KGTF ENGINE</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=21.0.0">
+<link rel="stylesheet" href="style.css?v=100">
 </head>
 <body>
-    <div id="version-tag" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: #ffaa00; padding: 10px 20px; border-radius: 5px; z-index: 99999; font-family: sans-serif; font-weight: bold;">Loading v37...</div>
     <header id="header">
         <div class="header-tools">
-            <div class="tool-group">
-                <button class="icon-btn active" id="btn-gizmo-translate" title="تحريك">✥</button>
-                <button class="icon-btn" id="btn-gizmo-rotate" title="تدوير">↻</button>
-                <button class="icon-btn" id="btn-gizmo-scale" title="تكبير">⤢</button>
-            </div>
-            
-            <button class="icon-btn" id="btn-snap-toggle" title="محاذاة الشبكة" style="color:#ffaa00;">📐</button>
-
-            <div class="dropdown">
-                <button class="icon-btn" id="btn-add-menu" style="color:#4ade80;" title="إضافة">➕</button>
-                <div class="dropdown-content" id="add-menu">
-                    <button class="add-btn" data-type="cube">📦 مكعب</button>
-                    <button class="add-btn" data-type="sphere">🔴 كرة</button>
-                    <button class="add-btn" data-type="tree">🌲 شجرة</button>
-                    <button class="add-btn" data-type="character">🏃 شخصية</button>
-                    <button class="add-btn" data-type="light">💡 ضوء</button>
-                    <button class="add-btn" data-type="vfx-fire" style="color:#ffaa00;">🔥 نار</button>
-                    <button class="add-btn" data-type="vfx-smoke" style="color:#aaa;">☁️ دخان</button>
-                </div>
-            </div>
-
-            <button class="icon-btn" id="btn-upload-glb" title="رفع مجسم 3D" style="color:#00e5ff;">📁</button>
-            <input type="file" id="file-upload-glb" accept=".glb,.gltf" style="display:none;">
-
-            <div class="tool-group">
-                <button class="icon-btn" id="btn-save" title="حفظ">💾</button>
-                <button class="icon-btn" id="btn-export" title="تصدير">📤</button>
-                <button class="icon-btn" id="btn-import" title="استيراد">📥</button>
-                <input type="file" id="file-import" accept=".json" style="display:none;">
-            </div>
+            <button class="icon-btn" id="btn-play" style="background:#4ade80; color:#000;">▶ تشغيل</button>
         </div>
-        
-        <button class="play-btn" id="btn-play" title="تشغيل">▶</button>
     </header>
 
     <main id="viewport-container">
-        <div id="debug-info" style="position: absolute; top: 80px; left: 10px; background: rgba(0,0,0,0.8); color: #00ff00; padding: 5px; font-family: monospace; font-size: 12px; z-index: 9999; pointer-events: none; border-radius: 5px;">
-            Joy: 0.00, 0.00<br>
-            Move: 0.00, 0.00<br>
-            isPlaying: false
-        </div>
-
         <canvas id="viewport"></canvas>
-        <div id="status-bar">FPS: <span id="fps">--</span></div>
         
-        <div id="play-ui">
-            <!-- منطقة سحب الكاميرا (للماوس في الكمبيوتر واللمس في الموبايل) -->
-
-            <button id="exit-play">✕ إيقاف</button>
-            <button id="btn-camera-mode" style="position:absolute; bottom: 130px; right: 30px; z-index: 1000; padding:10px 15px; background:rgba(0,0,0,0.5); border:1px solid #ffaa00; color:#ffaa00; border-radius:5px; font-family:Cairo; pointer-events:auto; font-weight:bold;">TPS</button>
-            <div id="score-display" style="display:none;">النقاط: <span id="score-val">0</span></div>
-            
+        <!-- واجهة اللعب -->
+        <div id="play-ui" style="display:none;">
+            <div id="debug-info" style="position:absolute; top:10px; left:10px; background:rgba(0,0,0,0.8); color:#0f0; padding:5px; font-family:monospace; z-index:9999;">
+                isPlaying: false<br>Joy: 0,0
+            </div>
+            <button id="exit-play" style="position:absolute; top:20px; left:20px; z-index:1000; padding:10px; background:red; color:white;">✕ إيقاف</button>
             <div id="joystick-zone"><div id="joystick-knob"></div></div>
             <button id="btn-jump">قفز</button>
-            
-            <div id="custom-hud"></div>
         </div>
     </main>
 
-    <aside id="inspector-panel">
-        <div id="panel-tabs">
-            <button class="tab-btn active" data-target="tab-outliner">Outliner</button>
-            <button class="tab-btn" data-target="tab-details">Details</button>
-            <button class="tab-btn" data-target="tab-world">World</button>
-            <button class="tab-btn" data-target="tab-ui">UI</button>
-            <button class="tab-btn" data-target="tab-logic">Logic</button>
-            <button class="tab-btn" data-target="tab-assets">Assets</button>
-        </div>
-        <div class="panel-content-wrapper">
-            <div class="panel-section tab-pane active" id="tab-outliner">
-                <div class="panel-header">
-                    <span class="panel-title">OUTLINER</span>
-                    <button class="btn-small" id="btn-clear-scene" style="color:#ff5577;">مسح الكل</button>
-                </div>
-                <div id="object-list"></div>
-            </div>
-            
-            <div class="panel-section tab-pane" id="tab-details">
-                <div class="panel-header">
-                    <span class="panel-title" style="color:#00e5ff;">DETAILS</span>
-                    <div id="object-actions" style="display:none; gap:5px;">
-                        <button class="btn-small" id="btn-duplicate" style="background:#478cbf; color:#fff;" title="نسخ">📑</button>
-                        <button class="btn-small" id="btn-delete-obj" style="background:#ff5577; color:#fff;" title="حذف">🗑️</button>
-                    </div>
-                </div>
-                <div id="no-selection-msg" style="text-align:center; color:#666; font-size:12px; margin-top:10px;">لم يتم تحديد مجسم.</div>
-                <div id="inspector">
-                    <div class="prop-grid">
-                        <div class="prop-row" style="grid-column: span 2;">
-                            <label style="width:auto;">المادة</label>
-                            <select id="prop-material" style="flex:1; background:#222; border:1px solid #444; color:#fff; border-radius:4px; padding:4px;">
-                                <option value="default">عادي</option>
-                                <option value="metal">معدن</option>
-                                <option value="wood">خشب</option>
-                                <option value="glass">زجاج</option>
-                                <option value="rubber">مطاط</option>
-                                <option value="gold">ذهب</option>
-                            </select>
-                        </div>
-                        
-                        <div class="prop-row"><label>X</label><input type="range" id="prop-x" min="-50" max="50" step="0.1"></div>
-                        <div class="prop-row"><label>Y</label><input type="range" id="prop-y" min="-5" max="30" step="0.1"></div>
-                        <div class="prop-row"><label>Z</label><input type="range" id="prop-z" min="-50" max="50" step="0.1"></div>
-                        <div class="prop-row"><label>🎨</label><input type="color" id="prop-color" value="#00e5ff"></div>
-                        
-                        <div class="prop-row" style="grid-column: span 2; justify-content: space-between; background: #222; margin-top: 5px;">
-                            <label style="width:auto; font-weight:bold; color:#ffaa00;">تفعيل الجاذبية</label>
-                            <input type="checkbox" id="prop-physics" style="width:20px; height:20px; accent-color:#ffaa00;">
-                        </div>
-                        <button class="btn-small" id="btn-save-asset" style="grid-column: span 2; background: #ffaa00; color: #000; font-weight: bold; margin-top: 5px;">💾 حفظ كأصل</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="panel-section tab-pane" id="tab-world">
-                <div class="panel-header"><span class="panel-title">WORLD</span></div>
-                <div style="padding:10px;">
-                    <div class="prop-row" style="margin-bottom:10px;">
-                        <label style="width:70px; font-weight:bold; color:#ffaa00; font-size:11px;">الوقت</label>
-                        <input type="range" id="env-time-of-day" min="0" max="24" step="0.1" value="14" style="flex:1; accent-color:#ffaa00;">
-                        <span id="time-display" style="width:35px; text-align:center; font-size:11px; color:#fff;">14:00</span>
-                    </div>
-                    <div class="prop-row" style="margin-bottom:10px;"><label style="width:80px;">المطر</label><input type="checkbox" id="env-rain-toggle"></div>
-                </div>
-            </div>
-
-            <div class="panel-section tab-pane" id="tab-ui">
-                <div class="panel-header"><span class="panel-title" style="color:#ffaa00;">UI</span></div>
-                <div style="padding:10px;">
-                    <div class="prop-row" style="margin-bottom:10px;">
-                        <input type="text" id="ui-text-input" placeholder="نص..." style="flex:1; padding:6px; background:#222; border:1px solid #444; color:#fff;">
-                    </div>
-                    <button class="btn-small" id="btn-add-text" style="width:100%; background:#3b82f6; color:#fff; padding:8px;">إضافة نص</button>
-                    <button class="btn-small" id="btn-clear-ui" style="width:100%; background:#ff5577; color:#fff; padding:8px; margin-top:5px;">مسح</button>
-                </div>
-            </div>
-
-            <div class="panel-section tab-pane" id="tab-logic">
-                <div class="panel-header"><span class="panel-title" style="color:#4ade80;">LOGIC</span></div>
-                <div style="padding:10px;">
-                    <div id="no-logic-selection" style="text-align:center; color:#666; font-size:12px; margin-top:10px;">حدد مجسماً.</div>
-                    <div id="logic-editor" style="display:none;">
-                        <div class="prop-row" style="margin-bottom:5px;"><label style="width:50px; font-size:11px;">الحدث</label>
-                            <select id="logic-event" style="flex:1; background:#222; color:#fff; border:1px solid #444; padding:4px; font-size:11px;">
-                                <option value="onStart">عند البدء</option>
-                                <option value="onCollide">عند الاصطدام</option>
-                                <option value="onTimer">مؤقت (كل 3 ثواني)</option>
-                            </select>
-                        </div>
-                        <div class="prop-row" style="margin-bottom:10px;"><label style="width:50px; font-size:11px;">الإجراء</label>
-                            <select id="logic-action" style="flex:1; background:#222; color:#fff; border:1px solid #444; padding:4px; font-size:11px;">
-                                <option value="addScore">نقاط +10</option>
-                                <option value="destroy">تدمير</option>
-                                <option value="playSound">صوت</option>
-                                <option value="spawnCube">توليد مكعب</option>
-                                <option value="teleport">انتقال عشوائي</option>
-                            </select>
-                        </div>
-                        <button class="btn-small" id="btn-add-logic" style="width:100%; background:#4ade80; color:#000; font-weight:bold;">إضافة</button>
-                        <div id="active-logic-list" style="margin-top:10px; display:flex; flex-direction:column; gap:5px;"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="panel-section tab-pane" id="tab-assets">
-                <div class="panel-header"><span class="panel-title" style="color:#ffaa00;">ASSETS</span></div>
-                <div id="asset-grid" style="padding:10px; display:grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap:10px; overflow-y:auto;"></div>
-            </div>
-        </div>
-    </aside>
-
     <script type="importmap">
-    { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/", "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js" } }
+    { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
     </script>
-    <script type="module" src="src/main.js?v=21.0.0"></script>
+    <script type="module" src="src/main.js?v=100"></script>
 </body>
 </html>
