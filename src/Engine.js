@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Physics } from './Physics.js?v=103';
+import { Serializer } from './Serializer.js?v=104';
 
 export class Engine {
     constructor(canvas) {
@@ -36,7 +37,7 @@ export class Engine {
         window.addEventListener('resize', () => this.resize());
         this.resize();
         
-        this.createObject('cube');
+        this.loadScene(); // تحميل المشهد المحفوظ أو إنشاء مكعب افتراضي
     }
 
     createObject(type) {
@@ -87,6 +88,30 @@ export class Engine {
     selectObject(obj) {
         this.selectedObj = obj;
         if (this.onSelectCallback) this.onSelectCallback(obj);
+    }
+
+
+    saveScene() {
+        const data = this.objects.map(o => Serializer.serialize(o));
+        localStorage.setItem('kgtf_saved_scene', JSON.stringify(data));
+        alert('تم حفظ المشهد بنجاح!');
+    }
+
+    loadScene() {
+        const raw = localStorage.getItem('kgtf_saved_scene');
+        if (raw) {
+            try {
+                const data = JSON.parse(raw);
+                this.clearScene();
+                data.forEach(d => Serializer.deserialize(d, this));
+                this.selectObject(null);
+            } catch (e) {
+                console.error("Load failed:", e);
+            }
+        } else {
+            // إذا لم يكن هناك حفظ، ننشئ مكعب افتراضي
+            this.loadScene(); // تحميل المشهد المحفوظ أو إنشاء مكعب افتراضي
+        }
     }
 
     resize() {
