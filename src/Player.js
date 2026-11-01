@@ -84,6 +84,10 @@ export class Player {
         this.isGrounded = true;
         this.cameraYaw = 0;
         this.engine.selectObject(null);
+        
+        // ✅ فك حظر الصوت وتشغيل الموسيقى
+        this.engine.audio.unlock();
+        this.engine.audio.playBGM();
     }
 
     stopPlay() {
@@ -96,6 +100,8 @@ export class Player {
         if (this.playerModel && this.playerModel.userData.animator) {
             this.playerModel.userData.animator.play('idle');
         }
+        
+        this.engine.audio.stopBGM();
     }
 
     update(dt) {
@@ -159,7 +165,7 @@ export class Player {
             this.playerModel.userData.animator.update(dt);
         }
 
-        // ✅ فحص التصادم وإطلاق الأحداث
+        // فحص التصادم وإطلاق الحدث
         const playerBox = new THREE.Box3().setFromCenterAndSize(
             this.playerModel.position.clone().add(new THREE.Vector3(0, 1, 0)), 
             new THREE.Vector3(0.8, 2, 0.8)
