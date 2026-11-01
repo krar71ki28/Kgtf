@@ -1,6 +1,6 @@
-import { Engine } from './Engine.js?v=4.0.0';
-import { Editor } from './Editor.js?v=4.0.0';
-import { Player } from './Player.js?v=4.0.0';
+import { Engine } from './Engine.js?v=1000';
+import { Editor } from './Editor.js?v=1000';
+import { Player } from './Player.js?v=1000';
 
 const canvas = document.getElementById('viewport');
 const engine = new Engine(canvas);
@@ -28,4 +28,11 @@ function animate() {
     fpsAcc += dt; frames++; 
     if (fpsAcc >= 0.5) { fpsEl.innerText = Math.round(frames / fpsAcc); fpsAcc = 0; frames = 0; }
 }
+
+// إخفاء رسالة التحميل إن وجدت
+setTimeout(() => { 
+    const tag = document.getElementById('version-tag'); 
+    if(tag) tag.style.display = 'none'; 
+}, 1000);
+
 animate();

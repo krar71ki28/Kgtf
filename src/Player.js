@@ -12,22 +12,13 @@ export class Player {
         this.cameraPitch = 0.3; 
         this.targetDist = 4.5; 
         this.currentDist = 4.5; 
-        this.cameraLag = 15; 
-        this.cameraMode = 'TPS'; 
         
         this.setupControls();
     }
 
     setupControls() {
-        document.getElementById('btn-play').addEventListener('click', () => this.startPlay());
-        
-        const btnExit = document.getElementById('exit-play');
-        if(btnExit) {
-            btnExit.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.stopPlay();
-            });
-        }
+        document.getElementById('btn-play').onclick = () => this.startPlay();
+        document.getElementById('exit-play').onclick = () => this.stopPlay();
 
         window.addEventListener('keydown', (e) => { 
             this.keys[e.code] = true; 
@@ -35,77 +26,70 @@ export class Player {
         });
         window.addEventListener('keyup', (e) => this.keys[e.code] = false);
 
+        // ✅ الجويستيك (باستخدام Pointer Events لضمان العمل على كل الأجهزة)
         let joyActive = false, joyDir = {x:0, y:0};
         const joyZone = document.getElementById('joystick-zone'), joyKnob = document.getElementById('joystick-knob');
         
         if(joyZone && joyKnob) {
-            joyZone.addEventListener('touchstart', (e) => { 
+            joyZone.addEventListener('pointerdown', (e) => { 
                 e.preventDefault(); e.stopPropagation(); 
                 joyActive = true; 
-            }, { passive: false });
+                joyZone.setPointerCapture(e.pointerId);
+            });
 
-            joyZone.addEventListener('touchmove', (e) => {
+            joyZone.addEventListener('pointermove', (e) => {
                 e.preventDefault(); e.stopPropagation(); 
                 if(!joyActive) return;
                 const rect = joyZone.getBoundingClientRect();
-                let dx = e.touches[0].clientX - (rect.left + rect.width/2);
-                let dy = e.touches[0].clientY - (rect.top + rect.height/2);
+                let dx = e.clientX - (rect.left + rect.width/2);
+                let dy = e.clientY - (rect.top + rect.height/2);
                 const dist = Math.sqrt(dx*dx + dy*dy); 
                 if(dist > 40) { dx = (dx/dist)*40; dy = (dy/dist)*40; }
                 joyKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
                 joyDir.x = dx/40; joyDir.y = dy/40;
-            }, { passive: false });
+            });
 
-            joyZone.addEventListener('touchend', (e) => { 
+            const endJoy = (e) => {
+                if(!joyActive) return;
                 e.preventDefault(); e.stopPropagation(); 
                 joyActive = false; 
                 joyKnob.style.transform = `translate(-50%, -50%)`; 
                 joyDir = {x:0, y:0}; 
-            }, { passive: false });
+            };
+
+            joyZone.addEventListener('pointerup', endJoy);
+            joyZone.addEventListener('pointercancel', endJoy);
+            joyZone.addEventListener('pointerleave', endJoy);
         }
         
+        // ✅ زر القفز
         const btnJump = document.getElementById('btn-jump');
-        if(btnJump) btnJump.addEventListener('touchstart', (e) => { 
+        if(btnJump) btnJump.addEventListener('pointerdown', (e) => { 
             e.preventDefault(); e.stopPropagation(); 
             if(this.isPlaying && this.isGrounded) { this.velocityY = 8; this.isGrounded = false; } 
-        }, { passive: false });
+        });
 
+        // ✅ التحكم بالكاميرا (Pointer Events)
         const canvas = this.engine.renderer.domElement;
         let isDraggingCam = false;
         let lastCamPos = { x: 0, y: 0 };
-        let initialPinchDist = 0;
 
-        canvas.addEventListener('touchstart', (e) => {
+        canvas.addEventListener('pointerdown', (e) => {
             if (!this.isPlaying) return;
-            e.preventDefault(); 
-            if (e.touches.length === 2) {
-                initialPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-            } else if (e.touches.length === 1) {
-                isDraggingCam = true;
-                lastCamPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-            }
-        }, { passive: false });
+            // تجاهل النقر إذا كان على زر
+            if (e.target !== canvas) return; 
+            isDraggingCam = true;
+            lastCamPos = { x: e.clientX, y: e.clientY };
+        });
         
-        canvas.addEventListener('touchmove', (e) => {
-            if (!this.isPlaying) return;
-            e.preventDefault();
-            if (e.touches.length === 2 && initialPinchDist > 0) {
-                const currentPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-                const delta = initialPinchDist - currentPinchDist;
-                this.targetDist = Math.max(0.5, Math.min(8, this.targetDist + delta * 0.05));
-                initialPinchDist = currentPinchDist;
-            } else if (e.touches.length === 1 && isDraggingCam) {
-                const touch = e.touches[0];
-                this.cameraYaw -= (touch.clientX - lastCamPos.x) * 0.005;
-                this.cameraPitch = Math.max(-0.5, Math.min(1.2, this.cameraPitch + (touch.clientY - lastCamPos.y) * 0.005));
-                lastCamPos = { x: touch.clientX, y: touch.clientY };
-            }
-        }, { passive: false });
+        canvas.addEventListener('pointermove', (e) => {
+            if (!isDraggingCam || !this.isPlaying) return;
+            this.cameraYaw -= (e.clientX - lastCamPos.x) * 0.005;
+            this.cameraPitch = Math.max(-0.5, Math.min(1.2, this.cameraPitch + (e.clientY - lastCamPos.y) * 0.005));
+            lastCamPos = { x: e.clientX, y: e.clientY };
+        });
         
-        canvas.addEventListener('touchend', (e) => { 
-            e.preventDefault();
-            isDraggingCam = false; initialPinchDist = 0; 
-        }, { passive: false });
+        window.addEventListener('pointerup', () => { isDraggingCam = false; });
 
         this.getJoyDir = () => joyActive ? joyDir : {x:0, y:0};
     }
@@ -115,22 +99,16 @@ export class Player {
         if (!this.playerModel) { alert('أضف شخصية أولاً!'); return; }
         
         this.isPlaying = true;
-        this.playerModel.visible = true;
         this.playerModel.position.set(0, 0, 0);
-        this.playerModel.rotation.set(0, 0, 0);
         this.velocityY = 0;
         this.isGrounded = true;
         
         document.body.classList.add('play-mode');
         document.getElementById('play-ui').style.display = 'block';
+        
         this.engine.selectObject(null); 
         this.engine.orbit.enabled = false;
-        
         this.cameraYaw = Math.PI; 
-        this.cameraPitch = 0.3;
-        this.targetDist = 4.5;
-        
-        this.engine.startGameLogic();
     }
 
     stopPlay() {
@@ -140,11 +118,16 @@ export class Player {
         this.engine.orbit.enabled = true; 
         this.engine.camera.position.set(6, 6, 8); 
         this.engine.orbit.target.set(0, 1, 0);
-        
-        if (this.playerModel) this.playerModel.visible = true;
     }
 
     update(dt) {
+        // ✅ تحديث شاشة التشخيص قبل أي شرط
+        const debug = document.getElementById('debug-info');
+        if (debug) {
+            debug.innerHTML = `isPlaying: ${this.isPlaying}<br>` +
+                              `Joy: ${this.getJoyDir().x.toFixed(2)}, ${this.getJoyDir().y.toFixed(2)}`;
+        }
+
         if (!this.isPlaying || !this.playerModel) return;
         
         const speed = 5;
@@ -165,22 +148,10 @@ export class Player {
         }
 
         const isMoving = moveVector.lengthSq() > 0;
-        
-        // ✅ تحديث شاشة التشخيص
-        const debug = document.getElementById('debug-info');
-        if (debug) {
-            debug.innerHTML = `Joy: ${joy.x.toFixed(2)}, ${joy.y.toFixed(2)}<br>` +
-                              `Move: ${moveVector.x.toFixed(2)}, ${moveVector.z.toFixed(2)}<br>` +
-                              `isPlaying: ${this.isPlaying}`;
-        }
-
-        this.currentDist += (this.targetDist - this.currentDist) * 10 * dt;
-        const isFirstPerson = this.currentDist < 0.8;
-        this.playerModel.visible = !isFirstPerson;
 
         if (isMoving) {
             moveVector.normalize(); 
-            // حركة حرة مطلقة
+            // ✅ تحريك مباشر بدون أي فحص
             this.playerModel.position.x += moveVector.x * speed * dt;
             this.playerModel.position.z += moveVector.z * speed * dt;
             
@@ -197,15 +168,19 @@ export class Player {
             this.playerModel.position.y = 0; this.velocityY = 0; this.isGrounded = true; 
         }
 
-        const camHeight = 1.5; 
-        const anchorPos = this.playerModel.position.clone().add(new THREE.Vector3(0, camHeight, 0));
-        
+        // الكاميرا
+        const anchorPos = this.playerModel.position.clone().add(new THREE.Vector3(0, 1.5, 0));
         const offsetX = Math.sin(this.cameraYaw) * this.currentDist * Math.cos(this.cameraPitch);
         const offsetZ = Math.cos(this.cameraYaw) * this.currentDist * Math.cos(this.cameraPitch);
         const offsetY = Math.sin(this.cameraPitch) * this.currentDist;
         
-        let targetCamPos = anchorPos.clone().add(new THREE.Vector3(offsetX, offsetY, offsetZ));
-        this.engine.camera.position.lerp(targetCamPos, this.cameraLag * dt);
+        const targetCamPos = anchorPos.clone().add(new THREE.Vector3(offsetX, offsetY, offsetZ));
+        this.engine.camera.position.lerp(targetCamPos, 10 * dt);
         this.engine.camera.lookAt(anchorPos);
+
+        // الأنميشن
+        if (this.playerModel.userData.animator) {
+            this.playerModel.userData.animator.play(isMoving ? 'walk' : 'idle', 0.2);
+        }
     }
 }
