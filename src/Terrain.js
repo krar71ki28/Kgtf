@@ -5,52 +5,47 @@ export function createTerrain(scene, world) {
     const width = 100;
     const depth = 100;
     const segments = 50; 
-    const elementSize = width / segments;
 
     const geometry = new THREE.PlaneGeometry(width, depth, segments, segments);
     geometry.rotateX(-Math.PI / 2);
 
     const vertices = geometry.attributes.position.array;
-    const matrix = [];
+    const indices = geometry.index.array; // نحتاج الفهارس للـ Trimesh
 
-    let index = 0;
-    for (let i = 0; i <= segments; i++) {
-        matrix.push([]);
-        for (let j = 0; j <= segments; j++) {
-            const x = vertices[index];
-            const z = vertices[index + 2];
-            // تضاريس ناعمة ومتموجة
-            const y = Math.sin(x * 0.1) * Math.cos(z * 0.1) * 3.0; 
-            vertices[index + 1] = y;
-            matrix[i].push(y);
-            index += 3;
-        }
+    // تعديل ارتفاع التضاريس (التلال)
+    for (let i = 0; i < vertices.length; i += 3) {
+        const x = vertices[i];
+        const z = vertices[i + 2];
+        // دالة رياضية للتلال
+        const y = Math.sin(x * 0.1) * Math.cos(z * 0.1) * 3.0; 
+        vertices[i + 1] = y;
     }
-    geometry.computeVertexNormals(); // ضروري لجعل الإضاءة ناعمة
+    geometry.computeVertexNormals();
 
-    // المادة: إزالة flatShading ليصبح الرسم مطابقاً للفيزياء
+    // الرسم (Visual)
     const material = new THREE.MeshStandardMaterial({ 
-        color: 0x3e6b48, // لون عشبي واقعي
+        color: 0x3e6b48, 
         roughness: 0.8,
         metalness: 0.1,
-        flatShading: false // <--- هذا هو سر حل مشكلة الطمس
+        flatShading: false
     });
-
     const terrainMesh = new THREE.Mesh(geometry, material);
     terrainMesh.receiveShadow = true;
     terrainMesh.castShadow = true;
     scene.add(terrainMesh);
 
+    // الفيزياء (Physics)
     if (world) {
-        const heightfieldShape = new CANNON.Heightfield(matrix, { elementSize });
-        const heightfieldBody = new CANNON.Body({ mass: 0 });
-        heightfieldBody.addShape(heightfieldShape);
+        // استخدام Trimesh بدلاً من Heightfield لنسخ الرسم حرفياً
+        const trimeshShape = new CANNON.Trimesh(vertices, indices);
+        const trimeshBody = new CANNON.Body({ mass: 0 });
+        trimeshBody.addShape(trimeshShape);
         
-        // رفع الفيزياء قليلاً لضمان أن المجسمات تقف فوقها وليس بداخلها
-        heightfieldBody.position.set(-width / 2, 0.1, depth / 2); 
-        heightfieldBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+        // إزاحة طفيفة جداً للأعلى (0.2) لمنع الكيوب من الغوص
+        trimeshBody.position.set(0, 0.2, 0); 
         
-        world.addBody(heightfieldBody);
+        world.addBody(trimeshBody);
+        console.log('⛰️ Terrain Physics (Trimesh) Added - Perfect Match');
     }
     return terrainMesh;
 }
