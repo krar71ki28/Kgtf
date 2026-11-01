@@ -26,7 +26,7 @@ export class Engine {
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 1.0;
+        this.renderer.toneMappingExposure = 0.5;
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
         this.orbit = new OrbitControls(this.camera, this.renderer.domElement);
@@ -41,7 +41,7 @@ export class Engine {
         // Bloom (توهج الإضاءة)
         this.bloomPass = new UnrealBloomPass(
             new THREE.Vector2(window.innerWidth, window.innerHeight), 
-            0.4, 0.4, 0.85
+            0.2, 0.4, 0.95
         );
         this.composer.addPass(this.bloomPass);
 

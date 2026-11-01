@@ -8,28 +8,26 @@ export class Environment {
         this.renderer = engine.renderer;
         this.rainSystem = null;
 
-        // 1. تفعيل الظلال (مثل Unreal)
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-        // 2. إنشاء السماء الفيزيائية
         this.sky = new Sky();
         this.sky.scale.setScalar(450000);
         this.scene.add(this.sky);
 
-        // 3. إعداد الشمس والظلال
         const sunPos = new THREE.Vector3();
-        const phi = THREE.MathUtils.degToRad(90 - 45); // ارتفاع الشمس
+        const phi = THREE.MathUtils.degToRad(90 - 45);
         const theta = THREE.MathUtils.degToRad(180); 
         sunPos.setFromSphericalCoords(1, phi, theta);
 
-        this.sky.material.uniforms['turbidity'].value = 10; // غيوم خفيفة
-        this.sky.material.uniforms['rayleigh'].value = 3;   // زرقة السماء
+        this.sky.material.uniforms['turbidity'].value = 10; 
+        this.sky.material.uniforms['rayleigh'].value = 3;   
         this.sky.material.uniforms['mieCoefficient'].value = 0.005;
         this.sky.material.uniforms['mieDirectionalG'].value = 0.7;
         this.sky.material.uniforms['sunPosition'].value.copy(sunPos);
 
-        this.sun = new THREE.DirectionalLight(0xfff5e6, 3.0);
+        // ✅ تقليل شدة الشمس من 3.0 إلى 1.5 (لون دافئ وطبيعي)
+        this.sun = new THREE.DirectionalLight(0xfff5e6, 1.5);
         this.sun.position.copy(sunPos).multiplyScalar(100);
         this.sun.castShadow = true;
         this.sun.shadow.mapSize.width = 2048;
@@ -42,11 +40,10 @@ export class Environment {
         this.sun.shadow.camera.bottom = -50;
         this.scene.add(this.sun);
 
-        // إضاءة محيطة منخفضة (عشان الظلال تبان)
-        this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.4);
+        // ✅ زيادة الإضاءة المحيطة قليلاً (لتعويض تقليل الشمس)
+        this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
         this.scene.add(this.hemiLight);
 
-        // 4. توليد انعكاسات بيئية (PBR Environment)
         const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
         this.scene.environment = pmremGenerator.fromScene(this.sky).texture;
     }
