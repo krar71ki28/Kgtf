@@ -23,11 +23,7 @@ export class Editor {
         });
 
         document.getElementById('btn-clear-scene').onclick = () => this.engine.clearScene();
-
-        document.getElementById('btn-save').onclick = () => {
-            this.engine.saveScene();
-        };
-
+        document.getElementById('btn-save').onclick = () => this.engine.saveScene();
 
         const bindProp = (id, cb) => {
             document.getElementById(id).addEventListener('input', (e) => {

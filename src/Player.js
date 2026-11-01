@@ -95,11 +95,6 @@ export class Player {
     }
 
     update(dt) {
-        const debug = document.getElementById('debug-info');
-        if (debug) {
-            debug.innerHTML = `isPlaying: ${this.isPlaying}<br>Joy: ${this.joyDir.x.toFixed(2)}, ${this.joyDir.y.toFixed(2)}`;
-        }
-
         if (!this.isPlaying || !this.playerModel) return;
         
         const speed = 5;

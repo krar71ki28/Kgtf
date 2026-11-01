@@ -16,7 +16,6 @@ export class Physics {
 
     addNode(mesh) {
         if (mesh.userData.type === 'character') return;
-
         let shape;
         if (mesh.userData.type === 'cube') shape = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
         else if (mesh.userData.type === 'sphere') shape = new CANNON.Sphere(0.5);

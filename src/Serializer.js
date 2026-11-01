@@ -1,7 +1,6 @@
 export class Serializer {
     static serialize(mesh) {
         if (!mesh) return null;
-        
         return {
             type: mesh.userData.type,
             position: [mesh.position.x, mesh.position.y, mesh.position.z],
@@ -13,8 +12,6 @@ export class Serializer {
 
     static deserialize(data, engine) {
         if (!data) return null;
-        
-        // إنشاء المجسم باستخدام دالة المحرك
         const mesh = engine.createObject(data.type);
         if (!mesh) return null;
 
@@ -25,14 +22,12 @@ export class Serializer {
             mesh.material.color.set(data.color);
         }
 
-        // تحديث حالة الفيزياء إذا كانت مفعلة
         if (data.physicsEnabled && mesh.userData.body) {
             mesh.userData.physicsEnabled = true;
             mesh.userData.body.mass = 1;
             mesh.userData.body.position.set(data.position[0], data.position[1], data.position[2]);
             mesh.userData.body.updateMassProperties();
         }
-
         return mesh;
     }
 }

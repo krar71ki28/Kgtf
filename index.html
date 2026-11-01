@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>KGTF ENGINE v3.5</title>
+<title>KGTF ENGINE v3.6</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=104">
+<link rel="stylesheet" href="style.css?v=106">
 </head>
 <body>
     <header id="header">
@@ -27,9 +27,6 @@
     <main id="viewport-container">
         <canvas id="viewport"></canvas>
         <div id="play-ui" style="display:none;">
-            <div id="debug-info" style="position:absolute; top:10px; left:10px; background:rgba(0,0,0,0.8); color:#0f0; padding:5px; font-family:monospace; z-index:9999;">
-                isPlaying: false<br>Joy: 0,0
-            </div>
             <button id="exit-play" style="position:absolute; top:20px; left:20px; z-index:1000; padding:10px; background:red; color:white; border:none; border-radius:5px;">✕ إيقاف</button>
             <div id="joystick-zone"><div id="joystick-knob"></div></div>
             <button id="btn-jump">قفز</button>
@@ -37,9 +34,7 @@
     </main>
 
     <aside id="inspector-panel">
-        <div class="panel-header">
-            <span class="panel-title">OUTLINER</span>
-        </div>
+        <div class="panel-header"><span class="panel-title">OUTLINER</span></div>
         <div id="object-list"></div>
         <div id="inspector" style="display:none; padding:10px; background:#1a1a20; border-top:1px solid #333;">
             <div class="prop-row"><label>اللون</label><input type="color" id="prop-color" value="#00e5ff"></div>
@@ -59,6 +54,6 @@
         "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js"
     } }
     </script>
-    <script type="module" src="src/main.js?v=104"></script>
+    <script type="module" src="src/main.js?v=106"></script>
 </body>
 </html>

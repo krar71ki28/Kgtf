@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { Physics } from './Physics.js?v=103';
-import { Serializer } from './Serializer.js?v=104';
+import { Physics } from './Physics.js?v=106';
+import { Serializer } from './Serializer.js?v=106';
 
 export class Engine {
     constructor(canvas) {
@@ -37,7 +37,7 @@ export class Engine {
         window.addEventListener('resize', () => this.resize());
         this.resize();
         
-        this.loadScene(); // تحميل المشهد المحفوظ أو إنشاء مكعب افتراضي
+        this.loadScene();
     }
 
     createObject(type) {
@@ -85,12 +85,6 @@ export class Engine {
         if (this.onSceneChangeCallback) this.onSceneChangeCallback();
     }
 
-    selectObject(obj) {
-        this.selectedObj = obj;
-        if (this.onSelectCallback) this.onSelectCallback(obj);
-    }
-
-
     saveScene() {
         const data = this.objects.map(o => Serializer.serialize(o));
         localStorage.setItem('kgtf_saved_scene', JSON.stringify(data));
@@ -105,13 +99,19 @@ export class Engine {
                 this.clearScene();
                 data.forEach(d => Serializer.deserialize(d, this));
                 this.selectObject(null);
+                return; // نجح التحميل
             } catch (e) {
-                console.error("Load failed:", e);
+                console.error("Load failed, creating default cube:", e);
             }
-        } else {
-            // إذا لم يكن هناك حفظ، ننشئ مكعب افتراضي
-            this.loadScene(); // تحميل المشهد المحفوظ أو إنشاء مكعب افتراضي
         }
+        // إذا لم يوجد حفظ، أو فشل التحميل، ننشئ مكعب افتراضي
+        this.clearScene();
+        this.createObject('cube');
+    }
+
+    selectObject(obj) {
+        this.selectedObj = obj;
+        if (this.onSelectCallback) this.onSelectCallback(obj);
     }
 
     resize() {
