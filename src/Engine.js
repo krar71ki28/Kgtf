@@ -1,15 +1,15 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Physics } from './Physics.js?v=502';
-import { Serializer } from './Serializer.js?v=502';
-import { Animator } from './Animator.js?v=502';
-import { LogicManager } from './Logic.js?v=502';
-import { Environment } from './Environment.js?v=502';
-import { AudioManager } from './Audio.js?v=502';
-import { UIManager } from './UI.js?v=502';
-import { VFXManager } from './VFX.js?v=502';
-import { AIManager } from './AI.js?v=502';
+import { Physics } from './Physics.js?v=800';
+import { Serializer } from './Serializer.js?v=800';
+import { Animator } from './Animator.js?v=800';
+import { LogicManager } from './Logic.js?v=800';
+import { Environment } from './Environment.js?v=800';
+import { AudioManager } from './Audio.js?v=800';
+import { UIManager } from './UI.js?v=800';
+import { VFXManager } from './VFX.js?v=800';
+import { AIManager } from './AI.js?v=800';
 
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -23,12 +23,12 @@ export class Engine {
         this.scene = new THREE.Scene();
 
         this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
-        this.camera.position.set(6, 6, 8); // إرجاع الكاميرا لموقعها الأصلي
+        this.camera.position.set(6, 6, 8); 
 
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 1.2; 
+        this.renderer.toneMappingExposure = 0.6; // ✅ إرجاع التعرض المريح للعين
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -53,15 +53,9 @@ export class Engine {
 
         this.composer.addPass(new OutputPass());
 
-        // ✅ إرجاع الأرضية المسطحة مع النتوءات (Bump Map)
-        const { diffuse, bump } = this.createProceduralGround();
-        const groundMat = new THREE.MeshStandardMaterial({ 
-            map: diffuse, 
-            bumpMap: bump,
-            bumpScale: 0.1,
-            roughness: 0.9, 
-            metalness: 0.1 
-        });
+        // ✅ أرضية بسيطة ومسطحة (بدون Bump Map)
+        const groundTexture = this.createGrassTexture();
+        const groundMat = new THREE.MeshStandardMaterial({ map: groundTexture, roughness: 0.9, metalness: 0.1 });
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), groundMat);
         ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
@@ -87,45 +81,21 @@ export class Engine {
         this.loadScene();
     }
 
-    createProceduralGround() {
-        const size = 512;
+    createGrassTexture() {
         const canvas = document.createElement('canvas');
-        canvas.width = size; canvas.height = size;
+        canvas.width = 256; canvas.height = 256;
         const ctx = canvas.getContext('2d');
-
-        ctx.fillStyle = '#2e4a35'; 
-        ctx.fillRect(0, 0, size, size);
-
-        for (let i = 0; i < 10000; i++) {
-            const x = Math.random() * size; const y = Math.random() * size; const s = Math.random() * 4 + 1;
-            const r = Math.floor(30 + Math.random() * 20); 
-            const g = Math.floor(60 + Math.random() * 40); 
-            const b = Math.floor(30 + Math.random() * 20);
-            ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
-            ctx.fillRect(x, y, s, s);
+        ctx.fillStyle = '#2e4a35'; ctx.fillRect(0, 0, 256, 256);
+        for (let i = 0; i < 5000; i++) {
+            const x = Math.random() * 256; const y = Math.random() * 256; const size = Math.random() * 3 + 1;
+            const r = Math.floor(30 + Math.random() * 20); const g = Math.floor(60 + Math.random() * 40); const b = Math.floor(30 + Math.random() * 20);
+            ctx.fillStyle = `rgb(${r}, ${g}, ${b})`; ctx.fillRect(x, y, size, size);
         }
-        const diffuse = new THREE.CanvasTexture(canvas);
-        diffuse.wrapS = THREE.RepeatWrapping; diffuse.wrapT = THREE.RepeatWrapping;
-        diffuse.repeat.set(50, 50);
-        diffuse.colorSpace = THREE.SRGBColorSpace;
-
-        const bumpCanvas = document.createElement('canvas');
-        bumpCanvas.width = size; bumpCanvas.height = size;
-        const bCtx = bumpCanvas.getContext('2d');
-        bCtx.fillStyle = '#808080';
-        bCtx.fillRect(0, 0, size, size);
-
-        for (let i = 0; i < 10000; i++) {
-            const x = Math.random() * size; const y = Math.random() * size; const s = Math.random() * 4 + 1;
-            const val = Math.floor(Math.random() * 255);
-            bCtx.fillStyle = `rgb(${val}, ${val}, ${val})`;
-            bCtx.fillRect(x, y, s, s);
-        }
-        const bump = new THREE.CanvasTexture(bumpCanvas);
-        bump.wrapS = THREE.RepeatWrapping; bump.wrapT = THREE.RepeatWrapping;
-        bump.repeat.set(50, 50);
-
-        return { diffuse, bump };
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping; texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(50, 50);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        return texture;
     }
 
     loadGLB(file, position = new THREE.Vector3(0, 1, 0)) {

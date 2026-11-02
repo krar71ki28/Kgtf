@@ -1,6 +1,6 @@
-import { Engine } from './Engine.js?v=502';
-import { Editor } from './Editor.js?v=502';
-import { Player } from './Player.js?v=502';
+import { Engine } from './Engine.js?v=800';
+import { Editor } from './Editor.js?v=800';
+import { Player } from './Player.js?v=800';
 
 const canvas = document.getElementById('viewport');
 const engine = new Engine(canvas);
