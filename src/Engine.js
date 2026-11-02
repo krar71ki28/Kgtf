@@ -1,15 +1,15 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Physics } from './Physics.js?v=801';
-import { Serializer } from './Serializer.js?v=801';
-import { Animator } from './Animator.js?v=801';
-import { LogicManager } from './Logic.js?v=801';
-import { Environment } from './Environment.js?v=801';
-import { AudioManager } from './Audio.js?v=801';
-import { UIManager } from './UI.js?v=801';
-import { VFXManager } from './VFX.js?v=801';
-import { AIManager } from './AI.js?v=801';
+import { Physics } from './Physics.js?v=900';
+import { Serializer } from './Serializer.js?v=900';
+import { Animator } from './Animator.js?v=900';
+import { LogicManager } from './Logic.js?v=900';
+import { Environment } from './Environment.js?v=900';
+import { AudioManager } from './Audio.js?v=900';
+import { UIManager } from './UI.js?v=900';
+import { VFXManager } from './VFX.js?v=900';
+import { AIManager } from './AI.js?v=900';
 
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -27,11 +27,10 @@ export class Engine {
 
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
+        
+        // ✅ إعدادات الريندر البسيطة (نسخة v7.2)
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        
-        // ✅ هذا هو السر: التعرض 0.6 يعطي ألواناً فاتحة ومريحة
         this.renderer.toneMappingExposure = 0.6; 
-        
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
