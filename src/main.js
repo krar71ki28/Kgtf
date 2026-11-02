@@ -1,10 +1,12 @@
 import { Engine } from './Engine.js?v=999';
 import { Player } from './Player.js?v=999';
 import { Serializer } from './Serializer.js?v=1000';
+import { Physics } from './Physics.js?v=1000';
 
 const canvas = document.getElementById('viewport');
 const engine = new Engine(canvas);
 const player = new Player(engine);
+const physics = new Physics(engine);
 
 // إضافة المكعبات
 document.getElementById('btn-add-cube').onclick = () => {
@@ -21,7 +23,7 @@ document.getElementById('btn-add-character').onclick = () => {
     engine.createObject('character');
 };
 
-// مسح المجسمات
+// مسح المشهد
 document.getElementById('btn-clear-scene').onclick = () => {
     engine.clearScene();
 };
@@ -33,11 +35,11 @@ document.getElementById('btn-save-scene').onclick = () => {
         alert('تم تجهيز ملف المشهد للحفظ');
     } catch (error) {
         console.error(error);
-        alert('حدث خطأ أثناء حفظ المشهد');
+        alert('حدث خطأ أثناء الحفظ');
     }
 };
 
-// فتح نافذة اختيار ملف المشهد
+// اختيار ملف التحميل
 const fileInput = document.getElementById('scene-file-input');
 
 document.getElementById('btn-load-scene').onclick = () => {
@@ -50,28 +52,21 @@ fileInput.onchange = async (event) => {
 
     if (!file) return;
 
-    try {
-        const jsonData = await file.text();
-        const success = Serializer.loadScene(engine, jsonData);
+    const jsonData = await file.text();
+    const success = Serializer.loadScene(engine, jsonData);
 
-        if (success) {
-            alert('تم تحميل المشهد بنجاح');
-        } else {
-            alert('تعذر تحميل المشهد. تحقق من ملف JSON');
-        }
-    } catch (error) {
-        console.error(error);
-        alert('ملف المشهد غير صالح');
+    if (success) {
+        alert('تم تحميل المشهد بنجاح');
+    } else {
+        alert('تعذر تحميل المشهد');
     }
 
     fileInput.value = '';
 };
 
-// إنشاء مشهد جديد
+// مشهد جديد
 document.getElementById('btn-new-scene').onclick = () => {
-    const confirmed = confirm('هل تريد إنشاء مشهد جديد؟ سيتم حذف المجسمات الحالية.');
-
-    if (confirmed) {
+    if (confirm('إنشاء مشهد جديد؟ سيتم حذف المجسمات الحالية.')) {
         engine.clearScene();
     }
 };
@@ -85,6 +80,7 @@ function animate() {
     const dt = Math.min((now - lastTime) / 1000, 0.1);
     lastTime = now;
 
+    physics.update(dt);
     engine.update(dt);
     player.update(dt);
     engine.render();
