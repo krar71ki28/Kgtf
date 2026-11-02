@@ -1,15 +1,15 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Physics } from './Physics.js?v=800';
-import { Serializer } from './Serializer.js?v=800';
-import { Animator } from './Animator.js?v=800';
-import { LogicManager } from './Logic.js?v=800';
-import { Environment } from './Environment.js?v=800';
-import { AudioManager } from './Audio.js?v=800';
-import { UIManager } from './UI.js?v=800';
-import { VFXManager } from './VFX.js?v=800';
-import { AIManager } from './AI.js?v=800';
+import { Physics } from './Physics.js?v=801';
+import { Serializer } from './Serializer.js?v=801';
+import { Animator } from './Animator.js?v=801';
+import { LogicManager } from './Logic.js?v=801';
+import { Environment } from './Environment.js?v=801';
+import { AudioManager } from './Audio.js?v=801';
+import { UIManager } from './UI.js?v=801';
+import { VFXManager } from './VFX.js?v=801';
+import { AIManager } from './AI.js?v=801';
 
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -28,7 +28,10 @@ export class Engine {
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 0.6; // ✅ إرجاع التعرض المريح للعين
+        
+        // ✅ هذا هو السر: التعرض 0.6 يعطي ألواناً فاتحة ومريحة
+        this.renderer.toneMappingExposure = 0.6; 
+        
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -53,7 +56,7 @@ export class Engine {
 
         this.composer.addPass(new OutputPass());
 
-        // ✅ أرضية بسيطة ومسطحة (بدون Bump Map)
+        // الأرضية المسطحة البسيطة
         const groundTexture = this.createGrassTexture();
         const groundMat = new THREE.MeshStandardMaterial({ map: groundTexture, roughness: 0.9, metalness: 0.1 });
         const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), groundMat);

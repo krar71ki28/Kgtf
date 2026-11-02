@@ -8,6 +8,7 @@ export class Environment {
         this.renderer = engine.renderer;
         this.rainSystem = null;
 
+        // 1. السماء
         this.sky = new Sky();
         this.sky.scale.setScalar(450000);
         this.scene.add(this.sky);
@@ -17,13 +18,13 @@ export class Environment {
         const theta = THREE.MathUtils.degToRad(180);
         sunPos.setFromSphericalCoords(1, phi, theta);
 
-        this.sky.material.uniforms['turbidity'].value = 10;
-        this.sky.material.uniforms['rayleigh'].value = 3;
+        this.sky.material.uniforms['turbidity'].value = 10; 
+        this.sky.material.uniforms['rayleigh'].value = 3;   
         this.sky.material.uniforms['mieCoefficient'].value = 0.005;
         this.sky.material.uniforms['mieDirectionalG'].value = 0.7;
         this.sky.material.uniforms['sunPosition'].value.copy(sunPos);
 
-        // ✅ إضاءة بسيطة ومريحة (قبل التعديلات المعقدة)
+        // ✅ إضاءة خفيفة ومريحة (ألوان فاتحة)
         this.sun = new THREE.DirectionalLight(0xfff5e6, 2.0);
         this.sun.position.copy(sunPos).multiplyScalar(100);
         this.sun.castShadow = true;
@@ -35,15 +36,17 @@ export class Environment {
         this.sun.shadow.camera.right = 50;
         this.sun.shadow.camera.top = 50;
         this.sun.shadow.camera.bottom = -50;
-        this.sun.shadow.bias = -0.0005;
+        this.sun.shadow.bias = -0.0005; 
         this.scene.add(this.sun);
         this.scene.add(this.sun.target);
 
+        // إضاءة محيطة تعطي إشراقاً للظلال
         this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8);
         this.scene.add(this.hemiLight);
 
         this.scene.fog = new THREE.FogExp2(0x87CEEB, 0.015);
 
+        // مجس الانعكاس
         this.cubeRenderTarget = new THREE.WebGLCubeRenderTarget(256, {
             generateMipmaps: true,
             minFilter: THREE.LinearMipmapLinearFilter,
