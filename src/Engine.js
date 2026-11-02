@@ -1,5 +1,3 @@
-import { setupLighting } from './Lighting.js';
-import { createTerrain } from './Terrain.js';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -23,21 +21,14 @@ export class Engine {
     constructor(canvas) {
         this.canvas = canvas;
         this.scene = new THREE.Scene();
-        // --- Unreal Engine Lighting Preset ---
-        if (this.scene) { setupLighting(this.scene, this.renderer); }
-        // --- Auto-injected Lighting ---
-        // --- Auto-injected Terrain ---
-        const pWorld = this.world || this.physicsWorld || (this.physics && this.physics.world);
-        if (this.scene) { createTerrain(this.scene, pWorld); }
 
         this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
-        this.camera.position.set(6, 6, 8);
+        this.camera.position.set(6, 6, 8); // إرجاع الكاميرا لموقعها الأصلي
 
-        // ✅ تحسين التعرض والريندرر (مستوحى من Unreal/Godot)
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 1.2; // تعرض أعلى قليلاً لإضاءة سينمائية
+        this.renderer.toneMappingExposure = 1.2; 
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -62,12 +53,12 @@ export class Engine {
 
         this.composer.addPass(new OutputPass());
 
-        // ✅ أرضية احترافية مع Bump Map (نتوءات)
+        // ✅ إرجاع الأرضية المسطحة مع النتوءات (Bump Map)
         const { diffuse, bump } = this.createProceduralGround();
         const groundMat = new THREE.MeshStandardMaterial({ 
             map: diffuse, 
             bumpMap: bump,
-            bumpScale: 0.1, // قوة النتوءات
+            bumpScale: 0.1,
             roughness: 0.9, 
             metalness: 0.1 
         });
@@ -96,14 +87,12 @@ export class Engine {
         this.loadScene();
     }
 
-    // ✅ توليد أرضية إجرائية مع نتوءات (Bump Map) لمحاكاة واقعية الأرض
     createProceduralGround() {
         const size = 512;
         const canvas = document.createElement('canvas');
         canvas.width = size; canvas.height = size;
         const ctx = canvas.getContext('2d');
 
-        // 1. اللون الأساسي (Diffuse)
         ctx.fillStyle = '#2e4a35'; 
         ctx.fillRect(0, 0, size, size);
 
@@ -120,11 +109,10 @@ export class Engine {
         diffuse.repeat.set(50, 50);
         diffuse.colorSpace = THREE.SRGBColorSpace;
 
-        // 2. خريطة النتوءات (Bump Map) - باللون الرمادي
         const bumpCanvas = document.createElement('canvas');
         bumpCanvas.width = size; bumpCanvas.height = size;
         const bCtx = bumpCanvas.getContext('2d');
-        bCtx.fillStyle = '#808080'; // رمادي متوسط (مستوى سطح البحر)
+        bCtx.fillStyle = '#808080';
         bCtx.fillRect(0, 0, size, size);
 
         for (let i = 0; i < 10000; i++) {
@@ -140,7 +128,7 @@ export class Engine {
         return { diffuse, bump };
     }
 
-    loadGLB(file, position = new THREE.Vector3(0, 0, 0)) {
+    loadGLB(file, position = new THREE.Vector3(0, 1, 0)) {
         return new Promise((resolve, reject) => {
             const url = URL.createObjectURL(file);
             this.loader.load(url, (gltf) => {
