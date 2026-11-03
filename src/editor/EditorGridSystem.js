@@ -2,24 +2,31 @@ import * as THREE from "three";
 
 export class EditorGridSystem {
     constructor(options = {}) {
-        this.size = options.size ?? 100;
+        this.size = options.size ?? 200;
         this.divisions = options.divisions ?? 100;
         this.majorEvery = options.majorEvery ?? 10;
         this.visible = options.visible ?? true;
 
-        if (this.size <= 0 || this.divisions <= 0 || this.majorEvery <= 0) {
+        if (
+            this.size <= 0 ||
+            this.divisions <= 0 ||
+            this.majorEvery <= 0
+        ) {
             throw new RangeError("Grid dimensions must be positive");
         }
 
         this.uniforms = {
-            uSize: { value: this.size },
-            uCellSize: { value: this.size / this.divisions },
-            uMajorEvery: { value: this.majorEvery },
+            uCellSize: {
+                value: this.size / this.divisions
+            },
+            uMajorEvery: {
+                value: this.majorEvery
+            },
             uMinorColor: {
-                value: new THREE.Color(options.minorColor ?? 0x7b858f)
+                value: new THREE.Color(options.minorColor ?? 0x687582)
             },
             uMajorColor: {
-                value: new THREE.Color(options.majorColor ?? 0x535e69)
+                value: new THREE.Color(options.majorColor ?? 0x465563)
             }
         };
 
@@ -30,6 +37,7 @@ export class EditorGridSystem {
 
         this.material = new THREE.ShaderMaterial({
             uniforms: this.uniforms,
+
             vertexShader: `
                 varying vec2 vGridPosition;
 
@@ -42,8 +50,8 @@ export class EditorGridSystem {
                         vec4(position, 1.0);
                 }
             `,
+
             fragmentShader: `
-                uniform float uSize;
                 uniform float uCellSize;
                 uniform float uMajorEvery;
 
@@ -52,7 +60,11 @@ export class EditorGridSystem {
 
                 varying vec2 vGridPosition;
 
-                float gridLine(vec2 position, float spacing, float width) {
+                float gridLine(
+                    vec2 position,
+                    float spacing,
+                    float width
+                ) {
                     vec2 cell = abs(
                         fract(position / spacing + 0.5) - 0.5
                     );
@@ -71,20 +83,20 @@ export class EditorGridSystem {
                     float minor = gridLine(
                         vGridPosition,
                         uCellSize,
-                        uCellSize * 0.018
+                        uCellSize * 0.025
                     );
 
                     float major = gridLine(
                         vGridPosition,
                         uCellSize * uMajorEvery,
-                        uCellSize * 0.035
+                        uCellSize * 0.025
                     );
 
                     float edgeDistance =
-                        length(vGridPosition) / (uSize * 0.5);
+                        length(vGridPosition) / 141.42;
 
-                    float edgeFade =
-                        1.0 - smoothstep(0.70, 1.0, edgeDistance);
+                    float fade =
+                        1.0 - smoothstep(0.68, 1.0, edgeDistance);
 
                     vec3 color = mix(
                         uMinorColor,
@@ -93,13 +105,14 @@ export class EditorGridSystem {
                     );
 
                     float alpha = max(
-                        minor * 0.42,
-                        major * 0.72
-                    ) * edgeFade;
+                        minor * 0.48,
+                        major * 0.78
+                    ) * fade;
 
                     gl_FragColor = vec4(color, alpha);
                 }
             `,
+
             transparent: true,
             depthWrite: false,
             side: THREE.DoubleSide,
@@ -112,10 +125,9 @@ export class EditorGridSystem {
         );
 
         this.mesh.rotation.x = -Math.PI / 2;
-        this.mesh.position.y = 0.015;
+        this.mesh.position.y = 0.012;
         this.mesh.name = "EditorGrid";
         this.mesh.visible = this.visible;
-
         this.mesh.renderOrder = 1;
     }
 

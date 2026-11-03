@@ -27,61 +27,173 @@ async function startEngine() {
     const cameraSystem = new CameraSystem(viewport);
 
     const scene = sceneManager.create("Main", {
-        background: 0x91c5ed
+        background: 0x9dbbd3
     });
 
+    scene.fog = new THREE.Fog(
+        0xb7ccdc,
+        100,
+        320
+    );
+
+    // Sky dome
+    const skyGeometry = new THREE.SphereGeometry(
+        900,
+        32,
+        16
+    );
+
+    const skyMaterial = new THREE.ShaderMaterial({
+        side: THREE.BackSide,
+        depthWrite: false,
+        vertexShader: `
+            varying vec3 vWorldDirection;
+
+            void main() {
+                vec4 worldPosition =
+                    modelMatrix * vec4(position, 1.0);
+
+                vWorldDirection = normalize(worldPosition.xyz);
+
+                gl_Position =
+                    projectionMatrix *
+                    modelViewMatrix *
+                    vec4(position, 1.0);
+            }
+        `,
+        fragmentShader: `
+            varying vec3 vWorldDirection;
+
+            void main() {
+                float height = normalize(vWorldDirection).y;
+
+                vec3 horizon = vec3(0.78, 0.86, 0.92);
+                vec3 middle = vec3(0.43, 0.65, 0.83);
+                vec3 zenith = vec3(0.20, 0.39, 0.62);
+
+                vec3 color = mix(
+                    horizon,
+                    middle,
+                    smoothstep(-0.12, 0.28, height)
+                );
+
+                color = mix(
+                    color,
+                    zenith,
+                    smoothstep(0.28, 0.95, height)
+                );
+
+                gl_FragColor = vec4(color, 1.0);
+            }
+        `
+    });
+
+    const sky = new THREE.Mesh(
+        skyGeometry,
+        skyMaterial
+    );
+
+    sky.name = "EditorSky";
+    sky.renderOrder = -10;
+    scene.add(sky);
+
+    // Ground
     const ground = new THREE.Mesh(
-        new THREE.PlaneGeometry(200, 200),
+        new THREE.PlaneGeometry(1000, 1000),
         new THREE.MeshStandardMaterial({
-            color: 0x858b92,
+            color: 0x777f87,
             roughness: 1,
             metalness: 0
         })
     );
 
     ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -0.025;
-    ground.name = "Ground";
+    ground.position.y = -0.035;
+    ground.name = "EditorGround";
+    ground.receiveShadow = true;
     scene.add(ground);
 
+    // Editor grid
     const gridSystem = new EditorGridSystem({
-        size: 100,
+        size: 200,
         divisions: 100,
         majorEvery: 10,
-        minorColor: 0x7b858f,
-        majorColor: 0x535e69
+        minorColor: 0x687582,
+        majorColor: 0x465563
     });
 
     scene.add(gridSystem.mesh);
 
+    // World axes
+    const axes = new THREE.Group();
+    axes.name = "WorldAxes";
+
+    const xAxis = new THREE.Mesh(
+        new THREE.BoxGeometry(14, 0.012, 0.035),
+        new THREE.MeshBasicMaterial({
+            color: 0xd65c5c
+        })
+    );
+
+    xAxis.position.set(7, 0.025, 0);
+
+    const zAxis = new THREE.Mesh(
+        new THREE.BoxGeometry(0.035, 0.012, 14),
+        new THREE.MeshBasicMaterial({
+            color: 0x4d91d8
+        })
+    );
+
+    zAxis.position.set(0, 0.025, 7);
+
+    axes.add(xAxis, zAxis);
+    scene.add(axes);
+
+    // Lighting
     const hemisphereLight = new THREE.HemisphereLight(
-        0xffffff,
-        0x777d84,
-        2
+        0xe5f1ff,
+        0x60666d,
+        1.7
     );
 
     scene.add(hemisphereLight);
 
     const sunlight = new THREE.DirectionalLight(
-        0xffffff,
-        2.2
+        0xfff3df,
+        2.5
     );
 
-    sunlight.position.set(8, 14, 10);
+    sunlight.position.set(12, 20, 10);
+    sunlight.castShadow = true;
+
+    sunlight.shadow.mapSize.set(1024, 1024);
+    sunlight.shadow.camera.left = -25;
+    sunlight.shadow.camera.right = 25;
+    sunlight.shadow.camera.top = 25;
+    sunlight.shadow.camera.bottom = -25;
+    sunlight.shadow.camera.near = 0.5;
+    sunlight.shadow.camera.far = 70;
+    sunlight.shadow.bias = -0.0002;
+    sunlight.shadow.normalBias = 0.025;
+
     scene.add(sunlight);
 
+    // Object creation
     function addCube() {
         const cube = new THREE.Mesh(
             new THREE.BoxGeometry(1, 1, 1),
             new THREE.MeshStandardMaterial({
                 color: 0x438ee8,
-                roughness: 0.55,
-                metalness: 0.05
+                roughness: 0.48,
+                metalness: 0.04
             })
         );
 
         cube.position.set(0, 0.5, 0);
         cube.name = "Cube";
+        cube.castShadow = true;
+        cube.receiveShadow = true;
+
         scene.add(cube);
 
         return cube;
@@ -146,6 +258,7 @@ async function startEngine() {
         if (disposed) return;
 
         disposed = true;
+
         cancelAnimationFrame(animationFrame);
         cameraResizeObserver.disconnect();
 
@@ -155,6 +268,18 @@ async function startEngine() {
         cameraSystem.dispose();
         sceneManager.dispose();
         renderer.dispose();
+
+        skyGeometry.dispose();
+        skyMaterial.dispose();
+        ground.geometry.dispose();
+        ground.material.dispose();
+
+        axes.traverse((object) => {
+            if (object.isMesh) {
+                object.geometry.dispose();
+                object.material.dispose();
+            }
+        });
     }, { once: true });
 }
 

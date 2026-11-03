@@ -15,7 +15,7 @@ export class Renderer {
         });
 
         this.renderer.setPixelRatio(
-            Math.min(window.devicePixelRatio || 1, 2)
+            Math.min(window.devicePixelRatio || 1, 1.75)
         );
 
         this.renderer.setSize(
@@ -26,6 +26,9 @@ export class Renderer {
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.renderer.toneMappingExposure = 1;
+
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
         this.container.appendChild(this.renderer.domElement);
 
@@ -42,7 +45,7 @@ export class Renderer {
 
         this.renderer.setSize(width, height, false);
         this.renderer.setPixelRatio(
-            Math.min(window.devicePixelRatio || 1, 2)
+            Math.min(window.devicePixelRatio || 1, 1.75)
         );
     }
 
