@@ -504,3 +504,59 @@ button:disabled {
         right: 235px;
     }
 }
+
+/* KGTF Localization */
+#language-toggle {
+    border-color: #5799ed;
+    background: #263b55;
+    color: #ffffff;
+}
+
+html[dir="rtl"] {
+    direction: rtl;
+}
+
+html[dir="rtl"] body {
+    direction: rtl;
+}
+
+html[dir="rtl"] #toolbar {
+    direction: rtl;
+}
+
+html[dir="rtl"] .toolbar-actions {
+    direction: rtl;
+}
+
+html[dir="rtl"] .settings-header {
+    direction: rtl;
+}
+
+html[dir="rtl"] .setting-toggle {
+    direction: rtl;
+}
+
+html[dir="rtl"] #world-settings-button,
+html[dir="rtl"] #outliner-toggle {
+    left: 10px;
+    right: auto;
+}
+
+html[dir="rtl"] #outliner-toggle {
+    left: 125px;
+}
+
+html[dir="rtl"] #world-settings,
+html[dir="rtl"] #outliner-panel {
+    left: 10px;
+    right: auto;
+}
+
+html[dir="rtl"] #viewport-label {
+    left: auto;
+    right: 12px;
+}
+
+html[dir="rtl"] #statusbar {
+    direction: rtl;
+}

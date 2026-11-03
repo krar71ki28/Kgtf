@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -25,13 +25,14 @@
         </div>
 
         <div class="toolbar-actions">
-            <button id="add-cube">إضافة مكعب</button>
-            <button id="save-scene" type="button">حفظ المشهد</button>
-            <button id="load-scene" type="button">تحميل المشهد</button>
+            <button id="add-cube">Add Cube</button>
+            <button id="save-scene" type="button">Save Scene</button>
+            <button id="load-scene" type="button">Load Scene</button>
             <button id="tool-move" type="button">Move</button>
             <button id="tool-rotate" type="button">Rotate</button>
             <button id="tool-scale" type="button">Scale</button>
-            <button id="play-button">تشغيل</button>
+            <button id="play-button">Coming Soon</button>
+            <button id="language-toggle" type="button">العربية</button>
         </div>
     </header>
 
@@ -39,17 +40,15 @@
         <section id="viewport">
             <div id="viewport-label">PERSPECTIVE</div>
 
-            <button id="world-settings-button" type="button">
-                إعدادات العالم
-            </button>
+            <button id="world-settings-button" type="button">World Settings</button>
 
             <section id="world-settings" hidden>
                 <div class="settings-header">
-                    <strong>إعدادات العالم</strong>
+                    <strong>WORLD SETTINGS</strong>
                     <button id="close-world-settings" type="button">×</button>
                 </div>
 
-                <label for="world-size">حجم الأرض</label>
+                <label for="world-size">World Size</label>
                 <select id="world-size">
                     <option value="10">10 × 10</option>
                     <option value="20" selected>20 × 20</option>
@@ -61,54 +60,62 @@
 
                 <label class="setting-toggle">
                     <input id="ground-visible" type="checkbox" checked>
-                    إظهار الأرض
+                    Show Ground
                 </label>
 
                 <label class="setting-toggle">
                     <input id="grid-visible" type="checkbox" checked>
-                    إظهار الشبكة
+                    Show Grid
                 </label>
 
                 <label class="setting-toggle">
                     <input id="axes-visible" type="checkbox" checked>
-                    إظهار المحاور
+                    Show Axes
                 </label>
 
                 <div id="world-size-info">WORLD SIZE: 20 × 20</div>
             </section>
 
-            <button id="lighting-toggle" type="button">الإضاءة والسماء</button>
+            <button id="lighting-toggle" type="button">Lighting</button>
 
             <section id="lighting-panel" hidden>
                 <div class="settings-header">
                     <strong>LIGHTING & SKY</strong>
                     <button id="close-lighting" type="button">×</button>
                 </div>
-                <label for="sun-elevation">ارتفاع الشمس</label>
+
+                <label for="sun-elevation">Sun Elevation</label>
                 <input id="sun-elevation" type="range" min="5" max="90" value="45">
                 <div id="sun-elevation-value" class="lighting-value">45°</div>
-                <label for="sun-azimuth">اتجاه الشمس</label>
+
+                <label for="sun-azimuth">Sun Azimuth</label>
                 <input id="sun-azimuth" type="range" min="0" max="360" value="35">
                 <div id="sun-azimuth-value" class="lighting-value">35°</div>
-                <label for="sun-intensity">شدة ضوء الشمس</label>
+
+                <label for="sun-intensity">Sun Intensity</label>
                 <input id="sun-intensity" type="range" min="0" max="5" step="0.1" value="2.5">
                 <div id="sun-intensity-value" class="lighting-value">2.5</div>
-                <label for="ambient-intensity">الإضاءة المحيطية</label>
+
+                <label for="ambient-intensity">Ambient Intensity</label>
                 <input id="ambient-intensity" type="range" min="0" max="4" step="0.1" value="1.7">
                 <div id="ambient-intensity-value" class="lighting-value">1.7</div>
-                <label for="sky-color">لون السماء</label>
+
+                <label for="sky-color">Sky Color</label>
                 <input id="sky-color" type="color" value="#9dbbd3">
+
                 <label class="setting-toggle">
                     <input id="fog-enabled" type="checkbox" checked>
-                    تفعيل الضباب
+                    Enable Fog
                 </label>
-                <label for="fog-near">بداية الضباب</label>
+
+                <label for="fog-near">Fog Near</label>
                 <input id="fog-near" type="range" min="0" max="300" value="100">
-                <label for="fog-far">نهاية الضباب</label>
+
+                <label for="fog-far">Fog Far</label>
                 <input id="fog-far" type="range" min="50" max="500" value="320">
             </section>
 
-            <button id="terrain-toggle" type="button">التضاريس</button>
+            <button id="terrain-toggle" type="button">Terrain</button>
 
             <section id="terrain-panel" hidden>
                 <div class="settings-header">
@@ -116,25 +123,25 @@
                     <button id="close-terrain" type="button">×</button>
                 </div>
 
-                <label for="terrain-tool">أداة التضاريس</label>
+                <label for="terrain-tool">Sculpting Tool</label>
                 <select id="terrain-tool">
-                    <option value="raise">رفع الأرض</option>
-                    <option value="lower">خفض الأرض</option>
-                    <option value="smooth">تنعيم الأرض</option>
+                    <option value="raise">Raise</option>
+                    <option value="lower">Lower</option>
+                    <option value="smooth">Smooth</option>
                 </select>
 
-                <label for="terrain-brush-size">حجم الفرشاة</label>
+                <label for="terrain-brush-size">Brush Size</label>
                 <input id="terrain-brush-size" type="range" min="0.5" max="6" step="0.5" value="2">
                 <div id="terrain-brush-size-value" class="lighting-value">2</div>
 
-                <label for="terrain-brush-strength">قوة التأثير</label>
+                <label for="terrain-brush-strength">Brush Strength</label>
                 <input id="terrain-brush-strength" type="range" min="0.05" max="2" step="0.05" value="0.5">
                 <div id="terrain-brush-strength-value" class="lighting-value">0.5</div>
 
-                <button id="terrain-reset" type="button">إعادة التضاريس للوضع الأصلي</button>
+                <button id="terrain-reset" type="button">Reset Terrain</button>
             </section>
 
-            <button id="outliner-toggle" type="button">العناصر</button>
+            <button id="outliner-toggle" type="button">Outliner</button>
 
             <section id="outliner-panel" hidden>
                 <div class="settings-header">
@@ -145,19 +152,19 @@
                 <div id="object-list"></div>
 
                 <div id="object-details">
-                    <label for="object-name">اسم العنصر المحدد</label>
+                    <label for="object-name">Selected Object</label>
                     <input id="object-name" type="text" maxlength="40"
-                        placeholder="اختر عنصراً">
+                        placeholder="Select an object">
 
-                    <button id="rename-object" type="button">إعادة تسمية</button>
-                    <button id="delete-object" type="button">حذف العنصر</button>
+                    <button id="rename-object" type="button">Rename</button>
+                    <button id="delete-object" type="button">Delete</button>
                 </div>
 
                 <div id="object-count">OBJECTS: 0</div>
             </section>
 
             <div id="viewport-container"></div>
-            <div id="loading-message">KGTF ENGINE — جاري تجهيز المحرك</div>
+            <div id="loading-message">KGTF ENGINE — Initializing...</div>
         </section>
     </main>
 
@@ -166,6 +173,7 @@
         <span id="fps-counter">FPS: --</span>
     </footer>
 
+    <script src="src/editor/LocalizationSystem.js"></script>
     <script type="module" src="src/main.js"></script>
     <script type="module" src="src/editor/DetailsPanel.js"></script>
 </body>
