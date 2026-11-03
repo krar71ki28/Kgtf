@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#171a21">
+    <title>KGTF ENGINE</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+        }
+    }
+    </script>
+</head>
+<body>
+    <header id="toolbar">
+        <div class="brand">
+            <strong>KGTF</strong>
+            <span>ENGINE</span>
+        </div>
+
+        <div class="toolbar-actions">
+            <button id="add-cube">إضافة مكعب</button>
+            <button id="play-button">تشغيل</button>
+        </div>
+    </header>
+
+    <main id="editor">
+        <section id="viewport">
+            <div id="viewport-label">PERSPECTIVE</div>
+            <div id="viewport-container"></div>
+            <div id="loading-message">KGTF ENGINE — جاري تجهيز المحرك</div>
+        </section>
+    </main>
+
+    <footer id="statusbar">
+        <span id="engine-status">ENGINE: INITIALIZING</span>
+        <span id="fps-counter">FPS: --</span>
+    </footer>
+
+    <script type="module" src="src/main.js"></script>
+</body>
+</html>
