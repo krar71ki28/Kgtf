@@ -16,12 +16,10 @@ export class TerrainSystem {
     }
 
     validateOptions(options) {
-        const size = Number(options.size);
-        const segments = Number(options.segments);
-        const heightScale = Number(options.heightScale);
+        const { size, segments, heightScale } = options;
 
         if (!Number.isFinite(size) || size <= 0) {
-            throw new Error('Terrain size must be positive.');
+            throw new Error('Invalid terrain size.');
         }
 
         if (
@@ -29,7 +27,7 @@ export class TerrainSystem {
             segments < 16 ||
             segments > 512
         ) {
-            throw new Error('Terrain segments must be between 16 and 512.');
+            throw new Error('Invalid terrain segments.');
         }
 
         if (
@@ -39,21 +37,6 @@ export class TerrainSystem {
         ) {
             throw new Error('Invalid terrain height scale.');
         }
-    }
-
-    getHeightAt(x, z) {
-        if (!this.data) return null;
-
-        const halfSize = this.options.size / 2;
-
-        if (
-            Math.abs(x) > halfSize ||
-            Math.abs(z) > halfSize
-        ) {
-            return null;
-        }
-
-        return this.calculateHeight(x, -z);
     }
 
     calculateHeight(x, z) {
@@ -77,25 +60,52 @@ export class TerrainSystem {
             this.options.heightScale;
     }
 
-    init() {
-        if (this.mesh) return;
+    getHeightAt(x, z) {
+        if (!this.data) return null;
 
-        this.rebuild();
+        const half = this.data.size / 2;
+
+        if (
+            Math.abs(x) > half ||
+            Math.abs(z) > half
+        ) return null;
+
+        const { size, segments, heights } = this.data;
+        const spacing = size / segments;
+
+        const gx = (x + half) / spacing;
+        const gz = (z + half) / spacing;
+
+        const col = Math.min(segments - 1, Math.floor(gx));
+        const row = Math.min(segments - 1, Math.floor(gz));
+
+        const tx = gx - col;
+        const tz = gz - row;
+
+        const stride = segments + 1;
+
+        const a = heights[row * stride + col];
+        const b = heights[row * stride + col + 1];
+        const c = heights[(row + 1) * stride + col];
+        const d = heights[(row + 1) * stride + col + 1];
+
+        const top = THREE.MathUtils.lerp(a, b, tx);
+        const bottom = THREE.MathUtils.lerp(c, d, tx);
+
+        return THREE.MathUtils.lerp(top, bottom, tz);
+    }
+
+    init() {
+        if (!this.mesh) this.rebuild();
     }
 
     setOptions(changes = {}) {
-        const nextOptions = {
-            ...this.options,
-            ...changes
-        };
+        const next = { ...this.options, ...changes };
 
-        this.validateOptions(nextOptions);
+        this.validateOptions(next);
+        this.options = next;
 
-        this.options = nextOptions;
-
-        if (this.mesh) {
-            this.rebuild();
-        }
+        if (this.mesh) this.rebuild();
     }
 
     rebuild() {
@@ -105,27 +115,22 @@ export class TerrainSystem {
             this.sceneManager.remove(this.mesh);
             this.mesh.geometry.dispose();
             this.mesh.material.dispose();
-            this.mesh = null;
         }
 
-        const size = this.options.size;
-        const segments = this.options.segments;
+        const { size, segments } = this.options;
 
         const geometry = new THREE.PlaneGeometry(
-            size,
-            size,
-            segments,
-            segments
+            size, size, segments, segments
         );
 
         const positions = geometry.attributes.position;
         const heights = new Float32Array(positions.count);
 
         for (let i = 0; i < positions.count; i++) {
-            const x = positions.getX(i);
-            const z = positions.getY(i);
-
-            const height = this.calculateHeight(x, z);
+            const height = this.calculateHeight(
+                positions.getX(i),
+                positions.getY(i)
+            );
 
             positions.setZ(i, height);
             heights[i] = height;
@@ -133,6 +138,33 @@ export class TerrainSystem {
 
         geometry.computeVertexNormals();
 
+        this.mesh = new THREE.Mesh(
+            geometry,
+            new THREE.MeshStandardMaterial({
+                vertexColors: true,
+                roughness: 0.95
+            })
+        );
+
+        this.mesh.name = 'KGTF_Landscape';
+        this.mesh.receiveShadow = true;
+        this.mesh.userData.engineObject = true;
+        this.mesh.userData.objectType = 'terrain';
+
+        this.mesh.rotation.x = -Math.PI / 2;
+
+        this.data = { size, segments, heights };
+
+        this.updateColors();
+
+        this.sceneManager.add(this.mesh);
+    }
+
+    updateColors() {
+        if (!this.mesh || !this.data) return;
+
+        const geometry = this.mesh.geometry;
+        const positions = geometry.attributes.position;
         const normals = geometry.attributes.normal;
 
         const grass = new THREE.Color(0x527b3d);
@@ -140,30 +172,14 @@ export class TerrainSystem {
         const rock = new THREE.Color(0x777b80);
 
         const colors = [];
-
-        const smoothstep = (a, b, value) => {
-            const t = THREE.MathUtils.clamp(
-                (value - a) / (b - a),
-                0,
-                1
-            );
-
-            return t * t * (3 - 2 * t);
-        };
-
         const color = new THREE.Color();
 
         for (let i = 0; i < positions.count; i++) {
-            const height = heights[i];
+            const height = this.data.heights[i];
             const slope = 1 - normals.getZ(i);
 
             color.copy(grass);
-
-            color.lerp(
-                dirt,
-                smoothstep(1.5, 3.5, height)
-            );
-
+            color.lerp(dirt, smoothstep(1.5, 3.5, height));
             color.lerp(
                 rock,
                 Math.max(
@@ -179,40 +195,26 @@ export class TerrainSystem {
             'color',
             new THREE.Float32BufferAttribute(colors, 3)
         );
-
-        geometry.rotateX(-Math.PI / 2);
-
-        const material = new THREE.MeshStandardMaterial({
-            vertexColors: true,
-            roughness: 0.95,
-            metalness: 0
-        });
-
-        this.mesh = new THREE.Mesh(geometry, material);
-
-        this.mesh.name = 'KGTF_Landscape';
-        this.mesh.receiveShadow = true;
-        this.mesh.userData.engineObject = true;
-        this.mesh.userData.objectType = 'terrain';
-
-        this.sceneManager.add(this.mesh);
-
-        this.data = {
-            size,
-            segments,
-            heights
-        };
     }
 
     dispose() {
         if (!this.mesh) return;
 
         this.sceneManager.remove(this.mesh);
-
         this.mesh.geometry.dispose();
         this.mesh.material.dispose();
 
         this.mesh = null;
         this.data = null;
     }
+}
+
+function smoothstep(a, b, value) {
+    const t = THREE.MathUtils.clamp(
+        (value - a) / (b - a),
+        0,
+        1
+    );
+
+    return t * t * (3 - 2 * t);
 }

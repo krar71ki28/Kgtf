@@ -7,13 +7,8 @@ import { ObjectFactory } from './objects/ObjectFactory.js';
 import { InputManager } from './input/InputManager.js';
 import { CameraController } from './editor/CameraController.js';
 import { TerrainSystem } from './terrain/TerrainSystem.js';
+import { TerrainSculpt } from './terrain/TerrainSculpt.js';
 import { SkySystem } from './environment/SkySystem.js';
-
-const viewport = document.querySelector('#viewport-container');
-
-if (!viewport) {
-    throw new Error('Viewport container not found.');
-}
 
 const engine = new Engine();
 
@@ -29,6 +24,7 @@ let input = null;
 
 const cameraController = new CameraController(renderer);
 const terrain = new TerrainSystem(sceneManager);
+const sculpt = new TerrainSculpt(terrain);
 const sky = new SkySystem(renderer);
 
 const worldSystem = {
@@ -47,13 +43,11 @@ const worldSystem = {
         sky.init();
         terrain.init();
 
-        const cube = objectFactory.create('cube', {
+        objectFactory.create('cube', {
             name: 'First Cube',
             position: { x: 0, y: 2, z: 0 },
             color: 0x4f9cff
         });
-
-        cube.castShadow = true;
     },
 
     update() {
@@ -64,11 +58,7 @@ const worldSystem = {
 
     dispose() {
         cameraController.dispose();
-
-        if (input) {
-            input.dispose();
-            input = null;
-        }
+        if (input) input.dispose();
 
         terrain.dispose();
         sky.dispose();
@@ -80,28 +70,22 @@ const worldSystem = {
 
 engine.registerSystem(worldSystem);
 
-async function startEngine() {
-    try {
-        await engine.start();
-        console.log('KGTF ENGINE started successfully.');
-    } catch (error) {
-        console.error('KGTF ENGINE startup failed:', error);
-    }
-}
-
-startEngine();
+engine.start().catch(error => {
+    console.error('KGTF ENGINE startup failed:', error);
+});
 
 window.KGTF = {
     engine,
     renderer,
     sceneManager,
     objectFactory,
-    get input() {
-        return input;
-    },
     cameraController,
     terrain,
-    sky
+    sculpt,
+    sky,
+    get input() {
+        return input;
+    }
 };
 
 window.addEventListener('beforeunload', () => {
