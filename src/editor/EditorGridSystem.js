@@ -10,12 +10,15 @@ export class EditorGridSystem {
     init() {
         const scene = this.renderer.scene;
 
+        // خلفية رمادية موحدة خارج حدود الشبكة
         scene.background = new THREE.Color(0x383838);
 
+        // أرضية رمادية واسعة
         const floor = new THREE.Mesh(
-            new THREE.PlaneGeometry(400, 400),
+            new THREE.PlaneGeometry(4000, 4000),
             new THREE.MeshBasicMaterial({
-                color: 0x383838
+                color: 0x383838,
+                depthWrite: true
             })
         );
 
@@ -23,6 +26,7 @@ export class EditorGridSystem {
         floor.position.y = -0.025;
         this.group.add(floor);
 
+        // الشبكة الصغيرة
         const minorGrid = new THREE.GridHelper(
             100, 100, 0x858585, 0x555555
         );
@@ -32,6 +36,7 @@ export class EditorGridSystem {
         minorGrid.material.opacity = 0.7;
         this.group.add(minorGrid);
 
+        // الخطوط الرئيسية
         const majorGrid = new THREE.GridHelper(
             100, 10, 0xa0a0a0, 0x777777
         );
@@ -41,6 +46,7 @@ export class EditorGridSystem {
         majorGrid.material.opacity = 0.9;
         this.group.add(majorGrid);
 
+        // المحاور
         const axes = new THREE.AxesHelper(5);
         axes.position.y = 0.01;
         this.group.add(axes);
