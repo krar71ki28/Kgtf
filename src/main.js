@@ -7,6 +7,7 @@ import { SceneManager } from "./scene/SceneManager.js";
 import { CameraSystem } from "./scene/CameraSystem.js";
 import { WorldSystem } from "./world/WorldSystem.js";
 import { ObjectManager } from "./objects/ObjectManager.js";
+import { TransformSystem } from "./editor/TransformSystem.js";
 
 async function startEngine() {
     const $ = (id) => document.getElementById(id);
@@ -18,6 +19,10 @@ async function startEngine() {
 
     const addCubeButton = $("add-cube");
     const playButton = $("play-button");
+
+    const moveButton = $("tool-move");
+    const rotateButton = $("tool-rotate");
+    const scaleButton = $("tool-scale");
 
     const settingsButton = $("world-settings-button");
     const settingsPanel = $("world-settings");
@@ -135,8 +140,15 @@ async function startEngine() {
 
     scene.add(sunlight);
 
-    // Object management
+    // Object and transform systems
     const objectManager = new ObjectManager(scene);
+
+    const transformSystem = new TransformSystem(
+        scene,
+        cameraSystem.camera,
+        renderer.renderer.domElement,
+        cameraSystem.controls
+    );
 
     function renderOutliner() {
         if (!objectList) return;
@@ -171,6 +183,8 @@ async function startEngine() {
             objectList.append(button);
         }
 
+        transformSystem.syncSelection(selected);
+
         if (objectCount) {
             objectCount.textContent = `OBJECTS: ${items.length}`;
         }
@@ -197,6 +211,29 @@ async function startEngine() {
 
     // Initial object
     addCube();
+
+    // Transform toolbar
+    function activateTool(mode, activeButton) {
+        transformSystem.setMode(mode);
+
+        for (const button of [moveButton, rotateButton, scaleButton]) {
+            button?.classList.toggle("active", button === activeButton);
+        }
+    }
+
+    moveButton?.addEventListener("click", () => {
+        activateTool("translate", moveButton);
+    });
+
+    rotateButton?.addEventListener("click", () => {
+        activateTool("rotate", rotateButton);
+    });
+
+    scaleButton?.addEventListener("click", () => {
+        activateTool("scale", scaleButton);
+    });
+
+    moveButton?.classList.add("active");
 
     // World settings
     settingsButton?.addEventListener("click", () => {
@@ -276,6 +313,12 @@ async function startEngine() {
         if (event.target !== selectionCanvas) return;
         if (event.button !== undefined && event.button !== 0) return;
 
+        // Do not start object selection on a transform handle
+        if (transformSystem.isDragging || transformSystem.controls.axis !== null) {
+            pointerStart = null;
+            return;
+        }
+
         pointerStart = {
             id: event.pointerId,
             x: event.clientX,
@@ -290,10 +333,11 @@ async function startEngine() {
         const start = pointerStart;
         pointerStart = null;
 
+        if (transformSystem.isDragging) return;
+
         const dx = event.clientX - start.x;
         const dy = event.clientY - start.y;
 
-        // Ignore camera movement and dragging
         if (Math.hypot(dx, dy) > 7) return;
 
         const rect = selectionCanvas.getBoundingClientRect();
@@ -317,7 +361,6 @@ async function startEngine() {
             return;
         }
 
-        // Find the managed object containing the intersected mesh
         let target = intersections[0].object;
 
         while (target && !target.userData.editorObjectId) {
@@ -403,6 +446,7 @@ async function startEngine() {
 
         await engine.stop();
 
+        transformSystem.dispose();
         objectManager.dispose();
         worldSystem.dispose();
         cameraSystem.dispose();

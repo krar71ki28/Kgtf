@@ -1,0 +1,45 @@
+#toolbar .toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+#toolbar .toolbar-actions button {
+    min-height: 36px;
+    padding: 7px 12px;
+    border: 1px solid #414956;
+    border-radius: 6px;
+    background: #252c36;
+    color: #e6edf5;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+#toolbar .toolbar-actions button.active {
+    background: #2563a8;
+    border-color: #55aaff;
+    color: #ffffff;
+}
+
+#toolbar .toolbar-actions button:disabled {
+    opacity: 0.5;
+}
+
+@media (max-width: 600px) {
+    #toolbar {
+        gap: 6px;
+    }
+
+    #toolbar .toolbar-actions {
+        gap: 4px;
+    }
+
+    #toolbar .toolbar-actions button {
+        min-height: 38px;
+        padding: 6px 9px;
+        font-size: 11px;
+    }
+}
