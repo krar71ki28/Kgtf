@@ -567,8 +567,12 @@ async function startEngine() {
 
     const { AnimationSystem } = await import("./animation/AnimationSystem.js");
     const animationSystem = new AnimationSystem(objectManager);
+    const { AnimationStateMachine } = await import("./animation/AnimationStateMachine.js");
+    const animationStateMachine = new AnimationStateMachine(animationSystem, objectManager);
+    engine.registerSystem(animationStateMachine);
     engine.registerSystem(animationSystem);
     window.KGTF_EDITOR.animationSystem = animationSystem;
+    window.KGTF_EDITOR.animationStateMachine = animationStateMachine;
 
     await engine.initialize();
     engine.start();
