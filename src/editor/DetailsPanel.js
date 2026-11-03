@@ -6,7 +6,7 @@ if (!editor?.objectManager || !editor?.transformSystem) {
 
 const { objectManager, transformSystem } = editor;
 
-const viewport = document.getElementById("viewport");
+const viewport = document.getElementById("viewport-container");
 
 const stylesheet = document.createElement("link");
 stylesheet.rel = "stylesheet";
