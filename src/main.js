@@ -13,7 +13,8 @@ const engine = new Engine();
 
 const renderer = new Renderer({
     container: '#viewport-container',
-    canvas: '#viewport'
+    canvas: '#viewport',
+    background: 0x383838
 });
 
 const sceneManager = new SceneManager(renderer);
@@ -39,8 +40,6 @@ const worldSystem = {
         renderer.camera.lookAt(0, 0, 0);
 
         cameraController.init();
-
-        sky.init();
         editorGrid.init();
 
         objectFactory.create('cube', {
@@ -52,7 +51,6 @@ const worldSystem = {
 
     update() {
         cameraController.update();
-        sky.update();
         renderer.update();
     },
 
@@ -67,7 +65,6 @@ const worldSystem = {
         editorGrid.dispose();
         terrain.dispose();
         sky.dispose();
-
         sceneManager.dispose();
         renderer.dispose();
     }
