@@ -21,9 +21,7 @@ export class WorldSystem {
     validateSize(size) {
         const value = Number(size);
 
-        if (!Number.isFinite(value)) {
-            return 20;
-        }
+        if (!Number.isFinite(value)) return 20;
 
         return THREE.MathUtils.clamp(
             Math.round(value),
@@ -39,7 +37,7 @@ export class WorldSystem {
         );
 
         const material = new THREE.MeshStandardMaterial({
-            color: 0x858b92,
+            color: 0x62666b,
             roughness: 1,
             metalness: 0
         });
@@ -55,21 +53,51 @@ export class WorldSystem {
     }
 
     createGrid() {
-        this.grid = new THREE.GridHelper(
+        this.grid = new THREE.Group();
+        this.grid.name = "WorldGrid";
+
+        // Fine grid: 0.25 world units
+        const fineGrid = new THREE.GridHelper(
             this.size,
-            this.size,
-            0x526477,
-            0x71808e
+            this.size * 4,
+            0x41464d,
+            0x41464d
         );
 
-        this.grid.name = "WorldGrid";
-        this.grid.position.y = -0.015;
-        this.grid.renderOrder = 1;
+        fineGrid.name = "FineGrid";
+        fineGrid.position.y = -0.018;
 
-        this.grid.material.transparent = true;
-        this.grid.material.opacity = 0.75;
-        this.grid.material.depthWrite = false;
+        // Main grid: 1 world unit
+        const mainGrid = new THREE.GridHelper(
+            this.size,
+            this.size,
+            0x929ba5,
+            0x747e88
+        );
 
+        mainGrid.name = "MainGrid";
+        mainGrid.position.y = -0.014;
+
+        for (const helper of [fineGrid, mainGrid]) {
+            const materials = Array.isArray(helper.material)
+                ? helper.material
+                : [helper.material];
+
+            for (const material of materials) {
+                material.transparent = true;
+                material.depthWrite = false;
+            }
+        }
+
+        for (const material of fineGrid.material) {
+            material.opacity = 0.38;
+        }
+
+        for (const material of mainGrid.material) {
+            material.opacity = 0.78;
+        }
+
+        this.grid.add(fineGrid, mainGrid);
         this.grid.visible = this.gridVisible;
 
         this.scene.add(this.grid);
@@ -79,12 +107,10 @@ export class WorldSystem {
         this.axes = new THREE.Group();
         this.axes.name = "WorldAxes";
 
-        const half = this.size / 2;
-
         const xAxis = new THREE.Mesh(
             new THREE.BoxGeometry(this.size, 0.014, 0.035),
             new THREE.MeshBasicMaterial({
-                color: 0xd65c5c,
+                color: 0xe05252,
                 depthWrite: false
             })
         );
@@ -95,7 +121,7 @@ export class WorldSystem {
         const zAxis = new THREE.Mesh(
             new THREE.BoxGeometry(0.035, 0.014, this.size),
             new THREE.MeshBasicMaterial({
-                color: 0x4d91d8,
+                color: 0x438fe0,
                 depthWrite: false
             })
         );
@@ -112,9 +138,7 @@ export class WorldSystem {
     setSize(size) {
         const nextSize = this.validateSize(size);
 
-        if (nextSize === this.size) {
-            return this.size;
-        }
+        if (nextSize === this.size) return this.size;
 
         this.size = nextSize;
 
@@ -166,8 +190,21 @@ export class WorldSystem {
         if (!this.grid) return;
 
         this.scene.remove(this.grid);
-        this.grid.geometry.dispose();
-        this.grid.material.dispose();
+
+        this.grid.traverse((object) => {
+            if (!object.isLineSegments) return;
+
+            object.geometry.dispose();
+
+            const materials = Array.isArray(object.material)
+                ? object.material
+                : [object.material];
+
+            for (const material of materials) {
+                material.dispose();
+            }
+        });
+
         this.grid = null;
     }
 
