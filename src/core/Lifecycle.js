@@ -6,12 +6,21 @@ export class Lifecycle {
     }
 
     register(system) {
-        if (this.state !== 'idle') {
+        if (this.state !== 'idle' || this.isTransitioning) {
             throw new Error('Cannot register systems after startup.');
         }
 
         if (!system || typeof system !== 'object') {
             throw new TypeError('Invalid system.');
+        }
+
+        for (const method of ['init', 'update', 'dispose']) {
+            if (
+                system[method] !== undefined &&
+                typeof system[method] !== 'function'
+            ) {
+                throw new TypeError(`System ${method} must be a function.`);
+            }
         }
 
         if (this.systems.some(entry => entry.system === system)) {
@@ -36,18 +45,29 @@ export class Lifecycle {
 
         try {
             for (const entry of this.systems) {
-                if (typeof entry.system.init === 'function') {
+                // Mark before init to allow cleanup after partial initialization.
+                entry.initialized = true;
+
+                if (entry.system.init) {
                     await entry.system.init(context);
                 }
-
-                entry.initialized = true;
             }
 
             this.state = 'running';
-        } catch (error) {
-            await this.stopInitializedSystems();
+        } catch (startupError) {
+            const cleanupErrors = await this.stopInitializedSystems();
+
             this.state = 'failed';
-            throw error;
+
+            if (cleanupErrors.length > 0) {
+                throw new AggregateError(
+                    [startupError, ...cleanupErrors],
+                    'Startup failed and cleanup was incomplete.',
+                    { cause: startupError }
+                );
+            }
+
+            throw startupError;
         } finally {
             this.isTransitioning = false;
         }
@@ -63,7 +83,7 @@ export class Lifecycle {
         for (const entry of this.systems) {
             if (!entry.initialized) continue;
 
-            if (typeof entry.system.update === 'function') {
+            if (entry.system.update) {
                 entry.system.update(deltaTime, context);
             }
         }
@@ -78,14 +98,14 @@ export class Lifecycle {
             if (!entry.initialized) continue;
 
             try {
-                if (typeof entry.system.dispose === 'function') {
+                if (entry.system.dispose) {
                     await entry.system.dispose();
                 }
             } catch (error) {
                 errors.push(error);
+            } finally {
+                entry.initialized = false;
             }
-
-            entry.initialized = false;
         }
 
         return errors;
@@ -105,7 +125,10 @@ export class Lifecycle {
             const errors = await this.stopInitializedSystems();
 
             if (errors.length > 0) {
-                throw new AggregateError(errors, 'System shutdown failed.');
+                throw new AggregateError(
+                    errors,
+                    'System shutdown failed.'
+                );
             }
 
             this.state = 'stopped';
