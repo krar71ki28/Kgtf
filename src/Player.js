@@ -4,20 +4,15 @@ export class Player {
     constructor(engine, physics) {
         this.engine = engine;
         this.physics = physics;
-
         this.isPlaying = false;
         this.playerModel = null;
         this.playerBody = null;
-
         this.isGrounded = false;
         this.jumpQueued = false;
-
         this.jumpForce = 5.5;
         this.moveSpeed = 5;
-
         this.startPosition = null;
         this.startQuaternion = null;
-
         this.joyDir = { x: 0, y: 0 };
 
         this.forward = new THREE.Vector3();
@@ -29,74 +24,65 @@ export class Player {
     }
 
     setupControls() {
-        document.getElementById('btn-play').onclick = () => {
-            this.startPlay();
-        };
-
-        document.getElementById('exit-play').onclick = () => {
-            this.stopPlay();
-        };
-
-        let joyActive = false;
+        document.getElementById('btn-play').onclick = () => this.startPlay();
+        document.getElementById('exit-play').onclick = () => this.stopPlay();
 
         const joyZone = document.getElementById('joystick-zone');
         const joyKnob = document.getElementById('joystick-knob');
+        let pointerId = null;
 
-        joyZone.addEventListener('touchstart', (e) => {
+        joyZone.addEventListener('pointerdown', (e) => {
             e.preventDefault();
-            joyActive = true;
-        }, { passive: false });
+            pointerId = e.pointerId;
+            joyZone.setPointerCapture(pointerId);
+            this.updateJoystick(e, joyZone, joyKnob);
+        });
 
-        joyZone.addEventListener('touchmove', (e) => {
+        joyZone.addEventListener('pointermove', (e) => {
+            if (e.pointerId !== pointerId) return;
             e.preventDefault();
-
-            if (!joyActive || !e.touches.length) return;
-
-            const rect = joyZone.getBoundingClientRect();
-            const touch = e.touches[0];
-
-            let dx = touch.clientX - (rect.left + rect.width / 2);
-            let dy = touch.clientY - (rect.top + rect.height / 2);
-
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            if (dist > 40) {
-                dx = (dx / dist) * 40;
-                dy = (dy / dist) * 40;
-            }
-
-            joyKnob.style.transform =
-                `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-
-            this.joyDir.x = dx / 40;
-            this.joyDir.y = dy / 40;
-
-        }, { passive: false });
+            this.updateJoystick(e, joyZone, joyKnob);
+        });
 
         const resetJoystick = (e) => {
-            if (e) e.preventDefault();
-
-            joyActive = false;
+            if (e.pointerId !== pointerId) return;
+            pointerId = null;
             joyKnob.style.transform = 'translate(-50%, -50%)';
             this.joyDir = { x: 0, y: 0 };
         };
 
-        joyZone.addEventListener('touchend', resetJoystick, {
-            passive: false
+        joyZone.addEventListener('pointerup', resetJoystick);
+        joyZone.addEventListener('pointercancel', resetJoystick);
+        joyZone.addEventListener('lostpointercapture', () => {
+            pointerId = null;
+            joyKnob.style.transform = 'translate(-50%, -50%)';
+            this.joyDir = { x: 0, y: 0 };
         });
 
-        joyZone.addEventListener('touchcancel', resetJoystick, {
-            passive: false
+        document.getElementById('btn-jump').addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            if (this.isPlaying && this.isGrounded) {
+                this.jumpQueued = true;
+            }
         });
+    }
 
-        document.getElementById('btn-jump')
-            .addEventListener('touchstart', (e) => {
-                e.preventDefault();
+    updateJoystick(e, zone, knob) {
+        const rect = zone.getBoundingClientRect();
+        let dx = e.clientX - (rect.left + rect.width / 2);
+        let dy = e.clientY - (rect.top + rect.height / 2);
+        const distance = Math.hypot(dx, dy);
 
-                if (this.isPlaying && this.isGrounded) {
-                    this.jumpQueued = true;
-                }
-            }, { passive: false });
+        if (distance > 40) {
+            dx = dx / distance * 40;
+            dy = dy / distance * 40;
+        }
+
+        knob.style.transform =
+            `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+
+        this.joyDir.x = dx / 40;
+        this.joyDir.y = dy / 40;
     }
 
     startPlay() {
@@ -129,12 +115,10 @@ export class Player {
         this.isGrounded = false;
         this.jumpQueued = false;
         this.joyDir = { x: 0, y: 0 };
-
         this.isPlaying = true;
 
         document.body.classList.add('play-mode');
         document.getElementById('play-ui').style.display = 'block';
-
         this.engine.orbit.enabled = false;
         this.engine.camera.position.set(0, 5, 8);
     }
@@ -143,7 +127,6 @@ export class Player {
         this.isPlaying = false;
         this.jumpQueued = false;
         this.isGrounded = false;
-
         this.joyDir = { x: 0, y: 0 };
 
         if (this.playerBody) {
@@ -162,7 +145,6 @@ export class Player {
 
         document.body.classList.remove('play-mode');
         document.getElementById('play-ui').style.display = 'none';
-
         this.engine.orbit.enabled = true;
         this.engine.camera.position.set(6, 6, 8);
     }
@@ -192,7 +174,6 @@ export class Player {
         const moveForward = -this.joyDir.y;
 
         this.moveDirection.set(0, 0, 0);
-
         this.moveDirection.addScaledVector(this.right, moveX);
         this.moveDirection.addScaledVector(this.forward, moveForward);
 
@@ -208,7 +189,6 @@ export class Player {
                 this.moveDirection.x,
                 this.moveDirection.z
             );
-
             this.physics.setCharacterYaw(body, angle);
             body.wakeUp();
         }
@@ -219,13 +199,18 @@ export class Player {
             this.isGrounded = false;
         }
 
+        const debugMove = document.getElementById('debug-move');
+        if (debugMove) {
+            debugMove.textContent =
+                `Input: ${moveX.toFixed(2)}, ${moveForward.toFixed(2)} | ` +
+                `Velocity: ${body.velocity.x.toFixed(2)}, ${body.velocity.z.toFixed(2)}`;
+        }
+
         this.jumpQueued = false;
     }
 
     updateCamera(dt) {
-        if (!this.isPlaying || !this.playerModel || !this.playerBody) {
-            return;
-        }
+        if (!this.isPlaying || !this.playerModel || !this.playerBody) return;
 
         this.isGrounded = this.physics.isGrounded(this.playerBody);
 
