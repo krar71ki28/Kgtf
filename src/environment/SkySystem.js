@@ -7,6 +7,7 @@ export class SkySystem {
         this.sky = null;
         this.sunLight = null;
         this.hemisphereLight = null;
+        this.isSkyVisible = false;
 
         this.sunDirection = new THREE.Vector3(
             0.3, 0.8, -0.5
@@ -29,6 +30,8 @@ export class SkySystem {
         uniforms['mieDirectionalG'].value = 0.8;
         uniforms['sunPosition'].value.copy(this.sunDirection);
 
+        // السماء مخفية في المحرر
+        this.sky.visible = false;
         scene.add(this.sky);
 
         this.hemisphereLight = new THREE.HemisphereLight(
@@ -57,6 +60,19 @@ export class SkySystem {
             THREE.ACESFilmicToneMapping;
 
         this.renderer.renderer.toneMappingExposure = 0.8;
+    }
+
+    setSkyVisible(visible) {
+        this.isSkyVisible = Boolean(visible);
+
+        if (this.sky) {
+            this.sky.visible = this.isSkyVisible;
+        }
+
+        if (!this.isSkyVisible) {
+            this.renderer.scene.background =
+                new THREE.Color(0x383838);
+        }
     }
 
     setSunDirection(x, y, z) {
