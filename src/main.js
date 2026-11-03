@@ -6,6 +6,7 @@ import { Renderer } from "./rendering/Renderer.js";
 import { SceneManager } from "./scene/SceneManager.js";
 import { CameraSystem } from "./scene/CameraSystem.js";
 import { WorldSystem } from "./world/WorldSystem.js";
+import { LightingSystem } from "./lighting/LightingSystem.js";
 import { ObjectManager } from "./objects/ObjectManager.js";
 import { TransformSystem } from "./editor/TransformSystem.js";
 import { Serializer } from "./Serializer.js";
@@ -37,6 +38,18 @@ async function startEngine() {
     const axesVisibleInput = $("axes-visible");
     const worldSizeInfo = $("world-size-info");
 
+    const lightingToggle = $("lighting-toggle");
+    const lightingPanel = $("lighting-panel");
+    const closeLighting = $("close-lighting");
+    const sunElevationInput = $("sun-elevation");
+    const sunAzimuthInput = $("sun-azimuth");
+    const sunIntensityInput = $("sun-intensity");
+    const ambientIntensityInput = $("ambient-intensity");
+    const skyColorInput = $("sky-color");
+    const fogEnabledInput = $("fog-enabled");
+    const fogNearInput = $("fog-near");
+    const fogFarInput = $("fog-far");
+
     const outlinerToggle = $("outliner-toggle");
     const outlinerPanel = $("outliner-panel");
     const closeOutliner = $("close-outliner");
@@ -67,6 +80,9 @@ async function startEngine() {
     const skyGeometry = new THREE.SphereGeometry(900, 32, 16);
 
     const skyMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+            uSkyTint: { value: new THREE.Color(0xffffff) }
+        },
         side: THREE.BackSide,
         depthWrite: false,
         vertexShader: `
@@ -83,6 +99,7 @@ async function startEngine() {
             }
         `,
         fragmentShader: `
+            uniform vec3 uSkyTint;
             varying vec3 vWorldDirection;
 
             void main() {
@@ -104,6 +121,7 @@ async function startEngine() {
                     smoothstep(0.28, 0.95, height)
                 );
 
+                color *= uSkyTint;
                 gl_FragColor = vec4(color, 1.0);
             }
         `
@@ -119,29 +137,8 @@ async function startEngine() {
         size: 20
     });
 
-    // Lighting
-    const hemisphereLight = new THREE.HemisphereLight(
-        0xe5f1ff,
-        0x60666d,
-        1.7
-    );
-    scene.add(hemisphereLight);
-
-    const sunlight = new THREE.DirectionalLight(0xfff3df, 2.5);
-    sunlight.position.set(12, 20, 10);
-    sunlight.castShadow = true;
-
-    sunlight.shadow.mapSize.set(1024, 1024);
-    sunlight.shadow.camera.left = -25;
-    sunlight.shadow.camera.right = 25;
-    sunlight.shadow.camera.top = 25;
-    sunlight.shadow.camera.bottom = -25;
-    sunlight.shadow.camera.near = 0.5;
-    sunlight.shadow.camera.far = 70;
-    sunlight.shadow.bias = -0.0002;
-    sunlight.shadow.normalBias = 0.025;
-
-    scene.add(sunlight);
+    // Lighting System
+    const lightingSystem = new LightingSystem(scene, skyMaterial);
 
     // Object and transform systems
     const objectManager = new ObjectManager(scene);
@@ -246,14 +243,68 @@ async function startEngine() {
     settingsButton?.addEventListener("click", () => {
         settingsPanel.hidden = !settingsPanel.hidden;
 
-        if (!settingsPanel.hidden && outlinerPanel) {
+        if (!settingsPanel.hidden) {
             outlinerPanel.hidden = true;
+            lightingPanel.hidden = true;
         }
     });
 
     closeSettingsButton?.addEventListener("click", () => {
         settingsPanel.hidden = true;
     });
+
+    lightingToggle?.addEventListener("click", () => {
+        lightingPanel.hidden = !lightingPanel.hidden;
+        settingsPanel.hidden = true;
+        outlinerPanel.hidden = true;
+    });
+
+    closeLighting?.addEventListener("click", () => {
+        lightingPanel.hidden = true;
+    });
+
+    sunElevationInput?.addEventListener("input", () => {
+        lightingSystem.setSunElevation(sunElevationInput.value);
+        $("sun-elevation-value").textContent = sunElevationInput.value + "°";
+    });
+
+    sunAzimuthInput?.addEventListener("input", () => {
+        lightingSystem.setSunAzimuth(sunAzimuthInput.value);
+        $("sun-azimuth-value").textContent = sunAzimuthInput.value + "°";
+    });
+
+    sunIntensityInput?.addEventListener("input", () => {
+        lightingSystem.setSunIntensity(sunIntensityInput.value);
+        $("sun-intensity-value").textContent = sunIntensityInput.value;
+    });
+
+    ambientIntensityInput?.addEventListener("input", () => {
+        lightingSystem.setAmbientIntensity(ambientIntensityInput.value);
+        $("ambient-intensity-value").textContent = ambientIntensityInput.value;
+    });
+
+    skyColorInput?.addEventListener("input", () => {
+        lightingSystem.setSkyColor(skyColorInput.value);
+    });
+
+    fogEnabledInput?.addEventListener("change", () => {
+        lightingSystem.setFogEnabled(fogEnabledInput.checked);
+    });
+
+    function updateFogRange() {
+        let near = Number(fogNearInput.value);
+        let far = Number(fogFarInput.value);
+
+        if (far <= near) {
+            far = Math.min(500, near + 1);
+            fogFarInput.value = String(far);
+        }
+
+        lightingSystem.setFogRange(near, far);
+    }
+
+    fogNearInput?.addEventListener("input", updateFogRange);
+    fogFarInput?.addEventListener("input", updateFogRange);
 
     worldSizeSelect?.addEventListener("change", () => {
         const size = worldSystem.setSize(worldSizeSelect.value);
@@ -279,8 +330,9 @@ async function startEngine() {
     outlinerToggle?.addEventListener("click", () => {
         outlinerPanel.hidden = !outlinerPanel.hidden;
 
-        if (!outlinerPanel.hidden && settingsPanel) {
+        if (!outlinerPanel.hidden) {
             settingsPanel.hidden = true;
+            lightingPanel.hidden = true;
         }
     });
 
@@ -491,6 +543,7 @@ async function startEngine() {
         transformSystem.dispose();
         objectManager.dispose();
         worldSystem.dispose();
+        lightingSystem.dispose();
         cameraSystem.dispose();
         sceneManager.dispose();
         renderer.dispose();

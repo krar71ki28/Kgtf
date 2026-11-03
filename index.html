@@ -77,6 +77,37 @@
                 <div id="world-size-info">WORLD SIZE: 20 × 20</div>
             </section>
 
+            <button id="lighting-toggle" type="button">الإضاءة والسماء</button>
+
+            <section id="lighting-panel" hidden>
+                <div class="settings-header">
+                    <strong>LIGHTING & SKY</strong>
+                    <button id="close-lighting" type="button">×</button>
+                </div>
+                <label for="sun-elevation">ارتفاع الشمس</label>
+                <input id="sun-elevation" type="range" min="5" max="90" value="45">
+                <div id="sun-elevation-value" class="lighting-value">45°</div>
+                <label for="sun-azimuth">اتجاه الشمس</label>
+                <input id="sun-azimuth" type="range" min="0" max="360" value="35">
+                <div id="sun-azimuth-value" class="lighting-value">35°</div>
+                <label for="sun-intensity">شدة ضوء الشمس</label>
+                <input id="sun-intensity" type="range" min="0" max="5" step="0.1" value="2.5">
+                <div id="sun-intensity-value" class="lighting-value">2.5</div>
+                <label for="ambient-intensity">الإضاءة المحيطية</label>
+                <input id="ambient-intensity" type="range" min="0" max="4" step="0.1" value="1.7">
+                <div id="ambient-intensity-value" class="lighting-value">1.7</div>
+                <label for="sky-color">لون السماء</label>
+                <input id="sky-color" type="color" value="#9dbbd3">
+                <label class="setting-toggle">
+                    <input id="fog-enabled" type="checkbox" checked>
+                    تفعيل الضباب
+                </label>
+                <label for="fog-near">بداية الضباب</label>
+                <input id="fog-near" type="range" min="0" max="300" value="100">
+                <label for="fog-far">نهاية الضباب</label>
+                <input id="fog-far" type="range" min="50" max="500" value="320">
+            </section>
+
             <button id="outliner-toggle" type="button">العناصر</button>
 
             <section id="outliner-panel" hidden>
