@@ -3,12 +3,13 @@ export class Time {
         this.maxDelta = options.maxDelta ?? 0.05;
 
         if (!Number.isFinite(this.maxDelta) || this.maxDelta <= 0) {
-            throw new RangeError('maxDelta must be a positive number.');
+            throw new RangeError('maxDelta must be positive.');
         }
 
         this.elapsedTime = 0;
         this.deltaTime = 0;
         this.rawDeltaTime = 0;
+
         this.frame = 0;
         this.fps = 0;
 
@@ -42,33 +43,42 @@ export class Time {
         }
 
         this.deltaTime = Math.min(rawDelta, this.maxDelta);
+
         this.elapsedTime += this.deltaTime;
         this.frame++;
 
-        if (rawDelta > 0) {
-            this.fps = 1 / rawDelta;
-        }
+        this.fps = rawDelta > 0 ? 1 / rawDelta : 0;
     }
 
     pause() {
+        if (this.isPaused) return;
+
         this.isPaused = true;
+        this.deltaTime = 0;
     }
 
     resume(timestamp = null) {
-        this.isPaused = false;
+        if (!this.isPaused) return;
 
-        if (Number.isFinite(timestamp)) {
-            this.lastTimestamp = timestamp;
-        }
+        this.isPaused = false;
+        this.deltaTime = 0;
+        this.rawDeltaTime = 0;
+        this.lastTimestamp = Number.isFinite(timestamp)
+            ? timestamp
+            : null;
+    }
+
+    resetFrame() {
+        this.lastTimestamp = null;
+        this.deltaTime = 0;
+        this.rawDeltaTime = 0;
+        this.fps = 0;
     }
 
     reset() {
         this.elapsedTime = 0;
-        this.deltaTime = 0;
-        this.rawDeltaTime = 0;
         this.frame = 0;
-        this.fps = 0;
-        this.lastTimestamp = null;
+        this.resetFrame();
         this.isPaused = false;
     }
 }
