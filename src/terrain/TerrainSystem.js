@@ -2,76 +2,40 @@ import * as THREE from "three";
 
 export class TerrainSystem {
     constructor(scene, options = {}) {
-        if (!scene?.isScene) {
-            throw new TypeError("TerrainSystem requires a THREE.Scene");
-        }
-
         this.scene = scene;
-        this.size = this.validateSize(options.size ?? 20);
-        this.segments = this.validateSegments(options.segments ?? 100);
-        this.maxHeight = 30;
+        this.size = THREE.MathUtils.clamp(options.size ?? 20, 10, 200);
+        this.segments = THREE.MathUtils.clamp(options.segments ?? 100, 16, 256);
+        this.maxHeight = options.maxHeight ?? 30;
 
-        this.geometry = null;
-        this.material = null;
-        this.mesh = null;
-
-        this.create();
-    }
-
-    validateSize(value) {
-        const number = Number(value);
-        if (!Number.isFinite(number)) return 20;
-        return THREE.MathUtils.clamp(number, 10, 200);
-    }
-
-    validateSegments(value) {
-        const number = Math.round(Number(value));
-        if (!Number.isFinite(number)) return 100;
-        return THREE.MathUtils.clamp(number, 16, 256);
-    }
-
-    create() {
-        this.geometry = new THREE.PlaneGeometry(
+        const geometry = new THREE.PlaneGeometry(
             this.size,
             this.size,
             this.segments,
             this.segments
         );
 
-        this.geometry.rotateX(-Math.PI / 2);
+        geometry.rotateX(-Math.PI / 2);
 
         this.material = new THREE.MeshStandardMaterial({
-            color: 0x718b55,
-            roughness: 0.95,
-            metalness: 0,
-            side: THREE.FrontSide
+            color: 0x777777,
+            roughness: 0.95
         });
 
-        this.mesh = new THREE.Mesh(this.geometry, this.material);
+        this.mesh = new THREE.Mesh(geometry, this.material);
         this.mesh.name = "KGTF_Terrain";
         this.mesh.receiveShadow = true;
         this.mesh.castShadow = true;
-
         this.scene.add(this.mesh);
-        this.geometry.computeVertexNormals();
-        this.geometry.computeBoundingSphere();
+
+        this.originalHeights = geometry.attributes.position.array.slice();
     }
 
     getVertexIndex(x, z) {
         const half = this.size / 2;
+        const ix = Math.round(((x + half) / this.size) * this.segments);
+        const iz = Math.round(((z + half) / this.size) * this.segments);
 
-        const ix = Math.round(
-            ((x + half) / this.size) * this.segments
-        );
-
-        const iz = Math.round(
-            ((z + half) / this.size) * this.segments
-        );
-
-        if (
-            ix < 0 || ix > this.segments ||
-            iz < 0 || iz > this.segments
-        ) {
+        if (ix < 0 || ix > this.segments || iz < 0 || iz > this.segments) {
             return -1;
         }
 
@@ -79,139 +43,104 @@ export class TerrainSystem {
     }
 
     setHeightAt(x, z, height) {
-        if (![x, z, height].every(Number.isFinite)) return false;
-
         const index = this.getVertexIndex(x, z);
-        if (index < 0) return false;
+        if (index < 0) return;
 
-        const positions = this.geometry.attributes.position;
-        positions.setY(
-            index,
-            THREE.MathUtils.clamp(height, -this.maxHeight, this.maxHeight)
-        );
-
-        positions.needsUpdate = true;
-        this.geometry.computeVertexNormals();
-        this.geometry.computeBoundingSphere();
-
-        return true;
+        const positions = this.mesh.geometry.attributes.position;
+        positions.setY(index, THREE.MathUtils.clamp(height, -this.maxHeight, this.maxHeight));
+        this.updateGeometry();
     }
 
     sculptAt(x, z, radius, strength) {
-        if (![x, z, radius, strength].every(Number.isFinite)) return 0;
-        if (radius <= 0 || strength === 0) return 0;
-
-        const positions = this.geometry.attributes.position;
+        const positions = this.mesh.geometry.attributes.position;
         const half = this.size / 2;
-        const step = this.size / this.segments;
 
-        const minX = Math.max(0, Math.floor((x - radius + half) / step));
-        const maxX = Math.min(this.segments, Math.ceil((x + radius + half) / step));
-        const minZ = Math.max(0, Math.floor((z - radius + half) / step));
-        const maxZ = Math.min(this.segments, Math.ceil((z + radius + half) / step));
+        for (let i = 0; i < positions.count; i++) {
+            const vx = positions.getX(i);
+            const vz = positions.getZ(i);
+            const distance = Math.hypot(vx - x, vz - z);
 
-        let changed = 0;
+            if (distance > radius) continue;
 
-        for (let iz = minZ; iz <= maxZ; iz++) {
-            for (let ix = minX; ix <= maxX; ix++) {
-                const index = iz * (this.segments + 1) + ix;
-                const vertexX = positions.getX(index);
-                const vertexZ = positions.getZ(index);
-
-                const distance = Math.hypot(vertexX - x, vertexZ - z);
-                if (distance > radius) continue;
-
-                const falloff = 1 - distance / radius;
-                const height = positions.getY(index) + strength * falloff;
-
-                positions.setY(
-                    index,
-                    THREE.MathUtils.clamp(height, -this.maxHeight, this.maxHeight)
-                );
-
-                changed++;
-            }
+            const falloff = 1 - distance / radius;
+            const height = positions.getY(i) + strength * falloff;
+            positions.setY(i, THREE.MathUtils.clamp(height, -this.maxHeight, this.maxHeight));
         }
 
-        if (changed > 0) this.updateGeometry();
-        return changed;
+        this.updateGeometry();
     }
 
     smoothAt(x, z, radius, strength = 0.5) {
-        if (![x, z, radius, strength].every(Number.isFinite)) return 0;
-        if (radius <= 0) return 0;
+        const positions = this.mesh.geometry.attributes.position;
+        const oldHeights = [];
 
-        const positions = this.geometry.attributes.position;
-        const original = positions.array.slice();
-        const half = this.size / 2;
-        const step = this.size / this.segments;
+        for (let i = 0; i < positions.count; i++) {
+            oldHeights[i] = positions.getY(i);
+        }
 
-        const minX = Math.max(1, Math.floor((x - radius + half) / step));
-        const maxX = Math.min(this.segments - 1, Math.ceil((x + radius + half) / step));
-        const minZ = Math.max(1, Math.floor((z - radius + half) / step));
-        const maxZ = Math.min(this.segments - 1, Math.ceil((z + radius + half) / step));
+        const rowSize = this.segments + 1;
 
-        let changed = 0;
-        const amount = THREE.MathUtils.clamp(strength, 0, 1);
+        for (let iz = 1; iz < this.segments; iz++) {
+            for (let ix = 1; ix < this.segments; ix++) {
+                const index = iz * rowSize + ix;
+                const vx = positions.getX(index);
+                const vz = positions.getZ(index);
 
-        for (let iz = minZ; iz <= maxZ; iz++) {
-            for (let ix = minX; ix <= maxX; ix++) {
-                const index = iz * (this.segments + 1) + ix;
-                const vertexX = original[index * 3];
-                const vertexZ = original[index * 3 + 2];
-
-                if (Math.hypot(vertexX - x, vertexZ - z) > radius) continue;
+                const distance = Math.hypot(vx - x, vz - z);
+                if (distance > radius) continue;
 
                 const average = (
-                    original[(index - 1) * 3 + 1] +
-                    original[(index + 1) * 3 + 1] +
-                    original[(index - this.segments - 1) * 3 + 1] +
-                    original[(index + this.segments + 1) * 3 + 1]
+                    oldHeights[index - 1] +
+                    oldHeights[index + 1] +
+                    oldHeights[index - rowSize] +
+                    oldHeights[index + rowSize]
                 ) / 4;
 
-                const current = original[index * 3 + 1];
-                positions.setY(index, THREE.MathUtils.lerp(current, average, amount));
-                changed++;
+                const falloff = 1 - distance / radius;
+                const amount = THREE.MathUtils.clamp(strength * falloff, 0, 1);
+                positions.setY(index, THREE.MathUtils.lerp(oldHeights[index], average, amount));
             }
         }
 
-        if (changed > 0) this.updateGeometry();
-        return changed;
+        this.updateGeometry();
     }
 
     reset() {
-        const positions = this.geometry.attributes.position;
+        const positions = this.mesh.geometry.attributes.position;
 
         for (let i = 0; i < positions.count; i++) {
-            positions.setY(i, 0);
+            positions.setY(i, this.originalHeights[i * 3 + 1]);
         }
 
         this.updateGeometry();
     }
 
     updateGeometry() {
-        this.geometry.attributes.position.needsUpdate = true;
-        this.geometry.computeVertexNormals();
-        this.geometry.computeBoundingSphere();
+        const geometry = this.mesh.geometry;
+        geometry.attributes.position.needsUpdate = true;
+        geometry.computeVertexNormals();
+        geometry.computeBoundingSphere();
+        geometry.computeBoundingBox();
     }
 
     getData() {
+        const positions = this.mesh.geometry.attributes.position;
+        const heights = [];
+
+        for (let i = 0; i < positions.count; i++) {
+            heights.push(positions.getY(i));
+        }
+
         return {
             size: this.size,
             segments: this.segments,
-            heights: Array.from(
-                this.geometry.attributes.position.array
-            ).filter((value, index) => index % 3 === 1)
+            heights
         };
     }
 
     dispose() {
-        if (this.mesh) this.scene.remove(this.mesh);
-        this.geometry?.dispose();
-        this.material?.dispose();
-
-        this.mesh = null;
-        this.geometry = null;
-        this.material = null;
+        this.scene.remove(this.mesh);
+        this.mesh.geometry.dispose();
+        this.material.dispose();
     }
 }
