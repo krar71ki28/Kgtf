@@ -45,6 +45,21 @@ const worldSystem = {
 
         editorGrid.init();
         sky.init();
+
+        // المكعب الابتدائي
+        const cube = objectFactory.create('cube', {
+            name: 'First Cube',
+            position: { x: 0, y: 0.5, z: 0 },
+            color: 0x4f9cff
+        });
+
+        if (cube && cube.material) {
+            cube.material = new THREE.MeshStandardMaterial({
+                color: 0x4f9cff,
+                roughness: 0.65,
+                metalness: 0.05
+            });
+        }
     },
 
     update() {
