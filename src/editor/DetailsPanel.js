@@ -5,8 +5,11 @@ if (!editor?.objectManager || !editor?.transformSystem) {
 }
 
 const { objectManager, transformSystem } = editor;
-
 const viewport = document.getElementById("viewport-container");
+
+if (!viewport) {
+    throw new Error("DetailsPanel: viewport container not found");
+}
 
 const stylesheet = document.createElement("link");
 stylesheet.rel = "stylesheet";
@@ -60,6 +63,38 @@ panel.innerHTML = `
             </div>
         </div>
 
+        <div class="details-section">
+            <strong>المادة — MATERIAL</strong>
+
+            <div class="material-control">
+                <label for="details-material-color">لون المادة</label>
+                <input id="details-material-color" type="color"
+                    value="#438ee8">
+            </div>
+
+            <div class="material-control">
+                <label for="details-roughness">
+                    الخشونة — ROUGHNESS
+                    <output id="details-roughness-value">0.48</output>
+                </label>
+                <input id="details-roughness" type="range"
+                    min="0" max="1" step="0.01" value="0.48">
+            </div>
+
+            <div class="material-control">
+                <label for="details-metalness">
+                    المعدنية — METALNESS
+                    <output id="details-metalness-value">0.04</output>
+                </label>
+                <input id="details-metalness" type="range"
+                    min="0" max="1" step="0.01" value="0.04">
+            </div>
+
+            <div id="material-unavailable" hidden>
+                المادة الحالية لا تدعم هذه الخصائص.
+            </div>
+        </div>
+
         <div id="details-empty">اختر عنصراً لعرض خصائصه</div>
     </div>
 `;
@@ -69,6 +104,19 @@ viewport.append(toggle, panel);
 const nameInput = panel.querySelector("#details-name");
 const emptyMessage = panel.querySelector("#details-empty");
 
+const materialControls = {
+    color: panel.querySelector("#details-material-color"),
+    roughness: panel.querySelector("#details-roughness"),
+    metalness: panel.querySelector("#details-metalness")
+};
+
+const materialOutputs = {
+    roughness: panel.querySelector("#details-roughness-value"),
+    metalness: panel.querySelector("#details-metalness-value")
+};
+
+const materialUnavailable = panel.querySelector("#material-unavailable");
+
 const groups = {
     position: panel.querySelector('[data-group="position"]'),
     rotation: panel.querySelector('[data-group="rotation"]'),
@@ -77,6 +125,20 @@ const groups = {
 
 function getSelected() {
     return objectManager.getSelected();
+}
+
+function getEditableMaterial(object) {
+    const material = object?.material;
+
+    if (
+        !material ||
+        Array.isArray(material) ||
+        !material.isMeshStandardMaterial
+    ) {
+        return null;
+    }
+
+    return material;
 }
 
 function setInputsEnabled(enabled) {
@@ -89,10 +151,22 @@ function setInputsEnabled(enabled) {
     }
 
     emptyMessage.hidden = enabled;
+
+    const object = getSelected();
+    const materialEnabled = Boolean(
+        enabled && getEditableMaterial(object)
+    );
+
+    for (const input of Object.values(materialControls)) {
+        input.disabled = !materialEnabled;
+    }
+
+    materialUnavailable.hidden = !enabled || materialEnabled;
 }
 
 function refresh() {
     const object = getSelected();
+
     setInputsEnabled(Boolean(object));
 
     if (!object) {
@@ -103,14 +177,33 @@ function refresh() {
     nameInput.value = object.name;
 
     for (const axis of ["x", "y", "z"]) {
-        groups.position.querySelector(`[data-axis="${axis}"]`).value =
-            object.position[axis].toFixed(3);
+        groups.position.querySelector(
+            `[data-axis="${axis}"]`
+        ).value = object.position[axis].toFixed(3);
 
-        groups.rotation.querySelector(`[data-axis="${axis}"]`).value =
-            THREE_DEGREES(object.rotation[axis]);
+        groups.rotation.querySelector(
+            `[data-axis="${axis}"]`
+        ).value = THREE_DEGREES(object.rotation[axis]);
 
-        groups.scale.querySelector(`[data-axis="${axis}"]`).value =
-            object.scale[axis].toFixed(3);
+        groups.scale.querySelector(
+            `[data-axis="${axis}"]`
+        ).value = object.scale[axis].toFixed(3);
+    }
+
+    const material = getEditableMaterial(object);
+
+    if (material) {
+        materialControls.color.value =
+            `#${material.color.getHexString()}`;
+
+        materialControls.roughness.value = material.roughness;
+        materialControls.metalness.value = material.metalness;
+
+        materialOutputs.roughness.textContent =
+            material.roughness.toFixed(2);
+
+        materialOutputs.metalness.textContent =
+            material.metalness.toFixed(2);
     }
 }
 
@@ -156,6 +249,33 @@ nameInput.addEventListener("change", () => {
         object.userData.editorObjectId,
         nameInput.value
     );
+});
+
+materialControls.color.addEventListener("input", () => {
+    const material = getEditableMaterial(getSelected());
+    if (!material) return;
+
+    material.color.set(materialControls.color.value);
+});
+
+materialControls.roughness.addEventListener("input", () => {
+    const material = getEditableMaterial(getSelected());
+    if (!material) return;
+
+    material.roughness = Number(materialControls.roughness.value);
+
+    materialOutputs.roughness.textContent =
+        material.roughness.toFixed(2);
+});
+
+materialControls.metalness.addEventListener("input", () => {
+    const material = getEditableMaterial(getSelected());
+    if (!material) return;
+
+    material.metalness = Number(materialControls.metalness.value);
+
+    materialOutputs.metalness.textContent =
+        material.metalness.toFixed(2);
 });
 
 toggle.addEventListener("click", () => {
