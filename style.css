@@ -58,7 +58,8 @@ body {
     gap: 8px;
 }
 
-button {
+button,
+select {
     min-height: 36px;
     padding: 0 13px;
     border: 1px solid #414958;
@@ -132,6 +133,86 @@ button:active {
     pointer-events: none;
 }
 
+#world-settings-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 4;
+    background: #252d39;
+    border-color: #56677b;
+}
+
+#world-settings {
+    position: absolute;
+    top: 54px;
+    right: 10px;
+    z-index: 6;
+    width: min(260px, calc(100% - 20px));
+    padding: 14px;
+    border: 1px solid #465264;
+    border-radius: 9px;
+    background: rgba(27, 32, 42, 0.97);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+
+#world-settings[hidden] {
+    display: none;
+}
+
+.settings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    color: #e8edf5;
+    font-size: 14px;
+}
+
+#close-world-settings {
+    min-width: 30px;
+    min-height: 30px;
+    padding: 0;
+    font-size: 20px;
+}
+
+#world-settings > label:not(.setting-toggle) {
+    display: block;
+    margin-bottom: 7px;
+    color: #aeb9c8;
+    font-size: 12px;
+}
+
+#world-size {
+    width: 100%;
+    margin-bottom: 12px;
+    background: #303744;
+}
+
+.setting-toggle {
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #dce3ed;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.setting-toggle input {
+    width: 17px;
+    height: 17px;
+    accent-color: #5799ed;
+}
+
+#world-size-info {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #3b4554;
+    color: #81b5f2;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+}
+
 #loading-message {
     position: absolute;
     inset: 0;
@@ -184,9 +265,14 @@ button:active {
         gap: 5px;
     }
 
-    button {
+    button,
+    select {
         min-height: 34px;
         padding: 0 9px;
         font-size: 11px;
+    }
+
+    #world-settings {
+        top: 52px;
     }
 }

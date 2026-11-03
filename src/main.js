@@ -5,15 +5,26 @@ import { Time } from "./core/Time.js";
 import { Renderer } from "./rendering/Renderer.js";
 import { SceneManager } from "./scene/SceneManager.js";
 import { CameraSystem } from "./scene/CameraSystem.js";
-import { EditorGridSystem } from "./editor/EditorGridSystem.js";
+import { WorldSystem } from "./world/WorldSystem.js";
 
 async function startEngine() {
     const viewport = document.getElementById("viewport-container");
     const loading = document.getElementById("loading-message");
     const status = document.getElementById("engine-status");
     const fpsDisplay = document.getElementById("fps-counter");
+
     const addCubeButton = document.getElementById("add-cube");
     const playButton = document.getElementById("play-button");
+
+    const settingsButton = document.getElementById("world-settings-button");
+    const settingsPanel = document.getElementById("world-settings");
+    const closeSettingsButton = document.getElementById("close-world-settings");
+
+    const worldSizeSelect = document.getElementById("world-size");
+    const groundVisibleInput = document.getElementById("ground-visible");
+    const gridVisibleInput = document.getElementById("grid-visible");
+    const axesVisibleInput = document.getElementById("axes-visible");
+    const worldSizeInfo = document.getElementById("world-size-info");
 
     if (!viewport || !loading || !status || !fpsDisplay) {
         throw new Error("Required editor elements are missing");
@@ -30,18 +41,10 @@ async function startEngine() {
         background: 0x9dbbd3
     });
 
-    scene.fog = new THREE.Fog(
-        0xb7ccdc,
-        100,
-        320
-    );
+    scene.fog = new THREE.Fog(0xb7ccdc, 100, 320);
 
-    // Sky dome
-    const skyGeometry = new THREE.SphereGeometry(
-        900,
-        32,
-        16
-    );
+    // Sky
+    const skyGeometry = new THREE.SphereGeometry(900, 32, 16);
 
     const skyMaterial = new THREE.ShaderMaterial({
         side: THREE.BackSide,
@@ -50,9 +53,7 @@ async function startEngine() {
             varying vec3 vWorldDirection;
 
             void main() {
-                vec4 worldPosition =
-                    modelMatrix * vec4(position, 1.0);
-
+                vec4 worldPosition = modelMatrix * vec4(position, 1.0);
                 vWorldDirection = normalize(worldPosition.xyz);
 
                 gl_Position =
@@ -88,66 +89,15 @@ async function startEngine() {
         `
     });
 
-    const sky = new THREE.Mesh(
-        skyGeometry,
-        skyMaterial
-    );
-
+    const sky = new THREE.Mesh(skyGeometry, skyMaterial);
     sky.name = "EditorSky";
     sky.renderOrder = -10;
     scene.add(sky);
 
-    // Ground
-    const ground = new THREE.Mesh(
-        new THREE.PlaneGeometry(1000, 1000),
-        new THREE.MeshStandardMaterial({
-            color: 0x777f87,
-            roughness: 1,
-            metalness: 0
-        })
-    );
-
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -0.035;
-    ground.name = "EditorGround";
-    ground.receiveShadow = true;
-    scene.add(ground);
-
-    // Editor grid
-    const gridSystem = new EditorGridSystem({
-        size: 200,
-        divisions: 100,
-        majorEvery: 10,
-        minorColor: 0x687582,
-        majorColor: 0x465563
+    // World management
+    const worldSystem = new WorldSystem(scene, {
+        size: 20
     });
-
-    scene.add(gridSystem.mesh);
-
-    // World axes
-    const axes = new THREE.Group();
-    axes.name = "WorldAxes";
-
-    const xAxis = new THREE.Mesh(
-        new THREE.BoxGeometry(14, 0.012, 0.035),
-        new THREE.MeshBasicMaterial({
-            color: 0xd65c5c
-        })
-    );
-
-    xAxis.position.set(7, 0.025, 0);
-
-    const zAxis = new THREE.Mesh(
-        new THREE.BoxGeometry(0.035, 0.012, 14),
-        new THREE.MeshBasicMaterial({
-            color: 0x4d91d8
-        })
-    );
-
-    zAxis.position.set(0, 0.025, 7);
-
-    axes.add(xAxis, zAxis);
-    scene.add(axes);
 
     // Lighting
     const hemisphereLight = new THREE.HemisphereLight(
@@ -200,6 +150,38 @@ async function startEngine() {
     }
 
     addCube();
+
+    // World settings UI
+    if (settingsButton && settingsPanel) {
+        settingsButton.addEventListener("click", () => {
+            settingsPanel.hidden = !settingsPanel.hidden;
+        });
+    }
+
+    closeSettingsButton?.addEventListener("click", () => {
+        settingsPanel.hidden = true;
+    });
+
+    worldSizeSelect?.addEventListener("change", () => {
+        const size = worldSystem.setSize(worldSizeSelect.value);
+
+        if (worldSizeInfo) {
+            worldSizeInfo.textContent =
+                `WORLD SIZE: ${size} × ${size}`;
+        }
+    });
+
+    groundVisibleInput?.addEventListener("change", () => {
+        worldSystem.setGroundVisible(groundVisibleInput.checked);
+    });
+
+    gridVisibleInput?.addEventListener("change", () => {
+        worldSystem.setGridVisible(gridVisibleInput.checked);
+    });
+
+    axesVisibleInput?.addEventListener("change", () => {
+        worldSystem.setAxesVisible(axesVisibleInput.checked);
+    });
 
     engine.registerSystem({
         update() {
@@ -264,22 +246,13 @@ async function startEngine() {
 
         await engine.stop();
 
-        gridSystem.dispose();
+        worldSystem.dispose();
         cameraSystem.dispose();
         sceneManager.dispose();
         renderer.dispose();
 
         skyGeometry.dispose();
         skyMaterial.dispose();
-        ground.geometry.dispose();
-        ground.material.dispose();
-
-        axes.traverse((object) => {
-            if (object.isMesh) {
-                object.geometry.dispose();
-                object.material.dispose();
-            }
-        });
     }, { once: true });
 }
 
