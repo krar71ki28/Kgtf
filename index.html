@@ -71,6 +71,28 @@
                 <div id="world-size-info">WORLD SIZE: 20 × 20</div>
             </section>
 
+            <button id="outliner-toggle" type="button">العناصر</button>
+
+            <section id="outliner-panel" hidden>
+                <div class="settings-header">
+                    <strong>WORLD OUTLINER</strong>
+                    <button id="close-outliner" type="button">×</button>
+                </div>
+
+                <div id="object-list"></div>
+
+                <div id="object-details">
+                    <label for="object-name">اسم العنصر المحدد</label>
+                    <input id="object-name" type="text" maxlength="40"
+                        placeholder="اختر عنصراً">
+
+                    <button id="rename-object" type="button">إعادة تسمية</button>
+                    <button id="delete-object" type="button">حذف العنصر</button>
+                </div>
+
+                <div id="object-count">OBJECTS: 0</div>
+            </section>
+
             <div id="viewport-container"></div>
             <div id="loading-message">KGTF ENGINE — جاري تجهيز المحرك</div>
         </section>

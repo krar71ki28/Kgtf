@@ -6,25 +6,37 @@ import { Renderer } from "./rendering/Renderer.js";
 import { SceneManager } from "./scene/SceneManager.js";
 import { CameraSystem } from "./scene/CameraSystem.js";
 import { WorldSystem } from "./world/WorldSystem.js";
+import { ObjectManager } from "./objects/ObjectManager.js";
 
 async function startEngine() {
-    const viewport = document.getElementById("viewport-container");
-    const loading = document.getElementById("loading-message");
-    const status = document.getElementById("engine-status");
-    const fpsDisplay = document.getElementById("fps-counter");
+    const $ = (id) => document.getElementById(id);
 
-    const addCubeButton = document.getElementById("add-cube");
-    const playButton = document.getElementById("play-button");
+    const viewport = $("viewport-container");
+    const loading = $("loading-message");
+    const status = $("engine-status");
+    const fpsDisplay = $("fps-counter");
 
-    const settingsButton = document.getElementById("world-settings-button");
-    const settingsPanel = document.getElementById("world-settings");
-    const closeSettingsButton = document.getElementById("close-world-settings");
+    const addCubeButton = $("add-cube");
+    const playButton = $("play-button");
 
-    const worldSizeSelect = document.getElementById("world-size");
-    const groundVisibleInput = document.getElementById("ground-visible");
-    const gridVisibleInput = document.getElementById("grid-visible");
-    const axesVisibleInput = document.getElementById("axes-visible");
-    const worldSizeInfo = document.getElementById("world-size-info");
+    const settingsButton = $("world-settings-button");
+    const settingsPanel = $("world-settings");
+    const closeSettingsButton = $("close-world-settings");
+
+    const worldSizeSelect = $("world-size");
+    const groundVisibleInput = $("ground-visible");
+    const gridVisibleInput = $("grid-visible");
+    const axesVisibleInput = $("axes-visible");
+    const worldSizeInfo = $("world-size-info");
+
+    const outlinerToggle = $("outliner-toggle");
+    const outlinerPanel = $("outliner-panel");
+    const closeOutliner = $("close-outliner");
+    const objectList = $("object-list");
+    const objectNameInput = $("object-name");
+    const renameObjectButton = $("rename-object");
+    const deleteObjectButton = $("delete-object");
+    const objectCount = $("object-count");
 
     if (!viewport || !loading || !status || !fpsDisplay) {
         throw new Error("Required editor elements are missing");
@@ -43,7 +55,7 @@ async function startEngine() {
 
     scene.fog = new THREE.Fog(0xb7ccdc, 100, 320);
 
-    // Sky
+    // Editor sky
     const skyGeometry = new THREE.SphereGeometry(900, 32, 16);
 
     const skyMaterial = new THREE.ShaderMaterial({
@@ -94,7 +106,7 @@ async function startEngine() {
     sky.renderOrder = -10;
     scene.add(sky);
 
-    // World management
+    // World
     const worldSystem = new WorldSystem(scene, {
         size: 20
     });
@@ -105,14 +117,9 @@ async function startEngine() {
         0x60666d,
         1.7
     );
-
     scene.add(hemisphereLight);
 
-    const sunlight = new THREE.DirectionalLight(
-        0xfff3df,
-        2.5
-    );
-
+    const sunlight = new THREE.DirectionalLight(0xfff3df, 2.5);
     sunlight.position.set(12, 20, 10);
     sunlight.castShadow = true;
 
@@ -128,35 +135,76 @@ async function startEngine() {
 
     scene.add(sunlight);
 
-    // Object creation
-    function addCube() {
-        const cube = new THREE.Mesh(
-            new THREE.BoxGeometry(1, 1, 1),
-            new THREE.MeshStandardMaterial({
-                color: 0x438ee8,
-                roughness: 0.48,
-                metalness: 0.04
-            })
-        );
+    // Object management
+    const objectManager = new ObjectManager(scene);
 
-        cube.position.set(0, 0.5, 0);
-        cube.name = "Cube";
-        cube.castShadow = true;
-        cube.receiveShadow = true;
+    function renderOutliner() {
+        if (!objectList) return;
 
-        scene.add(cube);
+        const items = objectManager.getAll();
+        const selected = objectManager.getSelected();
 
-        return cube;
+        objectList.replaceChildren();
+
+        for (const item of items) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "object-row";
+
+            if (item.object === selected) {
+                button.classList.add("selected");
+            }
+
+            const icon = document.createElement("span");
+            icon.className = "object-type";
+            icon.textContent = "◆";
+
+            const name = document.createElement("span");
+            name.textContent = item.name;
+
+            button.append(icon, name);
+
+            button.addEventListener("click", () => {
+                objectManager.select(item.id);
+            });
+
+            objectList.append(button);
+        }
+
+        if (objectCount) {
+            objectCount.textContent = `OBJECTS: ${items.length}`;
+        }
+
+        if (objectNameInput) {
+            objectNameInput.value = selected?.name ?? "";
+            objectNameInput.disabled = !selected;
+        }
+
+        if (renameObjectButton) {
+            renameObjectButton.disabled = !selected;
+        }
+
+        if (deleteObjectButton) {
+            deleteObjectButton.disabled = !selected;
+        }
     }
 
+    objectManager.onChange = renderOutliner;
+
+    function addCube() {
+        return objectManager.createCube();
+    }
+
+    // Initial object
     addCube();
 
-    // World settings UI
-    if (settingsButton && settingsPanel) {
-        settingsButton.addEventListener("click", () => {
-            settingsPanel.hidden = !settingsPanel.hidden;
-        });
-    }
+    // World settings
+    settingsButton?.addEventListener("click", () => {
+        settingsPanel.hidden = !settingsPanel.hidden;
+        if (!settingsPanel.hidden && outlinerPanel) {
+            outlinerPanel.hidden = true;
+        }
+    });
 
     closeSettingsButton?.addEventListener("click", () => {
         settingsPanel.hidden = true;
@@ -166,8 +214,7 @@ async function startEngine() {
         const size = worldSystem.setSize(worldSizeSelect.value);
 
         if (worldSizeInfo) {
-            worldSizeInfo.textContent =
-                `WORLD SIZE: ${size} × ${size}`;
+            worldSizeInfo.textContent = `WORLD SIZE: ${size} × ${size}`;
         }
     });
 
@@ -181,6 +228,39 @@ async function startEngine() {
 
     axesVisibleInput?.addEventListener("change", () => {
         worldSystem.setAxesVisible(axesVisibleInput.checked);
+    });
+
+    // Outliner
+    outlinerToggle?.addEventListener("click", () => {
+        outlinerPanel.hidden = !outlinerPanel.hidden;
+
+        if (!outlinerPanel.hidden && settingsPanel) {
+            settingsPanel.hidden = true;
+        }
+    });
+
+    closeOutliner?.addEventListener("click", () => {
+        outlinerPanel.hidden = true;
+    });
+
+    renameObjectButton?.addEventListener("click", () => {
+        const selected = objectManager.getSelected();
+
+        if (!selected || !objectNameInput) return;
+
+        const id = selected.userData.editorObjectId;
+        objectManager.rename(id, objectNameInput.value);
+    });
+
+    objectNameInput?.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            renameObjectButton?.click();
+            objectNameInput.blur();
+        }
+    });
+
+    deleteObjectButton?.addEventListener("click", () => {
+        objectManager.removeSelected();
     });
 
     engine.registerSystem({
@@ -218,7 +298,6 @@ async function startEngine() {
         if (disposed) return;
 
         const deltaTime = time.update(timestamp);
-
         engine.update(deltaTime);
 
         renderer.render(
@@ -246,6 +325,7 @@ async function startEngine() {
 
         await engine.stop();
 
+        objectManager.dispose();
         worldSystem.dispose();
         cameraSystem.dispose();
         sceneManager.dispose();

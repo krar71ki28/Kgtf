@@ -59,6 +59,12 @@ body {
 }
 
 button,
+select,
+input {
+    font-family: inherit;
+}
+
+button,
 select {
     min-height: 36px;
     padding: 0 13px;
@@ -74,6 +80,11 @@ select {
 
 button:active {
     background: #46546a;
+}
+
+button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
 #play-button {
@@ -133,21 +144,31 @@ button:active {
     pointer-events: none;
 }
 
-#world-settings-button {
+#world-settings-button,
+#outliner-toggle {
     position: absolute;
     top: 10px;
-    right: 10px;
     z-index: 4;
     background: #252d39;
     border-color: #56677b;
 }
 
-#world-settings {
+#world-settings-button {
+    right: 10px;
+}
+
+#outliner-toggle {
+    right: 125px;
+}
+
+#world-settings,
+#outliner-panel {
     position: absolute;
     top: 54px;
-    right: 10px;
     z-index: 6;
-    width: min(260px, calc(100% - 20px));
+    width: min(270px, calc(100% - 20px));
+    max-height: calc(100% - 70px);
+    overflow-y: auto;
     padding: 14px;
     border: 1px solid #465264;
     border-radius: 9px;
@@ -155,7 +176,17 @@ button:active {
     box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
 }
 
-#world-settings[hidden] {
+#world-settings {
+    right: 10px;
+}
+
+#outliner-panel {
+    right: 10px;
+    top: 54px;
+}
+
+#world-settings[hidden],
+#outliner-panel[hidden] {
     display: none;
 }
 
@@ -168,24 +199,28 @@ button:active {
     font-size: 14px;
 }
 
-#close-world-settings {
+#close-world-settings,
+#close-outliner {
     min-width: 30px;
     min-height: 30px;
     padding: 0;
     font-size: 20px;
 }
 
-#world-settings > label:not(.setting-toggle) {
+#world-settings > label:not(.setting-toggle),
+#object-details label {
     display: block;
     margin-bottom: 7px;
     color: #aeb9c8;
     font-size: 12px;
 }
 
-#world-size {
+#world-size,
+#object-name {
     width: 100%;
     margin-bottom: 12px;
     background: #303744;
+    color: #f1f4f9;
 }
 
 .setting-toggle {
@@ -204,13 +239,69 @@ button:active {
     accent-color: #5799ed;
 }
 
-#world-size-info {
+#world-size-info,
+#object-count {
     margin-top: 12px;
     padding-top: 10px;
     border-top: 1px solid #3b4554;
     color: #81b5f2;
     font-size: 10px;
     letter-spacing: 0.5px;
+}
+
+#object-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    max-height: 190px;
+    overflow-y: auto;
+}
+
+.object-row {
+    width: 100%;
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 9px;
+    padding: 0 10px;
+    text-align: right;
+    background: #252d39;
+    border-color: #3d4858;
+}
+
+.object-row.selected {
+    background: #29466a;
+    border-color: #5799ed;
+}
+
+.object-row .object-type {
+    color: #8ca4bf;
+    font-size: 10px;
+}
+
+#object-details {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid #3b4554;
+}
+
+#object-name {
+    min-height: 36px;
+    padding: 0 10px;
+    border: 1px solid #414958;
+    border-radius: 6px;
+}
+
+#rename-object,
+#delete-object {
+    width: 100%;
+    margin-top: 6px;
+}
+
+#delete-object {
+    background: #713b42;
+    border-color: #96525b;
 }
 
 #loading-message {
@@ -272,7 +363,12 @@ button:active {
         font-size: 11px;
     }
 
-    #world-settings {
+    #outliner-toggle {
+        right: 116px;
+    }
+
+    #world-settings,
+    #outliner-panel {
         top: 52px;
     }
 }
