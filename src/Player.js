@@ -20,6 +20,11 @@ export class Player {
 
         this.joyDir = { x: 0, y: 0 };
 
+        this.forward = new THREE.Vector3();
+        this.right = new THREE.Vector3();
+        this.moveDirection = new THREE.Vector3();
+        this.up = new THREE.Vector3(0, 1, 0);
+
         this.setupControls();
     }
 
@@ -45,15 +50,13 @@ export class Player {
         joyZone.addEventListener('touchmove', (e) => {
             e.preventDefault();
 
-            if (!joyActive) return;
+            if (!joyActive || !e.touches.length) return;
 
             const rect = joyZone.getBoundingClientRect();
+            const touch = e.touches[0];
 
-            let dx = e.touches[0].clientX -
-                (rect.left + rect.width / 2);
-
-            let dy = e.touches[0].clientY -
-                (rect.top + rect.height / 2);
+            let dx = touch.clientX - (rect.left + rect.width / 2);
+            let dy = touch.clientY - (rect.top + rect.height / 2);
 
             const dist = Math.sqrt(dx * dx + dy * dy);
 
@@ -74,10 +77,8 @@ export class Player {
             if (e) e.preventDefault();
 
             joyActive = false;
-
             joyKnob.style.transform = 'translate(-50%, -50%)';
             this.joyDir = { x: 0, y: 0 };
-
         };
 
         joyZone.addEventListener('touchend', resetJoystick, {
@@ -113,9 +114,7 @@ export class Player {
         this.startPosition = this.playerModel.position.clone();
         this.startQuaternion = this.playerModel.quaternion.clone();
 
-        this.playerBody = this.physics.addCharacter(
-            this.playerModel
-        );
+        this.playerBody = this.physics.addCharacter(this.playerModel);
 
         if (!this.playerBody) {
             this.playerModel = null;
@@ -129,12 +128,11 @@ export class Player {
 
         this.isGrounded = false;
         this.jumpQueued = false;
-
         this.joyDir = { x: 0, y: 0 };
+
         this.isPlaying = true;
 
         document.body.classList.add('play-mode');
-
         document.getElementById('play-ui').style.display = 'block';
 
         this.engine.orbit.enabled = false;
@@ -155,10 +153,7 @@ export class Player {
 
         if (this.playerModel && this.startPosition) {
             this.playerModel.position.copy(this.startPosition);
-
-            this.playerModel.quaternion.copy(
-                this.startQuaternion
-            );
+            this.playerModel.quaternion.copy(this.startQuaternion);
         }
 
         this.playerModel = null;
@@ -166,7 +161,6 @@ export class Player {
         this.startQuaternion = null;
 
         document.body.classList.remove('play-mode');
-
         document.getElementById('play-ui').style.display = 'none';
 
         this.engine.orbit.enabled = true;
@@ -183,23 +177,45 @@ export class Player {
 
         const body = this.playerBody;
 
+        this.engine.camera.getWorldDirection(this.forward);
+        this.forward.y = 0;
+
+        if (this.forward.lengthSq() < 0.0001) {
+            this.forward.set(0, 0, -1);
+        } else {
+            this.forward.normalize();
+        }
+
+        this.right.crossVectors(this.forward, this.up).normalize();
+
         const moveX = this.joyDir.x;
-        const moveZ = -this.joyDir.y;
+        const moveForward = -this.joyDir.y;
 
-        body.velocity.x = moveX * this.moveSpeed;
-        body.velocity.z = moveZ * this.moveSpeed;
+        this.moveDirection.set(0, 0, 0);
 
-        if (moveX !== 0 || moveZ !== 0) {
-            const angle = Math.atan2(moveX, moveZ);
+        this.moveDirection.addScaledVector(this.right, moveX);
+        this.moveDirection.addScaledVector(this.forward, moveForward);
+
+        if (this.moveDirection.lengthSq() > 1) {
+            this.moveDirection.normalize();
+        }
+
+        body.velocity.x = this.moveDirection.x * this.moveSpeed;
+        body.velocity.z = this.moveDirection.z * this.moveSpeed;
+
+        if (this.moveDirection.lengthSq() > 0.001) {
+            const angle = Math.atan2(
+                this.moveDirection.x,
+                this.moveDirection.z
+            );
 
             this.physics.setCharacterYaw(body, angle);
+            body.wakeUp();
         }
 
         if (this.jumpQueued && this.isGrounded) {
             body.velocity.y = this.jumpForce;
-
             body.wakeUp();
-
             this.isGrounded = false;
         }
 
@@ -211,9 +227,7 @@ export class Player {
             return;
         }
 
-        this.isGrounded = this.physics.isGrounded(
-            this.playerBody
-        );
+        this.isGrounded = this.physics.isGrounded(this.playerBody);
 
         const targetCamPos = this.playerModel.position.clone().add(
             new THREE.Vector3(0, 3, 6)
