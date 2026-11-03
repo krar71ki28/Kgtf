@@ -4,21 +4,21 @@ export class Player {
     constructor(engine, physics) {
         this.engine = engine;
         this.physics = physics;
+
         this.isPlaying = false;
         this.playerModel = null;
         this.playerBody = null;
         this.isGrounded = false;
         this.jumpQueued = false;
-        this.jumpForce = 5.5;
+
         this.moveSpeed = 5;
-        this.startPosition = null;
-        this.startQuaternion = null;
+        this.jumpForce = 5.5;
         this.joyDir = { x: 0, y: 0 };
 
         this.forward = new THREE.Vector3();
         this.right = new THREE.Vector3();
-        this.moveDirection = new THREE.Vector3();
         this.up = new THREE.Vector3(0, 1, 0);
+        this.moveDirection = new THREE.Vector3();
 
         this.setupControls();
     }
@@ -27,69 +27,61 @@ export class Player {
         document.getElementById('btn-play').onclick = () => this.startPlay();
         document.getElementById('exit-play').onclick = () => this.stopPlay();
 
-        const joyZone = document.getElementById('joystick-zone');
-        const joyKnob = document.getElementById('joystick-knob');
-        let pointerId = null;
+        const zone = document.getElementById('joystick-zone');
+        const knob = document.getElementById('joystick-knob');
+        let pointer = null;
 
-        joyZone.addEventListener('pointerdown', (e) => {
+        zone.addEventListener('pointerdown', e => {
             e.preventDefault();
-            pointerId = e.pointerId;
-            joyZone.setPointerCapture(pointerId);
-            this.updateJoystick(e, joyZone, joyKnob);
+            pointer = e.pointerId;
+            zone.setPointerCapture(pointer);
+            this.moveJoystick(e, zone, knob);
         });
 
-        joyZone.addEventListener('pointermove', (e) => {
-            if (e.pointerId !== pointerId) return;
-            e.preventDefault();
-            this.updateJoystick(e, joyZone, joyKnob);
+        zone.addEventListener('pointermove', e => {
+            if (e.pointerId !== pointer) return;
+            this.moveJoystick(e, zone, knob);
         });
 
-        const resetJoystick = (e) => {
-            if (e.pointerId !== pointerId) return;
-            pointerId = null;
-            joyKnob.style.transform = 'translate(-50%, -50%)';
+        const reset = e => {
+            if (e.pointerId !== pointer) return;
+            pointer = null;
             this.joyDir = { x: 0, y: 0 };
+            knob.style.transform = 'translate(-50%, -50%)';
         };
 
-        joyZone.addEventListener('pointerup', resetJoystick);
-        joyZone.addEventListener('pointercancel', resetJoystick);
-        joyZone.addEventListener('lostpointercapture', () => {
-            pointerId = null;
-            joyKnob.style.transform = 'translate(-50%, -50%)';
-            this.joyDir = { x: 0, y: 0 };
-        });
+        zone.addEventListener('pointerup', reset);
+        zone.addEventListener('pointercancel', reset);
 
-        document.getElementById('btn-jump').addEventListener('pointerdown', (e) => {
+        document.getElementById('btn-jump').addEventListener('pointerdown', e => {
             e.preventDefault();
-            if (this.isPlaying && this.isGrounded) {
-                this.jumpQueued = true;
-            }
+            if (this.isPlaying) this.jumpQueued = true;
         });
     }
 
-    updateJoystick(e, zone, knob) {
+    moveJoystick(e, zone, knob) {
         const rect = zone.getBoundingClientRect();
-        let dx = e.clientX - (rect.left + rect.width / 2);
-        let dy = e.clientY - (rect.top + rect.height / 2);
-        const distance = Math.hypot(dx, dy);
+        let x = e.clientX - rect.left - rect.width / 2;
+        let y = e.clientY - rect.top - rect.height / 2;
+        const length = Math.hypot(x, y);
 
-        if (distance > 40) {
-            dx = dx / distance * 40;
-            dy = dy / distance * 40;
+        if (length > 40) {
+            x = x / length * 40;
+            y = y / length * 40;
         }
 
-        knob.style.transform =
-            `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+        this.joyDir.x = x / 40;
+        this.joyDir.y = y / 40;
 
-        this.joyDir.x = dx / 40;
-        this.joyDir.y = dy / 40;
+        knob.style.transform =
+            `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
     }
 
     startPlay() {
         if (this.isPlaying) return;
 
         this.playerModel = this.engine.objects.find(
-            o => o.userData.isCharacter
+            obj => obj.userData.isCharacter
         );
 
         if (!this.playerModel) {
@@ -97,85 +89,51 @@ export class Player {
             return;
         }
 
-        this.startPosition = this.playerModel.position.clone();
-        this.startQuaternion = this.playerModel.quaternion.clone();
-
         this.playerBody = this.physics.addCharacter(this.playerModel);
-
-        if (!this.playerBody) {
-            this.playerModel = null;
-            alert('تعذر إنشاء جسم الشخصية الفيزيائي');
-            return;
-        }
+        if (!this.playerBody) return;
 
         this.playerBody.velocity.set(0, 0, 0);
-        this.playerBody.angularVelocity.set(0, 0, 0);
         this.playerBody.wakeUp();
 
-        this.isGrounded = false;
-        this.jumpQueued = false;
-        this.joyDir = { x: 0, y: 0 };
         this.isPlaying = true;
+        this.isGrounded = false;
 
         document.body.classList.add('play-mode');
         document.getElementById('play-ui').style.display = 'block';
         this.engine.orbit.enabled = false;
-        this.engine.camera.position.set(0, 5, 8);
     }
 
     stopPlay() {
         this.isPlaying = false;
         this.jumpQueued = false;
-        this.isGrounded = false;
         this.joyDir = { x: 0, y: 0 };
 
-        if (this.playerBody) {
+        if (this.playerModel) {
             this.physics.removeObject(this.playerModel);
-            this.playerBody = null;
-        }
-
-        if (this.playerModel && this.startPosition) {
-            this.playerModel.position.copy(this.startPosition);
-            this.playerModel.quaternion.copy(this.startQuaternion);
         }
 
         this.playerModel = null;
-        this.startPosition = null;
-        this.startQuaternion = null;
+        this.playerBody = null;
 
         document.body.classList.remove('play-mode');
         document.getElementById('play-ui').style.display = 'none';
         this.engine.orbit.enabled = true;
-        this.engine.camera.position.set(6, 6, 8);
     }
 
-    update(dt) {
+    update() {
         if (!this.isPlaying || !this.playerBody) return;
-
-        if (!this.engine.objects.includes(this.playerModel)) {
-            this.stopPlay();
-            return;
-        }
 
         const body = this.playerBody;
 
         this.engine.camera.getWorldDirection(this.forward);
         this.forward.y = 0;
-
-        if (this.forward.lengthSq() < 0.0001) {
-            this.forward.set(0, 0, -1);
-        } else {
-            this.forward.normalize();
-        }
+        this.forward.normalize();
 
         this.right.crossVectors(this.forward, this.up).normalize();
 
-        const moveX = this.joyDir.x;
-        const moveForward = -this.joyDir.y;
-
         this.moveDirection.set(0, 0, 0);
-        this.moveDirection.addScaledVector(this.right, moveX);
-        this.moveDirection.addScaledVector(this.forward, moveForward);
+        this.moveDirection.addScaledVector(this.right, this.joyDir.x);
+        this.moveDirection.addScaledVector(this.forward, -this.joyDir.y);
 
         if (this.moveDirection.lengthSq() > 1) {
             this.moveDirection.normalize();
@@ -184,49 +142,28 @@ export class Player {
         body.velocity.x = this.moveDirection.x * this.moveSpeed;
         body.velocity.z = this.moveDirection.z * this.moveSpeed;
 
-        if (this.moveDirection.lengthSq() > 0.001) {
-            const angle = Math.atan2(
-                this.moveDirection.x,
-                this.moveDirection.z
-            );
-            this.physics.setCharacterYaw(body, angle);
-            body.wakeUp();
-        }
-
-        if (this.jumpQueued && this.isGrounded) {
+        if (this.jumpQueued && this.physics.isGrounded(body)) {
             body.velocity.y = this.jumpForce;
             body.wakeUp();
-            this.isGrounded = false;
-        }
-
-        const debugMove = document.getElementById('debug-move');
-        if (debugMove) {
-            debugMove.textContent =
-                `Input: ${moveX.toFixed(2)}, ${moveForward.toFixed(2)} | ` +
-                `Velocity: ${body.velocity.x.toFixed(2)}, ${body.velocity.z.toFixed(2)}`;
         }
 
         this.jumpQueued = false;
     }
 
     updateCamera(dt) {
-        if (!this.isPlaying || !this.playerModel || !this.playerBody) return;
+        if (!this.isPlaying || !this.playerModel) return;
 
         this.isGrounded = this.physics.isGrounded(this.playerBody);
 
-        const targetCamPos = this.playerModel.position.clone().add(
+        const target = this.playerModel.position.clone().add(
             new THREE.Vector3(0, 3, 6)
         );
 
-        this.engine.camera.position.lerp(
-            targetCamPos,
-            Math.min(1, 5 * dt)
-        );
-
+        this.engine.camera.position.lerp(target, Math.min(1, 5 * dt));
         this.engine.camera.lookAt(
-            this.playerModel.position.clone().add(
-                new THREE.Vector3(0, 0.9, 0)
-            )
+            this.playerModel.position.x,
+            this.playerModel.position.y + 0.9,
+            this.playerModel.position.z
         );
     }
 }
