@@ -234,6 +234,24 @@ export class Physics {
                 body.quaternion.w
             );
         }
+
+        const debug = document.getElementById('physics-debug');
+        if (debug) {
+            const player = [...this.bodies.entries()].find(
+                ([mesh]) => mesh.userData.isCharacter
+            );
+            const body = player ? player[1] : null;
+
+            debug.style.display = body ? 'block' : 'none';
+            document.getElementById('debug-world').textContent =
+                `World Bodies: ${this.world.bodies.length}`;
+            document.getElementById('debug-body').textContent =
+                `Player Body: ${body && body.world === this.world ? 'ACTIVE' : 'MISSING'}`;
+            document.getElementById('debug-y').textContent =
+                `Player Y: ${body ? body.position.y.toFixed(3) : '--'}`;
+            document.getElementById('debug-vy').textContent =
+                `Velocity Y: ${body ? body.velocity.y.toFixed(3) : '--'}`;
+        }
     }
 
     clear() {
