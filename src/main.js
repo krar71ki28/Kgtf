@@ -1,11 +1,10 @@
-import * as THREE from 'three';
-
 import { Engine } from './core/Engine.js';
 import { Renderer } from './rendering/Renderer.js';
 import { SceneManager } from './scene/SceneManager.js';
 import { ObjectFactory } from './objects/ObjectFactory.js';
 import { InputManager } from './input/InputManager.js';
 import { CameraController } from './editor/CameraController.js';
+import { EditorGridSystem } from './editor/EditorGridSystem.js';
 import { TerrainSystem } from './terrain/TerrainSystem.js';
 import { TerrainSculpt } from './terrain/TerrainSculpt.js';
 import { SkySystem } from './environment/SkySystem.js';
@@ -23,6 +22,7 @@ const objectFactory = new ObjectFactory(sceneManager);
 let input = null;
 
 const cameraController = new CameraController(renderer);
+const editorGrid = new EditorGridSystem(renderer);
 const terrain = new TerrainSystem(sceneManager);
 const sculpt = new TerrainSculpt(terrain);
 const sky = new SkySystem(renderer);
@@ -35,17 +35,17 @@ const worldSystem = {
         input = new InputManager(renderer.canvas);
         input.init();
 
-        renderer.camera.position.set(110, 85, 110);
+        renderer.camera.position.set(12, 10, 12);
         renderer.camera.lookAt(0, 0, 0);
 
         cameraController.init();
 
         sky.init();
-        terrain.init();
+        editorGrid.init();
 
         objectFactory.create('cube', {
             name: 'First Cube',
-            position: { x: 0, y: 2, z: 0 },
+            position: { x: 0, y: 0.5, z: 0 },
             color: 0x4f9cff
         });
     },
@@ -58,8 +58,13 @@ const worldSystem = {
 
     dispose() {
         cameraController.dispose();
-        if (input) input.dispose();
 
+        if (input) {
+            input.dispose();
+            input = null;
+        }
+
+        editorGrid.dispose();
         terrain.dispose();
         sky.dispose();
 
@@ -80,6 +85,7 @@ window.KGTF = {
     sceneManager,
     objectFactory,
     cameraController,
+    editorGrid,
     terrain,
     sculpt,
     sky,
