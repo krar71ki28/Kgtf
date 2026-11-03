@@ -4,94 +4,208 @@ export class EditorGridSystem {
     constructor(renderer) {
         this.renderer = renderer;
         this.group = new THREE.Group();
-        this.group.name = 'KGTF Editor Ground';
+        this.group.name = 'KGTF Infinite Editor Grid';
 
-        this.floor = null;
+        this.gridMaterial = null;
+        this.gridMesh = null;
     }
 
     init() {
-        if (this.floor) return;
+        if (this.gridMesh) return;
 
-        const scene = this.renderer.scene;
+        const geometry = new THREE.PlaneGeometry(2000, 2000);
 
-        // أرضية المحرر الرمادية
-        this.floor = new THREE.Mesh(
-            new THREE.PlaneGeometry(4000, 4000),
-            new THREE.MeshBasicMaterial({
-                color: 0x383838,
-                depthWrite: true,
-                toneMapped: false
-            })
+        this.gridMaterial = new THREE.ShaderMaterial({
+            transparent: true,
+            depthWrite: false,
+            side: THREE.DoubleSide,
+
+            uniforms: {
+                uMinorColor: {
+                    value: new THREE.Color(0x777777)
+                },
+                uMajorColor: {
+                    value: new THREE.Color(0xa5a5a5)
+                },
+                uAxisXColor: {
+                    value: new THREE.Color(0xd65c5c)
+                },
+                uAxisZColor: {
+                    value: new THREE.Color(0x5c91d6)
+                },
+                uCameraPosition: {
+                    value: new THREE.Vector3()
+                },
+                uGridSize: {
+                    value: 1.0
+                },
+                uMajorEvery: {
+                    value: 10.0
+                },
+                uFadeStart: {
+                    value: 35.0
+                },
+                uFadeEnd: {
+                    value: 180.0
+                }
+            },
+
+            vertexShader: `
+                varying vec3 vWorldPosition;
+
+                void main() {
+                    vec4 worldPosition =
+                        modelMatrix * vec4(position, 1.0);
+
+                    vWorldPosition = worldPosition.xyz;
+
+                    gl_Position =
+                        projectionMatrix *
+                        viewMatrix *
+                        worldPosition;
+                }
+            `,
+
+            fragmentShader: `
+                varying vec3 vWorldPosition;
+
+                uniform vec3 uMinorColor;
+                uniform vec3 uMajorColor;
+                uniform vec3 uAxisXColor;
+                uniform vec3 uAxisZColor;
+
+                uniform vec3 uCameraPosition;
+
+                uniform float uGridSize;
+                uniform float uMajorEvery;
+                uniform float uFadeStart;
+                uniform float uFadeEnd;
+
+                float gridLine(vec2 coord, float width) {
+                    vec2 derivative = fwidth(coord);
+
+                    vec2 distanceToLine =
+                        abs(fract(coord - 0.5) - 0.5);
+
+                    vec2 line =
+                        1.0 - smoothstep(
+                            derivative * (width - 0.5),
+                            derivative * (width + 0.5),
+                            distanceToLine
+                        );
+
+                    return max(line.x, line.y);
+                }
+
+                void main() {
+                    vec2 worldXZ = vWorldPosition.xz;
+
+                    vec2 minorCoord = worldXZ / uGridSize;
+
+                    vec2 majorCoord =
+                        worldXZ / (uGridSize * uMajorEvery);
+
+                    float minor = gridLine(minorCoord, 1.0);
+                    float major = gridLine(majorCoord, 1.2);
+
+                    vec3 color = uMinorColor;
+
+                    color = mix(
+                        color,
+                        uMajorColor,
+                        major * 0.85
+                    );
+
+                    float axisWidth = 0.025;
+
+                    float axisX =
+                        1.0 - smoothstep(
+                            axisWidth,
+                            axisWidth * 2.0,
+                            abs(worldXZ.y)
+                        );
+
+                    float axisZ =
+                        1.0 - smoothstep(
+                            axisWidth,
+                            axisWidth * 2.0,
+                            abs(worldXZ.x)
+                        );
+
+                    color = mix(
+                        color,
+                        uAxisXColor,
+                        axisX
+                    );
+
+                    color = mix(
+                        color,
+                        uAxisZColor,
+                        axisZ
+                    );
+
+                    float distanceFromCamera =
+                        distance(
+                            vWorldPosition.xz,
+                            uCameraPosition.xz
+                        );
+
+                    float fade = 1.0 - smoothstep(
+                        uFadeStart,
+                        uFadeEnd,
+                        distanceFromCamera
+                    );
+
+                    float lineVisibility =
+                        max(minor, major);
+
+                    float alpha = lineVisibility * fade;
+
+                    gl_FragColor = vec4(color, alpha);
+
+                    #include <tonemapping_fragment>
+                    #include <colorspace_fragment>
+                }
+            `
+        });
+
+        this.gridMesh = new THREE.Mesh(
+            geometry,
+            this.gridMaterial
         );
 
-        this.floor.rotation.x = -Math.PI / 2;
-        this.floor.position.y = -0.03;
-        this.floor.name = 'Editor Ground';
-        this.group.add(this.floor);
+        this.gridMesh.rotation.x = -Math.PI / 2;
+        this.gridMesh.position.y = 0;
+        this.gridMesh.frustumCulled = false;
 
-        // شبكة المربعات الصغيرة
-        const minorGrid = new THREE.GridHelper(
-            100,
-            100,
-            0x999999,
-            0x606060
+        this.group.add(this.gridMesh);
+
+        this.renderer.scene.add(this.group);
+    }
+
+    update() {
+        if (!this.gridMaterial || !this.renderer.camera) {
+            return;
+        }
+
+        this.gridMaterial.uniforms.uCameraPosition.value.copy(
+            this.renderer.camera.position
         );
-
-        minorGrid.position.y = 0;
-        minorGrid.material.transparent = true;
-        minorGrid.material.opacity = 0.75;
-        minorGrid.material.depthWrite = false;
-        minorGrid.name = 'Minor Grid';
-
-        this.group.add(minorGrid);
-
-        // الخطوط الرئيسية
-        const majorGrid = new THREE.GridHelper(
-            100,
-            10,
-            0xb0b0b0,
-            0x858585
-        );
-
-        majorGrid.position.y = 0.003;
-        majorGrid.material.transparent = true;
-        majorGrid.material.opacity = 0.9;
-        majorGrid.material.depthWrite = false;
-        majorGrid.name = 'Major Grid';
-
-        this.group.add(majorGrid);
-
-        // محاور العالم
-        const axes = new THREE.AxesHelper(5);
-        axes.position.y = 0.01;
-        axes.name = 'World Axes';
-
-        this.group.add(axes);
-
-        scene.add(this.group);
     }
 
     dispose() {
-        const scene = this.renderer.scene;
+        if (this.gridMesh) {
+            this.gridMesh.geometry.dispose();
+        }
 
-        this.group.traverse(object => {
-            if (object.geometry) {
-                object.geometry.dispose();
-            }
+        if (this.gridMaterial) {
+            this.gridMaterial.dispose();
+        }
 
-            if (object.material) {
-                if (Array.isArray(object.material)) {
-                    object.material.forEach(material => {
-                        material.dispose();
-                    });
-                } else {
-                    object.material.dispose();
-                }
-            }
-        });
-
-        scene.remove(this.group);
+        this.renderer.scene.remove(this.group);
         this.group.clear();
-        this.floor = null;
+
+        this.gridMesh = null;
+        this.gridMaterial = null;
     }
 }

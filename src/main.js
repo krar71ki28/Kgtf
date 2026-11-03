@@ -43,28 +43,13 @@ const worldSystem = {
 
         cameraController.init();
 
-        // بناء الأرض والسماء والإضاءة
         editorGrid.init();
         sky.init();
-
-        // المكعب التجريبي
-        const cube = objectFactory.create('cube', {
-            name: 'First Cube',
-            position: { x: 0, y: 0.5, z: 0 },
-            color: 0x4f9cff
-        });
-
-        if (cube) {
-            cube.material = new THREE.MeshStandardMaterial({
-                color: 0x4f9cff,
-                roughness: 0.65,
-                metalness: 0.05
-            });
-        }
     },
 
     update() {
         cameraController.update();
+        editorGrid.update();
         sky.update();
         renderer.update();
     },
