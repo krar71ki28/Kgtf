@@ -18,36 +18,30 @@ export class EditorGridSystem {
         this.gridMaterial = new THREE.ShaderMaterial({
             transparent: true,
             depthWrite: false,
+            depthTest: true,
             side: THREE.DoubleSide,
+            toneMapped: false,
 
             uniforms: {
                 uMinorColor: {
-                    value: new THREE.Color(0x777777)
+                    value: new THREE.Color(0x777f89)
                 },
                 uMajorColor: {
-                    value: new THREE.Color(0xa5a5a5)
+                    value: new THREE.Color(0x505965)
                 },
                 uAxisXColor: {
-                    value: new THREE.Color(0xd65c5c)
+                    value: new THREE.Color(0xb75c5c)
                 },
                 uAxisZColor: {
-                    value: new THREE.Color(0x5c91d6)
+                    value: new THREE.Color(0x5689bd)
                 },
                 uCameraPosition: {
                     value: new THREE.Vector3()
                 },
-                uGridSize: {
-                    value: 1.0
-                },
-                uMajorEvery: {
-                    value: 10.0
-                },
-                uFadeStart: {
-                    value: 35.0
-                },
-                uFadeEnd: {
-                    value: 180.0
-                }
+                uGridSize: { value: 1.0 },
+                uMajorEvery: { value: 10.0 },
+                uFadeStart: { value: 30.0 },
+                uFadeEnd: { value: 150.0 }
             },
 
             vertexShader: `
@@ -73,7 +67,6 @@ export class EditorGridSystem {
                 uniform vec3 uMajorColor;
                 uniform vec3 uAxisXColor;
                 uniform vec3 uAxisZColor;
-
                 uniform vec3 uCameraPosition;
 
                 uniform float uGridSize;
@@ -100,55 +93,43 @@ export class EditorGridSystem {
                 void main() {
                     vec2 worldXZ = vWorldPosition.xz;
 
-                    vec2 minorCoord = worldXZ / uGridSize;
+                    float minor = gridLine(
+                        worldXZ / uGridSize,
+                        1.0
+                    );
 
-                    vec2 majorCoord =
-                        worldXZ / (uGridSize * uMajorEvery);
-
-                    float minor = gridLine(minorCoord, 1.0);
-                    float major = gridLine(majorCoord, 1.2);
+                    float major = gridLine(
+                        worldXZ / (uGridSize * uMajorEvery),
+                        1.2
+                    );
 
                     vec3 color = uMinorColor;
 
                     color = mix(
                         color,
                         uMajorColor,
-                        major * 0.85
+                        major * 0.9
                     );
 
-                    float axisWidth = 0.025;
-
-                    float axisX =
-                        1.0 - smoothstep(
-                            axisWidth,
-                            axisWidth * 2.0,
-                            abs(worldXZ.y)
-                        );
-
-                    float axisZ =
-                        1.0 - smoothstep(
-                            axisWidth,
-                            axisWidth * 2.0,
-                            abs(worldXZ.x)
-                        );
-
-                    color = mix(
-                        color,
-                        uAxisXColor,
-                        axisX
+                    float axisX = 1.0 - smoothstep(
+                        0.025,
+                        0.055,
+                        abs(worldXZ.y)
                     );
 
-                    color = mix(
-                        color,
-                        uAxisZColor,
-                        axisZ
+                    float axisZ = 1.0 - smoothstep(
+                        0.025,
+                        0.055,
+                        abs(worldXZ.x)
                     );
 
-                    float distanceFromCamera =
-                        distance(
-                            vWorldPosition.xz,
-                            uCameraPosition.xz
-                        );
+                    color = mix(color, uAxisXColor, axisX);
+                    color = mix(color, uAxisZColor, axisZ);
+
+                    float distanceFromCamera = distance(
+                        vWorldPosition.xz,
+                        uCameraPosition.xz
+                    );
 
                     float fade = 1.0 - smoothstep(
                         uFadeStart,
@@ -156,14 +137,13 @@ export class EditorGridSystem {
                         distanceFromCamera
                     );
 
-                    float lineVisibility =
-                        max(minor, major);
+                    float visibility = max(minor, major);
+                    float alpha = visibility * fade * 0.9;
 
-                    float alpha = lineVisibility * fade;
+                    if (alpha < 0.01) discard;
 
                     gl_FragColor = vec4(color, alpha);
 
-                    #include <tonemapping_fragment>
                     #include <colorspace_fragment>
                 }
             `
@@ -179,7 +159,6 @@ export class EditorGridSystem {
         this.gridMesh.frustumCulled = false;
 
         this.group.add(this.gridMesh);
-
         this.renderer.scene.add(this.group);
     }
 
