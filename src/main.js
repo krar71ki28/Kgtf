@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import { Engine } from './core/Engine.js';
 import { Renderer } from './rendering/Renderer.js';
 import { SceneManager } from './scene/SceneManager.js';
@@ -40,17 +41,28 @@ const worldSystem = {
         renderer.camera.lookAt(0, 0, 0);
 
         cameraController.init();
-        editorGrid.init();
 
-        objectFactory.create('cube', {
+        editorGrid.init();
+        sky.init();
+
+        const cube = objectFactory.create('cube', {
             name: 'First Cube',
             position: { x: 0, y: 0.5, z: 0 },
             color: 0x4f9cff
         });
+
+        if (cube) {
+            cube.material = new THREE.MeshStandardMaterial({
+                color: 0x4f9cff,
+                roughness: 0.65,
+                metalness: 0.05
+            });
+        }
     },
 
     update() {
         cameraController.update();
+        sky.update();
         renderer.update();
     },
 
