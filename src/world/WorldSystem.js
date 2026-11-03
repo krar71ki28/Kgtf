@@ -52,11 +52,23 @@ export class WorldSystem {
         this.scene.add(this.ground);
     }
 
+    configureGridMaterial(helper, opacity) {
+        const materials = Array.isArray(helper.material)
+            ? helper.material
+            : [helper.material];
+
+        for (const material of materials) {
+            material.transparent = true;
+            material.opacity = opacity;
+            material.depthWrite = false;
+            material.needsUpdate = true;
+        }
+    }
+
     createGrid() {
         this.grid = new THREE.Group();
         this.grid.name = "WorldGrid";
 
-        // Fine grid: 0.25 world units
         const fineGrid = new THREE.GridHelper(
             this.size,
             this.size * 4,
@@ -67,7 +79,6 @@ export class WorldSystem {
         fineGrid.name = "FineGrid";
         fineGrid.position.y = -0.018;
 
-        // Main grid: 1 world unit
         const mainGrid = new THREE.GridHelper(
             this.size,
             this.size,
@@ -78,24 +89,8 @@ export class WorldSystem {
         mainGrid.name = "MainGrid";
         mainGrid.position.y = -0.014;
 
-        for (const helper of [fineGrid, mainGrid]) {
-            const materials = Array.isArray(helper.material)
-                ? helper.material
-                : [helper.material];
-
-            for (const material of materials) {
-                material.transparent = true;
-                material.depthWrite = false;
-            }
-        }
-
-        for (const material of fineGrid.material) {
-            material.opacity = 0.38;
-        }
-
-        for (const material of mainGrid.material) {
-            material.opacity = 0.78;
-        }
+        this.configureGridMaterial(fineGrid, 0.38);
+        this.configureGridMaterial(mainGrid, 0.78);
 
         this.grid.add(fineGrid, mainGrid);
         this.grid.visible = this.gridVisible;
