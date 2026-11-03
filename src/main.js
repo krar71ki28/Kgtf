@@ -569,10 +569,14 @@ async function startEngine() {
     const animationSystem = new AnimationSystem(objectManager);
     const { AnimationStateMachine } = await import("./animation/AnimationStateMachine.js");
     const animationStateMachine = new AnimationStateMachine(animationSystem, objectManager);
+    const { BlendSpaceSystem } = await import("./animation/BlendSpaceSystem.js");
+    const blendSpaceSystem = new BlendSpaceSystem(animationSystem, animationStateMachine, objectManager);
     engine.registerSystem(animationStateMachine);
     engine.registerSystem(animationSystem);
+    engine.registerSystem(blendSpaceSystem);
     window.KGTF_EDITOR.animationSystem = animationSystem;
     window.KGTF_EDITOR.animationStateMachine = animationStateMachine;
+    window.KGTF_EDITOR.blendSpaceSystem = blendSpaceSystem;
 
     await engine.initialize();
     engine.start();
