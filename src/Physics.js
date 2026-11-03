@@ -9,34 +9,36 @@ export class Physics {
         });
 
         this.world.allowSleep = true;
-
         this.world.defaultContactMaterial.friction = 0.4;
         this.world.defaultContactMaterial.restitution = 0.1;
 
         this.bodies = new Map();
+        this.characterOffsets = new Map();
 
-        const groundBody = new CANNON.Body({
+        this.characterHeight = 1.83;
+        this.characterRadius = 0.30;
+
+        this.groundBody = new CANNON.Body({
             mass: 0,
             shape: new CANNON.Plane()
         });
 
-        groundBody.quaternion.setFromEuler(
+        this.groundBody.quaternion.setFromEuler(
             -Math.PI / 2,
             0,
             0
         );
 
-        this.world.addBody(groundBody);
+        this.world.addBody(this.groundBody);
 
         this.removeListener = this.engine.onObjectRemoved(
-            (mesh) => {
-                this.removeObject(mesh);
-            }
+            (mesh) => this.removeObject(mesh)
         );
     }
 
     addObject(mesh) {
         if (this.bodies.has(mesh)) return;
+        if (mesh.userData.isCharacter) return;
 
         let shape;
         const mass = 1;
@@ -49,7 +51,6 @@ export class Physics {
                     0.5 * Math.abs(mesh.scale.z)
                 )
             );
-
         } else if (mesh.userData.type === 'sphere') {
             const scale = Math.max(
                 Math.abs(mesh.scale.x),
@@ -58,7 +59,6 @@ export class Physics {
             );
 
             shape = new CANNON.Sphere(0.5 * scale);
-
         } else {
             return;
         }
@@ -88,6 +88,105 @@ export class Physics {
         this.bodies.set(mesh, body);
     }
 
+    addCharacter(mesh) {
+        if (!mesh || !mesh.userData.isCharacter) {
+            return null;
+        }
+
+        if (this.bodies.has(mesh)) {
+            return this.bodies.get(mesh);
+        }
+
+        const height = this.characterHeight;
+        const radius = this.characterRadius;
+        const cylinderHeight = height - (radius * 2);
+        const halfCylinder = cylinderHeight * 0.5;
+        const centerY = height * 0.5;
+
+        const body = new CANNON.Body({
+            mass: 1,
+            position: new CANNON.Vec3(
+                mesh.position.x,
+                mesh.position.y + centerY,
+                mesh.position.z
+            )
+        });
+
+        body.addShape(
+            new CANNON.Cylinder(
+                radius,
+                radius,
+                cylinderHeight,
+                12
+            )
+        );
+
+        body.addShape(
+            new CANNON.Sphere(radius),
+            new CANNON.Vec3(0, halfCylinder, 0)
+        );
+
+        body.addShape(
+            new CANNON.Sphere(radius),
+            new CANNON.Vec3(0, -halfCylinder, 0)
+        );
+
+        body.quaternion.set(
+            mesh.quaternion.x,
+            mesh.quaternion.y,
+            mesh.quaternion.z,
+            mesh.quaternion.w
+        );
+
+        body.fixedRotation = true;
+        body.updateMassProperties();
+
+        body.linearDamping = 0;
+        body.angularDamping = 1;
+        body.allowSleep = false;
+
+        this.world.addBody(body);
+
+        this.bodies.set(mesh, body);
+        this.characterOffsets.set(mesh, centerY);
+
+        return body;
+    }
+
+    setCharacterYaw(body, angle) {
+        if (!body) return;
+
+        body.quaternion.setFromAxisAngle(
+            new CANNON.Vec3(0, 1, 0),
+            angle
+        );
+
+        body.aabbNeedsUpdate = true;
+        body.wakeUp();
+    }
+
+    isGrounded(body) {
+        if (!body) return false;
+
+        for (const contact of this.world.contacts) {
+            if (
+                contact.bi === body &&
+                contact.ni.y < -0.5
+            ) {
+                return true;
+            }
+
+            if (
+                contact.bj === body &&
+                contact.ni.y > 0.5
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     removeObject(mesh) {
         const body = this.bodies.get(mesh);
 
@@ -95,6 +194,7 @@ export class Physics {
 
         this.world.removeBody(body);
         this.bodies.delete(mesh);
+        this.characterOffsets.delete(mesh);
 
         return true;
     }
@@ -104,9 +204,7 @@ export class Physics {
             this.addObject(mesh);
         }
 
-        const activeObjects = new Set(
-            this.engine.objects
-        );
+        const activeObjects = new Set(this.engine.objects);
 
         for (const mesh of this.bodies.keys()) {
             if (!activeObjects.has(mesh)) {
@@ -116,14 +214,16 @@ export class Physics {
 
         this.world.step(
             1 / 60,
-            Math.min(dt, 0.1),
+            Math.min(Math.max(dt, 0), 0.1),
             5
         );
 
         for (const [mesh, body] of this.bodies) {
+            const offsetY = this.characterOffsets.get(mesh) || 0;
+
             mesh.position.set(
                 body.position.x,
-                body.position.y,
+                body.position.y - offsetY,
                 body.position.z
             );
 
@@ -149,5 +249,7 @@ export class Physics {
             this.removeListener();
             this.removeListener = null;
         }
+
+        this.world.removeBody(this.groundBody);
     }
 }

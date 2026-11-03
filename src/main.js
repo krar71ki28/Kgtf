@@ -1,12 +1,13 @@
 import { Engine } from './Engine.js?v=999';
-import { Player } from './Player.js?v=999';
+import { Player } from './Player.js?v=1001';
 import { Serializer } from './Serializer.js?v=1000';
-import { Physics } from './Physics.js?v=1000';
+import { Physics } from './Physics.js?v=1001';
 
 const canvas = document.getElementById('viewport');
+
 const engine = new Engine(canvas);
-const player = new Player(engine);
 const physics = new Physics(engine);
+const player = new Player(engine, physics);
 
 // إضافة المكعبات
 document.getElementById('btn-add-cube').onclick = () => {
@@ -52,13 +53,22 @@ fileInput.onchange = async (event) => {
 
     if (!file) return;
 
-    const jsonData = await file.text();
-    const success = Serializer.loadScene(engine, jsonData);
+    try {
+        const jsonData = await file.text();
 
-    if (success) {
-        alert('تم تحميل المشهد بنجاح');
-    } else {
-        alert('تعذر تحميل المشهد');
+        const success = Serializer.loadScene(
+            engine,
+            jsonData
+        );
+
+        if (success) {
+            alert('تم تحميل المشهد بنجاح');
+        } else {
+            alert('تعذر تحميل المشهد');
+        }
+    } catch (error) {
+        console.error(error);
+        alert('حدث خطأ أثناء تحميل المشهد');
     }
 
     fileInput.value = '';
@@ -77,12 +87,27 @@ function animate() {
     requestAnimationFrame(animate);
 
     const now = performance.now();
-    const dt = Math.min((now - lastTime) / 1000, 0.1);
+
+    const dt = Math.min(
+        (now - lastTime) / 1000,
+        0.1
+    );
+
     lastTime = now;
 
-    physics.update(dt);
-    engine.update(dt);
+    // 1. قراءة أوامر اللاعب
     player.update(dt);
+
+    // 2. تنفيذ المحاكاة الفيزيائية
+    physics.update(dt);
+
+    // 3. تحديث المحرك
+    engine.update(dt);
+
+    // 4. تحديث كاميرا اللاعب
+    player.updateCamera(dt);
+
+    // 5. العرض
     engine.render();
 }
 

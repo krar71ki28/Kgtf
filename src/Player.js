@@ -1,26 +1,38 @@
 import * as THREE from 'three';
 
 export class Player {
-    constructor(engine) {
+    constructor(engine, physics) {
         this.engine = engine;
+        this.physics = physics;
+
         this.isPlaying = false;
         this.playerModel = null;
+        this.playerBody = null;
 
-        this.verticalVelocity = 0;
-        this.gravity = 20;
-        this.jumpForce = 7;
-        this.groundY = 0;
-        this.isGrounded = true;
+        this.isGrounded = false;
+        this.jumpQueued = false;
+
+        this.jumpForce = 5.5;
+        this.moveSpeed = 5;
+
+        this.startPosition = null;
+        this.startQuaternion = null;
+
+        this.joyDir = { x: 0, y: 0 };
 
         this.setupControls();
     }
 
     setupControls() {
-        document.getElementById('btn-play').onclick = () => this.startPlay();
-        document.getElementById('exit-play').onclick = () => this.stopPlay();
+        document.getElementById('btn-play').onclick = () => {
+            this.startPlay();
+        };
+
+        document.getElementById('exit-play').onclick = () => {
+            this.stopPlay();
+        };
 
         let joyActive = false;
-        this.joyDir = { x: 0, y: 0 };
 
         const joyZone = document.getElementById('joystick-zone');
         const joyKnob = document.getElementById('joystick-knob');
@@ -32,12 +44,16 @@ export class Player {
 
         joyZone.addEventListener('touchmove', (e) => {
             e.preventDefault();
+
             if (!joyActive) return;
 
             const rect = joyZone.getBoundingClientRect();
 
-            let dx = e.touches[0].clientX - (rect.left + rect.width / 2);
-            let dy = e.touches[0].clientY - (rect.top + rect.height / 2);
+            let dx = e.touches[0].clientX -
+                (rect.left + rect.width / 2);
+
+            let dy = e.touches[0].clientY -
+                (rect.top + rect.height / 2);
 
             const dist = Math.sqrt(dx * dx + dy * dy);
 
@@ -51,27 +67,40 @@ export class Player {
 
             this.joyDir.x = dx / 40;
             this.joyDir.y = dy / 40;
+
         }, { passive: false });
 
-        joyZone.addEventListener('touchend', (e) => {
-            e.preventDefault();
+        const resetJoystick = (e) => {
+            if (e) e.preventDefault();
+
             joyActive = false;
 
             joyKnob.style.transform = 'translate(-50%, -50%)';
             this.joyDir = { x: 0, y: 0 };
-        }, { passive: false });
 
-        document.getElementById('btn-jump').addEventListener('touchstart', (e) => {
-            e.preventDefault();
+        };
 
-            if (this.isPlaying && this.playerModel && this.isGrounded) {
-                this.verticalVelocity = this.jumpForce;
-                this.isGrounded = false;
-            }
-        }, { passive: false });
+        joyZone.addEventListener('touchend', resetJoystick, {
+            passive: false
+        });
+
+        joyZone.addEventListener('touchcancel', resetJoystick, {
+            passive: false
+        });
+
+        document.getElementById('btn-jump')
+            .addEventListener('touchstart', (e) => {
+                e.preventDefault();
+
+                if (this.isPlaying && this.isGrounded) {
+                    this.jumpQueued = true;
+                }
+            }, { passive: false });
     }
 
     startPlay() {
+        if (this.isPlaying) return;
+
         this.playerModel = this.engine.objects.find(
             o => o.userData.isCharacter
         );
@@ -81,13 +110,31 @@ export class Player {
             return;
         }
 
-        this.groundY = this.playerModel.position.y;
-        this.verticalVelocity = 0;
-        this.isGrounded = true;
+        this.startPosition = this.playerModel.position.clone();
+        this.startQuaternion = this.playerModel.quaternion.clone();
 
+        this.playerBody = this.physics.addCharacter(
+            this.playerModel
+        );
+
+        if (!this.playerBody) {
+            this.playerModel = null;
+            alert('تعذر إنشاء جسم الشخصية الفيزيائي');
+            return;
+        }
+
+        this.playerBody.velocity.set(0, 0, 0);
+        this.playerBody.angularVelocity.set(0, 0, 0);
+        this.playerBody.wakeUp();
+
+        this.isGrounded = false;
+        this.jumpQueued = false;
+
+        this.joyDir = { x: 0, y: 0 };
         this.isPlaying = true;
 
         document.body.classList.add('play-mode');
+
         document.getElementById('play-ui').style.display = 'block';
 
         this.engine.orbit.enabled = false;
@@ -96,15 +143,30 @@ export class Player {
 
     stopPlay() {
         this.isPlaying = false;
+        this.jumpQueued = false;
+        this.isGrounded = false;
 
-        if (this.playerModel) {
-            this.playerModel.position.y = this.groundY;
+        this.joyDir = { x: 0, y: 0 };
+
+        if (this.playerBody) {
+            this.physics.removeObject(this.playerModel);
+            this.playerBody = null;
         }
 
-        this.verticalVelocity = 0;
-        this.isGrounded = true;
+        if (this.playerModel && this.startPosition) {
+            this.playerModel.position.copy(this.startPosition);
+
+            this.playerModel.quaternion.copy(
+                this.startQuaternion
+            );
+        }
+
+        this.playerModel = null;
+        this.startPosition = null;
+        this.startQuaternion = null;
 
         document.body.classList.remove('play-mode');
+
         document.getElementById('play-ui').style.display = 'none';
 
         this.engine.orbit.enabled = true;
@@ -112,36 +174,60 @@ export class Player {
     }
 
     update(dt) {
-        if (!this.isPlaying || !this.playerModel) return;
+        if (!this.isPlaying || !this.playerBody) return;
 
-        dt = Math.min(dt, 0.05);
-
-        const speed = 5;
-
-        if (this.joyDir.x !== 0 || this.joyDir.y !== 0) {
-            this.playerModel.position.x += this.joyDir.x * speed * dt;
-            this.playerModel.position.z -= this.joyDir.y * speed * dt;
-
-            const angle = Math.atan2(this.joyDir.x, -this.joyDir.y);
-            this.playerModel.rotation.y = angle;
+        if (!this.engine.objects.includes(this.playerModel)) {
+            this.stopPlay();
+            return;
         }
 
-        if (!this.isGrounded) {
-            this.verticalVelocity -= this.gravity * dt;
-            this.playerModel.position.y += this.verticalVelocity * dt;
+        const body = this.playerBody;
 
-            if (this.playerModel.position.y <= this.groundY) {
-                this.playerModel.position.y = this.groundY;
-                this.verticalVelocity = 0;
-                this.isGrounded = true;
-            }
+        const moveX = this.joyDir.x;
+        const moveZ = -this.joyDir.y;
+
+        body.velocity.x = moveX * this.moveSpeed;
+        body.velocity.z = moveZ * this.moveSpeed;
+
+        if (moveX !== 0 || moveZ !== 0) {
+            const angle = Math.atan2(moveX, moveZ);
+
+            this.physics.setCharacterYaw(body, angle);
         }
+
+        if (this.jumpQueued && this.isGrounded) {
+            body.velocity.y = this.jumpForce;
+
+            body.wakeUp();
+
+            this.isGrounded = false;
+        }
+
+        this.jumpQueued = false;
+    }
+
+    updateCamera(dt) {
+        if (!this.isPlaying || !this.playerModel || !this.playerBody) {
+            return;
+        }
+
+        this.isGrounded = this.physics.isGrounded(
+            this.playerBody
+        );
 
         const targetCamPos = this.playerModel.position.clone().add(
             new THREE.Vector3(0, 3, 6)
         );
 
-        this.engine.camera.position.lerp(targetCamPos, 5 * dt);
-        this.engine.camera.lookAt(this.playerModel.position);
+        this.engine.camera.position.lerp(
+            targetCamPos,
+            Math.min(1, 5 * dt)
+        );
+
+        this.engine.camera.lookAt(
+            this.playerModel.position.clone().add(
+                new THREE.Vector3(0, 0.9, 0)
+            )
+        );
     }
 }
