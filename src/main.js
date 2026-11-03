@@ -201,6 +201,7 @@ async function startEngine() {
     // World settings
     settingsButton?.addEventListener("click", () => {
         settingsPanel.hidden = !settingsPanel.hidden;
+
         if (!settingsPanel.hidden && outlinerPanel) {
             outlinerPanel.hidden = true;
         }
@@ -263,6 +264,79 @@ async function startEngine() {
         objectManager.removeSelected();
     });
 
+    // Direct viewport selection using Raycasting
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+
+    let pointerStart = null;
+
+    const selectionCanvas = renderer.renderer.domElement;
+
+    function handlePointerDown(event) {
+        if (event.target !== selectionCanvas) return;
+        if (event.button !== undefined && event.button !== 0) return;
+
+        pointerStart = {
+            id: event.pointerId,
+            x: event.clientX,
+            y: event.clientY
+        };
+    }
+
+    function handlePointerUp(event) {
+        if (!pointerStart) return;
+        if (event.pointerId !== pointerStart.id) return;
+
+        const start = pointerStart;
+        pointerStart = null;
+
+        const dx = event.clientX - start.x;
+        const dy = event.clientY - start.y;
+
+        // Ignore camera movement and dragging
+        if (Math.hypot(dx, dy) > 7) return;
+
+        const rect = selectionCanvas.getBoundingClientRect();
+
+        if (!rect.width || !rect.height) return;
+
+        pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+        cameraSystem.camera.updateMatrixWorld();
+        raycaster.setFromCamera(pointer, cameraSystem.camera);
+
+        const objects = objectManager
+            .getAll()
+            .map((item) => item.object);
+
+        const intersections = raycaster.intersectObjects(objects, true);
+
+        if (intersections.length === 0) {
+            objectManager.clearSelection();
+            return;
+        }
+
+        // Find the managed object containing the intersected mesh
+        let target = intersections[0].object;
+
+        while (target && !target.userData.editorObjectId) {
+            target = target.parent;
+        }
+
+        if (target) {
+            objectManager.select(target.userData.editorObjectId);
+        }
+    }
+
+    function handlePointerCancel() {
+        pointerStart = null;
+    }
+
+    viewport.addEventListener("pointerdown", handlePointerDown);
+    viewport.addEventListener("pointerup", handlePointerUp);
+    viewport.addEventListener("pointercancel", handlePointerCancel);
+
     engine.registerSystem({
         update() {
             cameraSystem.update();
@@ -322,6 +396,10 @@ async function startEngine() {
 
         cancelAnimationFrame(animationFrame);
         cameraResizeObserver.disconnect();
+
+        viewport.removeEventListener("pointerdown", handlePointerDown);
+        viewport.removeEventListener("pointerup", handlePointerUp);
+        viewport.removeEventListener("pointercancel", handlePointerCancel);
 
         await engine.stop();
 
