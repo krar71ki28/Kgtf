@@ -3,17 +3,18 @@ import * as CANNON from 'cannon-es';
 export class Physics {
     constructor(engine) {
         this.engine = engine;
+
         this.world = new CANNON.World({
             gravity: new CANNON.Vec3(0, -9.82, 0)
         });
 
         this.world.allowSleep = true;
+
         this.world.defaultContactMaterial.friction = 0.4;
         this.world.defaultContactMaterial.restitution = 0.1;
 
         this.bodies = new Map();
 
-        // الأرضية الفيزيائية
         const groundBody = new CANNON.Body({
             mass: 0,
             shape: new CANNON.Plane()
@@ -26,13 +27,19 @@ export class Physics {
         );
 
         this.world.addBody(groundBody);
+
+        this.removeListener = this.engine.onObjectRemoved(
+            (mesh) => {
+                this.removeObject(mesh);
+            }
+        );
     }
 
     addObject(mesh) {
         if (this.bodies.has(mesh)) return;
 
         let shape;
-        let mass = 1;
+        const mass = 1;
 
         if (mesh.userData.type === 'cube') {
             shape = new CANNON.Box(
@@ -42,6 +49,7 @@ export class Physics {
                     0.5 * Math.abs(mesh.scale.z)
                 )
             );
+
         } else if (mesh.userData.type === 'sphere') {
             const scale = Math.max(
                 Math.abs(mesh.scale.x),
@@ -50,6 +58,7 @@ export class Physics {
             );
 
             shape = new CANNON.Sphere(0.5 * scale);
+
         } else {
             return;
         }
@@ -79,24 +88,38 @@ export class Physics {
         this.bodies.set(mesh, body);
     }
 
+    removeObject(mesh) {
+        const body = this.bodies.get(mesh);
+
+        if (!body) return false;
+
+        this.world.removeBody(body);
+        this.bodies.delete(mesh);
+
+        return true;
+    }
+
     update(dt) {
-        // اكتشاف المجسمات الجديدة
         for (const mesh of this.engine.objects) {
             this.addObject(mesh);
         }
 
-        // إزالة الأجسام التي حُذفت من المشهد
-        for (const [mesh, body] of this.bodies) {
-            if (!this.engine.objects.includes(mesh)) {
-                this.world.removeBody(body);
-                this.bodies.delete(mesh);
+        const activeObjects = new Set(
+            this.engine.objects
+        );
+
+        for (const mesh of this.bodies.keys()) {
+            if (!activeObjects.has(mesh)) {
+                this.removeObject(mesh);
             }
         }
 
-        // تحديث الفيزياء
-        this.world.step(1 / 60, Math.min(dt, 0.1), 5);
+        this.world.step(
+            1 / 60,
+            Math.min(dt, 0.1),
+            5
+        );
 
-        // مزامنة مواقع المجسمات مع أجسام الفيزياء
         for (const [mesh, body] of this.bodies) {
             mesh.position.set(
                 body.position.x,
@@ -114,10 +137,17 @@ export class Physics {
     }
 
     clear() {
-        for (const body of this.bodies.values()) {
-            this.world.removeBody(body);
+        for (const mesh of [...this.bodies.keys()]) {
+            this.removeObject(mesh);
         }
+    }
 
-        this.bodies.clear();
+    dispose() {
+        this.clear();
+
+        if (this.removeListener) {
+            this.removeListener();
+            this.removeListener = null;
+        }
     }
 }
