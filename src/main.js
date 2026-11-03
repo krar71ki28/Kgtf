@@ -5,6 +5,7 @@ import { Time } from "./core/Time.js";
 import { Renderer } from "./rendering/Renderer.js";
 import { SceneManager } from "./scene/SceneManager.js";
 import { CameraSystem } from "./scene/CameraSystem.js";
+import { EditorGridSystem } from "./editor/EditorGridSystem.js";
 
 async function startEngine() {
     const viewport = document.getElementById("viewport-container");
@@ -29,7 +30,6 @@ async function startEngine() {
         background: 0x91c5ed
     });
 
-    // Ground
     const ground = new THREE.Mesh(
         new THREE.PlaneGeometry(200, 200),
         new THREE.MeshStandardMaterial({
@@ -44,21 +44,16 @@ async function startEngine() {
     ground.name = "Ground";
     scene.add(ground);
 
-    // Editor grid
-    const grid = new THREE.GridHelper(
-        100,
-        100,
-        0x505963,
-        0x68727d
-    );
+    const gridSystem = new EditorGridSystem({
+        size: 100,
+        divisions: 100,
+        majorEvery: 10,
+        minorColor: 0x7b858f,
+        majorColor: 0x535e69
+    });
 
-    grid.position.y = 0.015;
-    grid.material.transparent = true;
-    grid.material.opacity = 0.48;
-    grid.material.depthWrite = false;
-    scene.add(grid);
+    scene.add(gridSystem.mesh);
 
-    // Lighting
     const hemisphereLight = new THREE.HemisphereLight(
         0xffffff,
         0x777d84,
@@ -75,7 +70,6 @@ async function startEngine() {
     sunlight.position.set(8, 14, 10);
     scene.add(sunlight);
 
-    // Initial cube
     function addCube() {
         const cube = new THREE.Mesh(
             new THREE.BoxGeometry(1, 1, 1),
@@ -95,37 +89,28 @@ async function startEngine() {
 
     addCube();
 
-    // Engine update system
-    const cameraUpdateSystem = {
+    engine.registerSystem({
         update() {
             cameraSystem.update();
         }
-    };
-
-    engine.registerSystem(cameraUpdateSystem);
+    });
 
     await engine.initialize();
     engine.start();
 
     time.start();
 
-    // Camera resizing
     const cameraResizeObserver = new ResizeObserver(() => {
         cameraSystem.resize();
     });
 
     cameraResizeObserver.observe(viewport);
 
-    // Add cube button
-    addCubeButton?.addEventListener("click", () => {
-        addCube();
-    });
+    addCubeButton?.addEventListener("click", addCube);
 
-    // Play mode is not implemented yet
     if (playButton) {
         playButton.disabled = true;
         playButton.textContent = "قريباً";
-        playButton.title = "Play Mode is under development";
     }
 
     loading.remove();
@@ -157,15 +142,16 @@ async function startEngine() {
 
     animationFrame = requestAnimationFrame(animate);
 
-    // Cleanup
     window.addEventListener("pagehide", async () => {
-        disposed = true;
+        if (disposed) return;
 
+        disposed = true;
         cancelAnimationFrame(animationFrame);
         cameraResizeObserver.disconnect();
 
         await engine.stop();
 
+        gridSystem.dispose();
         cameraSystem.dispose();
         sceneManager.dispose();
         renderer.dispose();
