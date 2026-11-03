@@ -22,6 +22,25 @@ document.body.appendChild(input);
 
 const loader = new GLTFLoader();
 
+function arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    const chunkSize = 0x8000;
+    let binary = "";
+
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.subarray(i, i + chunkSize);
+        binary += String.fromCharCode(...chunk);
+    }
+
+    return btoa(binary);
+}
+
+function resetButton() {
+    button.disabled = false;
+    button.textContent = "Import Model";
+    input.value = "";
+}
+
 button.addEventListener("click", () => input.click());
 
 input.addEventListener("change", async () => {
@@ -30,7 +49,7 @@ input.addEventListener("change", async () => {
 
     if (file.size > 50 * 1024 * 1024) {
         alert("Model file exceeds 50 MB");
-        input.value = "";
+        resetButton();
         return;
     }
 
@@ -40,18 +59,17 @@ input.addEventListener("change", async () => {
     try {
         const extension = file.name.split(".").pop().toLowerCase();
 
-        let data;
-
-        if (extension === "glb") {
-            data = await file.arrayBuffer();
-        } else if (extension === "gltf") {
-            data = await file.text();
-        } else {
+        if (!["glb", "gltf"].includes(extension)) {
             throw new Error("Only GLB and GLTF files are supported");
         }
 
+        const isGLB = extension === "glb";
+        const source = isGLB
+            ? await file.arrayBuffer()
+            : await file.text();
+
         loader.parse(
-            data,
+            source,
             "",
             (gltf) => {
                 try {
@@ -61,38 +79,42 @@ input.addEventListener("change", async () => {
                         throw new Error("The model has no scene");
                     }
 
-                    const name = file.name.replace(/\.(glb|gltf)$/i, "");
+                    model.userData.kgtfAsset = {
+                        format: extension,
+                        filename: file.name,
+                        data: isGLB
+                            ? arrayBufferToBase64(source)
+                            : source
+                    };
 
-                    editor.objectManager.registerObject(model, name);
+                    editor.objectManager.registerObject(
+                        model,
+                        file.name.replace(/\.(glb|gltf)$/i, "")
+                    );
+
                     editor.transformSystem.syncSelection(model);
 
                     const status = document.getElementById("engine-status");
                     if (status) status.textContent = "MODEL: IMPORTED";
 
-                    button.textContent = "Import Model";
-                    button.disabled = false;
-                    input.value = "";
+                    resetButton();
                 } catch (error) {
                     console.error("Model registration failed:", error);
                     alert(error.message || "Could not add model to scene");
-                    button.textContent = "Import Model";
-                    button.disabled = false;
-                    input.value = "";
+                    resetButton();
                 }
             },
             (error) => {
                 console.error("Model loading failed:", error);
-                alert("Could not load model. Check that the file is a valid GLB or GLTF with embedded resources.");
-                button.textContent = "Import Model";
-                button.disabled = false;
-                input.value = "";
+                alert(
+                    "Could not load model. GLTF files must have embedded resources."
+                );
+                resetButton();
             }
         );
     } catch (error) {
         console.error("Model import failed:", error);
         alert(error.message || "Model import failed");
-        button.textContent = "Import Model";
-        button.disabled = false;
-        input.value = "";
+        resetButton();
     }
 });
