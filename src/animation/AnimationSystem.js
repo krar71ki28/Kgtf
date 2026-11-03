@@ -20,6 +20,7 @@ export class AnimationSystem {
         this.clipSelect = null;
         this.speedSelect = null;
         this.loopSelect = null;
+        this.fadeSelect = null;
         this.timeline = null;
         this.timeLabel = null;
         this.statusLabel = null;
@@ -77,6 +78,7 @@ export class AnimationSystem {
         };
 
         const clipSelect = makeSelect([]);
+
         const speedSelect = makeSelect([
             ["0.25", "Speed: 0.25x"],
             ["0.5", "Speed: 0.5x"],
@@ -88,6 +90,13 @@ export class AnimationSystem {
             ["repeat", "Loop: Repeat"],
             ["once", "Loop: Once"],
             ["pingpong", "Loop: PingPong"]
+        ]);
+
+        const fadeSelect = makeSelect([
+            ["0.1", "Blend: 0.1s"],
+            ["0.25", "Blend: 0.25s"],
+            ["0.5", "Blend: 0.5s"],
+            ["1", "Blend: 1s"]
         ]);
 
         const timeline = document.createElement("input");
@@ -152,6 +161,7 @@ export class AnimationSystem {
         };
 
         makeButton("Play", "#16834b", () => this.play());
+        makeButton("Blend", "#2563a6", () => this.blend());
         makeButton("Pause", "#9a6b18", () => this.pause());
         makeButton("Stop", "#a33a43", () => this.stop());
 
@@ -188,6 +198,7 @@ export class AnimationSystem {
             clipSelect,
             speedSelect,
             loopSelect,
+            fadeSelect,
             timeline,
             timeRow,
             controls
@@ -199,6 +210,7 @@ export class AnimationSystem {
         this.clipSelect = clipSelect;
         this.speedSelect = speedSelect;
         this.loopSelect = loopSelect;
+        this.fadeSelect = fadeSelect;
         this.timeline = timeline;
         this.timeLabel = timeLabel;
         this.statusLabel = statusLabel;
@@ -228,6 +240,8 @@ export class AnimationSystem {
             activeIndex: -1,
             speed: 1,
             loopMode: "repeat",
+            fadeDuration: 0.25,
+            transition: null,
             isPlaying: false,
             isPaused: false
         };
@@ -259,6 +273,34 @@ export class AnimationSystem {
         return entry.actions[entry.selectedIndex] || null;
     }
 
+    configureAction(action, entry) {
+        if (!action) return;
+
+        action.enabled = true;
+        action.paused = false;
+        action.timeScale = entry.speed;
+
+        action.setLoop(
+            LOOP_MODES[entry.loopMode],
+            entry.loopMode === "once" ? 1 : Infinity
+        );
+
+        action.clampWhenFinished = entry.loopMode === "once";
+    }
+
+    clearTransition(entry) {
+        if (!entry.transition) return;
+
+        const fromAction =
+            entry.actions[entry.transition.fromIndex];
+
+        if (fromAction) {
+            fromAction.stop();
+        }
+
+        entry.transition = null;
+    }
+
     play() {
         const selected = this.getSelectedEntry();
         if (!selected) return;
@@ -271,6 +313,16 @@ export class AnimationSystem {
 
         if (entry.activeIndex === index && entry.isPaused) {
             action.paused = false;
+
+            if (entry.transition) {
+                const fromAction =
+                    entry.actions[entry.transition.fromIndex];
+
+                if (fromAction) {
+                    fromAction.paused = false;
+                }
+            }
+
             entry.isPaused = false;
             entry.isPlaying = true;
             this.updateStatus(entry);
@@ -280,6 +332,8 @@ export class AnimationSystem {
         if (entry.activeIndex === index && entry.isPlaying) {
             return;
         }
+
+        this.clearTransition(entry);
 
         const duration = action.getClip().duration;
 
@@ -292,20 +346,74 @@ export class AnimationSystem {
 
         entry.mixer.stopAllAction();
 
-        action.enabled = true;
-        action.paused = false;
-        action.timeScale = entry.speed;
-        action.setLoop(
-            LOOP_MODES[entry.loopMode],
-            entry.loopMode === "once" ? 1 : Infinity
-        );
-        action.clampWhenFinished = entry.loopMode === "once";
+        this.configureAction(action, entry);
         action.play();
 
         entry.activeIndex = index;
         entry.isPlaying = true;
         entry.isPaused = false;
 
+        this.updateTimeline(entry);
+        this.updateStatus(entry);
+    }
+
+    blend() {
+        const selected = this.getSelectedEntry();
+        if (!selected) return;
+
+        const { entry } = selected;
+        const targetIndex = entry.selectedIndex;
+        const targetAction = entry.actions[targetIndex];
+
+        if (!targetAction) return;
+
+        if (entry.activeIndex < 0) {
+            this.play();
+            return;
+        }
+
+        if (entry.transition) {
+            this.clearTransition(entry);
+        }
+
+        const sourceIndex = entry.activeIndex;
+        const sourceAction = entry.actions[sourceIndex];
+
+        if (!sourceAction || sourceIndex === targetIndex) {
+            return;
+        }
+
+        const wasPaused = entry.isPaused;
+        const duration = entry.fadeDuration;
+
+        targetAction.stop();
+        targetAction.reset();
+
+        this.configureAction(targetAction, entry);
+
+        targetAction.crossFadeFrom(
+            sourceAction,
+            duration,
+            false
+        );
+
+        if (wasPaused) {
+            targetAction.paused = true;
+            sourceAction.paused = true;
+        }
+
+        entry.transition = {
+            fromIndex: sourceIndex,
+            toIndex: targetIndex,
+            duration,
+            remaining: duration
+        };
+
+        entry.activeIndex = targetIndex;
+        entry.isPaused = wasPaused;
+        entry.isPlaying = !wasPaused;
+
+        this.updateTimeline(entry);
         this.updateStatus(entry);
     }
 
@@ -319,6 +427,16 @@ export class AnimationSystem {
         if (!action || !entry.isPlaying) return;
 
         action.paused = true;
+
+        if (entry.transition) {
+            const fromAction =
+                entry.actions[entry.transition.fromIndex];
+
+            if (fromAction) {
+                fromAction.paused = true;
+            }
+        }
+
         entry.isPlaying = false;
         entry.isPaused = true;
 
@@ -332,6 +450,7 @@ export class AnimationSystem {
         const { entry } = selected;
 
         entry.mixer.stopAllAction();
+        entry.transition = null;
 
         entry.activeIndex = -1;
         entry.isPlaying = false;
@@ -350,6 +469,7 @@ export class AnimationSystem {
         if (index < 0 || index >= entry.actions.length) return;
 
         entry.mixer.stopAllAction();
+        entry.transition = null;
 
         entry.selectedIndex = index;
         entry.activeIndex = -1;
@@ -375,6 +495,15 @@ export class AnimationSystem {
         if (action) {
             action.timeScale = speed;
         }
+
+        if (entry.transition) {
+            const fromAction =
+                entry.actions[entry.transition.fromIndex];
+
+            if (fromAction) {
+                fromAction.timeScale = speed;
+            }
+        }
     }
 
     setLoopMode(mode) {
@@ -385,15 +514,23 @@ export class AnimationSystem {
 
         entry.loopMode = mode;
 
-        const action = this.getActiveAction(entry);
+        const applyLoop = (action) => {
+            if (!action) return;
 
-        if (action) {
             action.setLoop(
                 LOOP_MODES[mode],
                 mode === "once" ? 1 : Infinity
             );
 
             action.clampWhenFinished = mode === "once";
+        };
+
+        applyLoop(this.getActiveAction(entry));
+
+        if (entry.transition) {
+            applyLoop(
+                entry.actions[entry.transition.fromIndex]
+            );
         }
     }
 
@@ -406,6 +543,8 @@ export class AnimationSystem {
 
         if (!action) return;
 
+        this.clearTransition(entry);
+
         const duration = action.getClip().duration;
         const time = Math.max(0, Math.min(1, value)) * duration;
 
@@ -413,13 +552,7 @@ export class AnimationSystem {
             entry.mixer.stopAllAction();
 
             action.reset();
-            action.enabled = true;
-            action.timeScale = entry.speed;
-            action.setLoop(
-                LOOP_MODES[entry.loopMode],
-                entry.loopMode === "once" ? 1 : Infinity
-            );
-            action.clampWhenFinished = entry.loopMode === "once";
+            this.configureAction(action, entry);
             action.play();
             action.paused = true;
 
@@ -476,7 +609,11 @@ export class AnimationSystem {
     }
 
     updateStatus(entry) {
-        if (entry.isPlaying) {
+        if (entry.transition) {
+            this.statusLabel.textContent = entry.isPaused
+                ? "Blend Paused"
+                : "Blending";
+        } else if (entry.isPlaying) {
             this.statusLabel.textContent = "Playing";
         } else if (entry.isPaused) {
             this.statusLabel.textContent = "Paused";
@@ -522,6 +659,7 @@ export class AnimationSystem {
         this.clipSelect.value = String(entry.selectedIndex);
         this.speedSelect.value = String(entry.speed);
         this.loopSelect.value = entry.loopMode;
+        this.fadeSelect.value = String(entry.fadeDuration);
 
         this.updateTimeline(entry);
         this.updateStatus(entry);
@@ -548,6 +686,21 @@ export class AnimationSystem {
 
             entry.mixer.update(dt);
 
+            if (entry.transition && entry.isPlaying) {
+                entry.transition.remaining -= dt;
+
+                if (entry.transition.remaining <= 0) {
+                    const fromAction =
+                        entry.actions[entry.transition.fromIndex];
+
+                    if (fromAction) {
+                        fromAction.stop();
+                    }
+
+                    entry.transition = null;
+                }
+            }
+
             const action = this.getActiveAction(entry);
 
             if (
@@ -556,6 +709,10 @@ export class AnimationSystem {
                 entry.isPlaying &&
                 action.time >= action.getClip().duration - 0.001
             ) {
+                if (entry.transition) {
+                    this.clearTransition(entry);
+                }
+
                 entry.isPlaying = false;
                 entry.isPaused = false;
             }
@@ -569,6 +726,7 @@ export class AnimationSystem {
         if (!entry) return;
 
         entry.mixer.stopAllAction();
+        entry.transition = null;
 
         for (const action of entry.actions) {
             entry.mixer.uncacheAction(action.getClip(), model);
