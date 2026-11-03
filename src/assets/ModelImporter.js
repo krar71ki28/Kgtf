@@ -1,4 +1,5 @@
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { assetLibrary } from "./AssetLibrary.js";
 
 const editor = window.KGTF_EDITOR;
@@ -15,13 +16,14 @@ button.textContent = "Import Model";
 
 const input = document.createElement("input");
 input.type = "file";
-input.accept = ".glb,.gltf";
+input.accept = ".glb,.gltf,.fbx";
 input.hidden = true;
 
 toolbar.appendChild(button);
 document.body.appendChild(input);
 
-const loader = new GLTFLoader();
+const gltfLoader = new GLTFLoader();
+const fbxLoader = new FBXLoader();
 
 function arrayBufferToBase64(buffer) {
     const bytes = new Uint8Array(buffer);
@@ -37,20 +39,43 @@ function arrayBufferToBase64(buffer) {
     return btoa(binary);
 }
 
-async function createFingerprint(source, isGLB) {
+async function createFingerprint(buffer) {
     if (!crypto.subtle) {
         throw new Error("Secure file fingerprinting is unavailable");
     }
 
-    const data = isGLB
-        ? source
-        : new TextEncoder().encode(source);
-
-    const digest = await crypto.subtle.digest("SHA-256", data);
+    const digest = await crypto.subtle.digest("SHA-256", buffer);
 
     return Array.from(new Uint8Array(digest))
         .map((byte) => byte.toString(16).padStart(2, "0"))
         .join("");
+}
+
+function parseModel(extension, source) {
+    if (extension === "fbx") {
+        const model = fbxLoader.parse(source, "");
+        model.userData.kgtfAnimations = model.animations || [];
+        return Promise.resolve(model);
+    }
+
+    return new Promise((resolve, reject) => {
+        gltfLoader.parse(
+            source,
+            "",
+            (gltf) => {
+                if (!gltf.scene) {
+                    reject(new Error("The model has no scene"));
+                    return;
+                }
+
+                gltf.scene.userData.kgtfAnimations =
+                    gltf.animations || [];
+
+                resolve(gltf.scene);
+            },
+            reject
+        );
+    });
 }
 
 function resetButton() {
@@ -77,75 +102,53 @@ input.addEventListener("change", async () => {
     try {
         const extension = file.name.split(".").pop().toLowerCase();
 
-        if (!["glb", "gltf"].includes(extension)) {
-            throw new Error("Only GLB and GLTF files are supported");
+        if (!["glb", "gltf", "fbx"].includes(extension)) {
+            throw new Error("Supported formats: GLB, GLTF, FBX");
         }
 
-        const isGLB = extension === "glb";
-        const source = isGLB
-            ? await file.arrayBuffer()
-            : await file.text();
+        const isGLTF = extension === "gltf";
+        const source = isGLTF
+            ? await file.text()
+            : await file.arrayBuffer();
 
-        const fingerprint = await createFingerprint(source, isGLB);
-
-        loader.parse(
-            source,
-            "",
-            async (gltf) => {
-                try {
-                    const model = gltf.scene;
-
-
-                    if (!model) {
-                        throw new Error("The model has no scene");
-                    }
-
-                    model.userData.kgtfAnimations = gltf.animations || [];
-
-                    const asset = await assetLibrary.put({
-                        id: `asset_${fingerprint}`,
-                        fingerprint,
-                        format: extension,
-                        filename: file.name,
-                        fileSize: file.size,
-                        data: isGLB
-                            ? arrayBufferToBase64(source)
-                            : source,
-                        importedAt: Date.now()
-                    });
-
-                    model.userData.kgtfAsset = asset;
-
-                    editor.objectManager.registerObject(
-                        model,
-                        file.name.replace(/\.(glb|gltf)$/i, "")
-                    );
-
-                    editor.transformSystem.syncSelection(model);
-
-                    const status = document.getElementById("engine-status");
-
-                    if (status) {
-                        status.textContent = "MODEL: IMPORTED & SAVED";
-                    }
-                } catch (error) {
-                    console.error("Model registration failed:", error);
-                    alert(error.message || "Could not save model");
-                } finally {
-                    resetButton();
-                }
-            },
-            (error) => {
-                console.error("Model loading failed:", error);
-                alert(
-                    "Could not load model. GLTF files must have embedded resources."
-                );
-                resetButton();
-            }
+        const fingerprint = await createFingerprint(
+            isGLTF
+                ? new TextEncoder().encode(source)
+                : source
         );
+
+        const model = await parseModel(extension, source);
+
+        const asset = await assetLibrary.put({
+            id: `asset_${fingerprint}`,
+            fingerprint,
+            format: extension,
+            filename: file.name,
+            fileSize: file.size,
+            data: isGLTF
+                ? source
+                : arrayBufferToBase64(source),
+            importedAt: Date.now()
+        });
+
+        model.userData.kgtfAsset = asset;
+
+        editor.objectManager.registerObject(
+            model,
+            file.name.replace(/\.(glb|gltf|fbx)$/i, "")
+        );
+
+        editor.transformSystem.syncSelection(model);
+
+        const status = document.getElementById("engine-status");
+
+        if (status) {
+            status.textContent = `${extension.toUpperCase()}: IMPORTED & SAVED`;
+        }
     } catch (error) {
         console.error("Model import failed:", error);
         alert(error.message || "Model import failed");
+    } finally {
         resetButton();
     }
 });

@@ -145,18 +145,22 @@ async function refreshAssets() {
 
                     editor.objectManager.registerObject(
                         model,
-                        asset.filename.replace(/\.(glb|gltf)$/i, "")
+                        asset.filename.replace(/\.(glb|gltf|fbx)$/i, "")
                     );
 
                     editor.transformSystem.syncSelection(model);
 
-                    const engineStatus = document.getElementById("engine-status");
-                    if (engineStatus) engineStatus.textContent = "ASSET: ADDED";
+                    const engineStatus =
+                        document.getElementById("engine-status");
+
+                    if (engineStatus) {
+                        engineStatus.textContent = "ASSET: ADDED";
+                    }
 
                     addButton.textContent = "Added";
                 } catch (error) {
                     console.error("Asset loading failed:", error);
-                    alert("Could not add this asset to the scene.");
+                    alert(error.message || "Could not add this asset.");
                     addButton.disabled = false;
                     addButton.textContent = "Add to Scene";
                 }

@@ -1,4 +1,5 @@
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 
 export class Serializer {
     constructor(objectManager) {
@@ -9,6 +10,7 @@ export class Serializer {
         this.objectManager = objectManager;
         this.version = 1;
         this.loader = new GLTFLoader();
+        this.fbxLoader = new FBXLoader();
     }
 
     serialize() {
@@ -73,10 +75,10 @@ export class Serializer {
 
     download(filename = "kgtf-scene.json") {
         const data = this.serialize();
-        const json = JSON.stringify(data, null, 2);
-        const blob = new Blob([json], {
-            type: "application/json"
-        });
+        const blob = new Blob(
+            [JSON.stringify(data, null, 2)],
+            { type: "application/json" }
+        );
 
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -122,16 +124,18 @@ export class Serializer {
             }
 
             if (item.type === "cube") {
+                const material = item.material;
+
                 if (
-                    !item.material ||
-                    typeof item.material.color !== "string" ||
-                    !/^#[0-9a-fA-F]{6}$/.test(item.material.color) ||
-                    !Number.isFinite(item.material.roughness) ||
-                    item.material.roughness < 0 ||
-                    item.material.roughness > 1 ||
-                    !Number.isFinite(item.material.metalness) ||
-                    item.material.metalness < 0 ||
-                    item.material.metalness > 1
+                    !material ||
+                    typeof material.color !== "string" ||
+                    !/^#[0-9a-fA-F]{6}$/.test(material.color) ||
+                    !Number.isFinite(material.roughness) ||
+                    material.roughness < 0 ||
+                    material.roughness > 1 ||
+                    !Number.isFinite(material.metalness) ||
+                    material.metalness < 0 ||
+                    material.metalness > 1
                 ) {
                     throw new Error("Scene contains invalid cube data");
                 }
@@ -144,12 +148,12 @@ export class Serializer {
 
                 if (
                     !asset ||
-                    !["glb", "gltf"].includes(asset.format) ||
+                    !["glb", "gltf", "fbx"].includes(asset.format) ||
                     typeof asset.filename !== "string" ||
                     typeof asset.data !== "string" ||
                     asset.data.length === 0 ||
                     asset.data.length > 70 * 1024 * 1024 ||
-                    (asset.format === "glb" &&
+                    (asset.format !== "gltf" &&
                         !/^[A-Za-z0-9+/]+={0,2}$/.test(asset.data))
                 ) {
                     throw new Error("Scene contains invalid model data");
@@ -178,6 +182,25 @@ export class Serializer {
     parseModel(asset) {
         return new Promise((resolve, reject) => {
             try {
+                if (asset.format === "fbx") {
+                    const model = this.fbxLoader.parse(
+                        this.decodeBase64(asset.data),
+                        ""
+                    );
+
+                    model.userData.kgtfAnimations =
+                        model.animations || [];
+
+                    model.userData.kgtfAsset = {
+                        format: asset.format,
+                        filename: asset.filename,
+                        data: asset.data
+                    };
+
+                    resolve(model);
+                    return;
+                }
+
                 const source = asset.format === "glb"
                     ? this.decodeBase64(asset.data)
                     : asset.data;
@@ -191,7 +214,9 @@ export class Serializer {
                             return;
                         }
 
-                        gltf.scene.userData.kgtfAnimations = gltf.animations || [];
+                        gltf.scene.userData.kgtfAnimations =
+                            gltf.animations || [];
+
                         gltf.scene.userData.kgtfAsset = {
                             format: asset.format,
                             filename: asset.filename,
@@ -211,7 +236,6 @@ export class Serializer {
     async load(data) {
         this.validate(data);
 
-        // Prepare imported models before changing the current scene.
         const prepared = [];
 
         for (const item of data.objects) {
@@ -283,9 +307,7 @@ export class Serializer {
             throw new Error("Invalid scene file or file exceeds 100 MB");
         }
 
-        const text = await file.text();
-        const data = JSON.parse(text);
-
+        const data = JSON.parse(await file.text());
         return this.load(data);
     }
 }
