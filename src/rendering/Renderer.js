@@ -8,27 +8,33 @@ export class Renderer {
         this.camera = null;
         this.renderer = null;
         this.container = null;
+        this.canvas = null;
 
         this.onResize = this.onResize.bind(this);
     }
 
     init() {
-        this.container = this.options.container
-            ? document.querySelector(this.options.container)
-            : document.body;
+        this.container = document.querySelector(
+            this.options.container ?? '#viewport-container'
+        );
 
-        if (!this.container) {
-            throw new Error('Renderer container not found.');
+        this.canvas = document.querySelector(
+            this.options.canvas ?? '#viewport'
+        );
+
+        if (!this.container || !this.canvas) {
+            throw new Error('Renderer container or canvas not found.');
         }
 
         this.scene = new THREE.Scene();
+
         this.scene.background = new THREE.Color(
             this.options.background ?? 0x20242c
         );
 
         this.camera = new THREE.PerspectiveCamera(
             60,
-            window.innerWidth / window.innerHeight,
+            1,
             0.1,
             1000
         );
@@ -37,6 +43,7 @@ export class Renderer {
         this.camera.lookAt(0, 0, 0);
 
         this.renderer = new THREE.WebGLRenderer({
+            canvas: this.canvas,
             antialias: true,
             alpha: false,
             powerPreference: 'high-performance'
@@ -46,36 +53,33 @@ export class Renderer {
             Math.min(window.devicePixelRatio || 1, 1.5)
         );
 
-        this.renderer.setSize(
-            window.innerWidth,
-            window.innerHeight
-        );
-
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-        this.renderer.domElement.style.display = 'block';
-        this.renderer.domElement.style.width = '100%';
-        this.renderer.domElement.style.height = '100%';
-
-        this.container.appendChild(this.renderer.domElement);
+        this.onResize();
 
         window.addEventListener('resize', this.onResize);
     }
 
     onResize() {
-        if (!this.camera || !this.renderer) return;
+        if (!this.camera || !this.renderer || !this.container) {
+            return;
+        }
 
-        const width = this.container.clientWidth || window.innerWidth;
-        const height = this.container.clientHeight || window.innerHeight;
+        const width = this.container.clientWidth;
+        const height = this.container.clientHeight;
+
+        if (width <= 0 || height <= 0) return;
 
         this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
 
-        this.renderer.setSize(width, height);
+        this.renderer.setSize(width, height, false);
     }
 
     update() {
-        if (!this.renderer || !this.scene || !this.camera) return;
+        if (!this.renderer || !this.scene || !this.camera) {
+            return;
+        }
 
         this.renderer.render(this.scene, this.camera);
     }
@@ -85,12 +89,12 @@ export class Renderer {
 
         if (this.renderer) {
             this.renderer.dispose();
-            this.renderer.domElement.remove();
         }
 
         this.renderer = null;
         this.scene = null;
         this.camera = null;
         this.container = null;
+        this.canvas = null;
     }
 }
