@@ -95,9 +95,12 @@ input.addEventListener("change", async () => {
                 try {
                     const model = gltf.scene;
 
+
                     if (!model) {
                         throw new Error("The model has no scene");
                     }
+
+                    model.userData.kgtfAnimations = gltf.animations || [];
 
                     const asset = await assetLibrary.put({
                         id: `asset_${fingerprint}`,

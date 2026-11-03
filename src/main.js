@@ -170,6 +170,7 @@ async function startEngine() {
     let terrainMode = false;
 
     window.KGTF_EDITOR = {
+        engine,
         objectManager,
         transformSystem,
         serializer,
@@ -563,6 +564,11 @@ async function startEngine() {
             cameraSystem.update();
         }
     });
+
+    const { AnimationSystem } = await import("./animation/AnimationSystem.js");
+    const animationSystem = new AnimationSystem(objectManager);
+    engine.registerSystem(animationSystem);
+    window.KGTF_EDITOR.animationSystem = animationSystem;
 
     await engine.initialize();
     engine.start();

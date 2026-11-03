@@ -191,6 +191,7 @@ export class Serializer {
                             return;
                         }
 
+                        gltf.scene.userData.kgtfAnimations = gltf.animations || [];
                         gltf.scene.userData.kgtfAsset = {
                             format: asset.format,
                             filename: asset.filename,
