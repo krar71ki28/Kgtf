@@ -37,6 +37,22 @@ function arrayBufferToBase64(buffer) {
     return btoa(binary);
 }
 
+async function createFingerprint(source, isGLB) {
+    if (!crypto.subtle) {
+        throw new Error("Secure file fingerprinting is unavailable");
+    }
+
+    const data = isGLB
+        ? source
+        : new TextEncoder().encode(source);
+
+    const digest = await crypto.subtle.digest("SHA-256", data);
+
+    return Array.from(new Uint8Array(digest))
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("");
+}
+
 function resetButton() {
     button.disabled = false;
     button.textContent = "Import Model";
@@ -70,6 +86,8 @@ input.addEventListener("change", async () => {
             ? await file.arrayBuffer()
             : await file.text();
 
+        const fingerprint = await createFingerprint(source, isGLB);
+
         loader.parse(
             source,
             "",
@@ -81,20 +99,17 @@ input.addEventListener("change", async () => {
                         throw new Error("The model has no scene");
                     }
 
-                    const asset = {
-                        id: globalThis.crypto?.randomUUID
-                            ? crypto.randomUUID()
-                            : `asset_${Date.now()}_${Math.random()
-                                .toString(36).slice(2)}`,
+                    const asset = await assetLibrary.put({
+                        id: `asset_${fingerprint}`,
+                        fingerprint,
                         format: extension,
                         filename: file.name,
+                        fileSize: file.size,
                         data: isGLB
                             ? arrayBufferToBase64(source)
                             : source,
-                        createdAt: Date.now()
-                    };
-
-                    await assetLibrary.put(asset);
+                        importedAt: Date.now()
+                    });
 
                     model.userData.kgtfAsset = asset;
 
@@ -106,8 +121,10 @@ input.addEventListener("change", async () => {
                     editor.transformSystem.syncSelection(model);
 
                     const status = document.getElementById("engine-status");
-                    if (status) status.textContent = "MODEL: IMPORTED & SAVED";
 
+                    if (status) {
+                        status.textContent = "MODEL: IMPORTED & SAVED";
+                    }
                 } catch (error) {
                     console.error("Model registration failed:", error);
                     alert(error.message || "Could not save model");

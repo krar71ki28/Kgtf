@@ -28,8 +28,21 @@ class AssetLibrary {
                 }
             };
 
-            request.onsuccess = () => resolve(request.result);
+            request.onsuccess = () => {
+                const database = request.result;
+
+                database.onversionchange = () => {
+                    database.close();
+                    this.databasePromise = null;
+                };
+
+                resolve(database);
+            };
+
             request.onerror = () => reject(request.error);
+            request.onblocked = () => {
+                reject(new Error("Asset database upgrade is blocked"));
+            };
         }).catch((error) => {
             this.databasePromise = null;
             throw error;
@@ -39,7 +52,12 @@ class AssetLibrary {
     }
 
     async put(asset) {
-        if (!asset?.id || !asset?.data || !asset?.filename) {
+        if (
+            !asset?.id ||
+            !asset?.data ||
+            !asset?.filename ||
+            !asset?.fingerprint
+        ) {
             throw new Error("Invalid asset data");
         }
 
@@ -51,15 +69,61 @@ class AssetLibrary {
                 "readwrite"
             );
 
-            transaction.objectStore(STORE_NAME).put({
-                ...asset,
-                updatedAt: Date.now()
-            });
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.getAll();
+            let result = null;
 
-            transaction.oncomplete = () => resolve(asset);
-            transaction.onerror = () => reject(transaction.error);
-            transaction.onabort = () => reject(transaction.error);
+            request.onsuccess = () => {
+                const existing = request.result.find(
+                    (item) => item.fingerprint === asset.fingerprint
+                );
+
+                if (existing) {
+                    result = existing;
+                    return;
+                }
+
+                const now = Date.now();
+
+                result = {
+                    ...asset,
+                    fileSize: asset.fileSize || 0,
+                    importedAt: asset.importedAt || now,
+                    updatedAt: now
+                };
+
+                store.add(result);
+            };
+
+            transaction.oncomplete = () => resolve(result);
+
+            transaction.onerror = () => {
+                reject(this.storageError(transaction.error));
+            };
+
+            transaction.onabort = () => {
+                reject(this.storageError(transaction.error));
+            };
         });
+    }
+
+    storageError(error) {
+        if (
+            error?.name === "QuotaExceededError" ||
+            error?.name === "NS_ERROR_DOM_QUOTA_REACHED"
+        ) {
+            return new Error(
+                "Asset storage is full. Delete unused assets and try again."
+            );
+        }
+
+        if (error?.name === "SecurityError") {
+            return new Error(
+                "Browser storage is blocked. Check site storage permissions."
+            );
+        }
+
+        return error || new Error("Asset storage operation failed");
     }
 
     async getAll() {
@@ -74,7 +138,7 @@ class AssetLibrary {
             request.onsuccess = () => {
                 resolve(
                     request.result.sort(
-                        (a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)
+                        (a, b) => (b.importedAt || 0) - (a.importedAt || 0)
                     )
                 );
             };
@@ -98,6 +162,8 @@ class AssetLibrary {
     }
 
     async remove(id) {
+        if (!id) throw new Error("Asset ID is required");
+
         const database = await this.open();
 
         return new Promise((resolve, reject) => {
@@ -109,8 +175,12 @@ class AssetLibrary {
             transaction.objectStore(STORE_NAME).delete(id);
 
             transaction.oncomplete = () => resolve(true);
-            transaction.onerror = () => reject(transaction.error);
-            transaction.onabort = () => reject(transaction.error);
+            transaction.onerror = () => {
+                reject(this.storageError(transaction.error));
+            };
+            transaction.onabort = () => {
+                reject(this.storageError(transaction.error));
+            };
         });
     }
 }
