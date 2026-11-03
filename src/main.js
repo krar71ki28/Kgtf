@@ -8,6 +8,7 @@ import { CameraSystem } from "./scene/CameraSystem.js";
 import { WorldSystem } from "./world/WorldSystem.js";
 import { ObjectManager } from "./objects/ObjectManager.js";
 import { TransformSystem } from "./editor/TransformSystem.js";
+import { Serializer } from "./Serializer.js";
 
 async function startEngine() {
     const $ = (id) => document.getElementById(id);
@@ -19,6 +20,8 @@ async function startEngine() {
 
     const addCubeButton = $("add-cube");
     const playButton = $("play-button");
+    const saveSceneButton = $("save-scene");
+    const loadSceneButton = $("load-scene");
 
     const moveButton = $("tool-move");
     const rotateButton = $("tool-rotate");
@@ -150,7 +153,9 @@ async function startEngine() {
         cameraSystem.controls
     );
 
-    window.KGTF_EDITOR = { objectManager, transformSystem };
+    const serializer = new Serializer(objectManager);
+
+    window.KGTF_EDITOR = { objectManager, transformSystem, serializer };
 
     function renderOutliner() {
         if (!objectList) return;
@@ -400,6 +405,41 @@ async function startEngine() {
     cameraResizeObserver.observe(viewport);
 
     addCubeButton?.addEventListener("click", addCube);
+
+    saveSceneButton?.addEventListener("click", () => {
+        try {
+            serializer.download();
+            status.textContent = "SCENE: EXPORTED";
+        } catch (error) {
+            console.error("Scene save failed:", error);
+            status.textContent = "SCENE: SAVE ERROR";
+        }
+    });
+
+    const sceneFileInput = document.createElement("input");
+    sceneFileInput.type = "file";
+    sceneFileInput.accept = ".json,application/json";
+    sceneFileInput.hidden = true;
+    document.body.appendChild(sceneFileInput);
+
+    loadSceneButton?.addEventListener("click", () => {
+        sceneFileInput.value = "";
+        sceneFileInput.click();
+    });
+
+    sceneFileInput.addEventListener("change", async () => {
+        const file = sceneFileInput.files?.[0];
+        if (!file) return;
+
+        try {
+            const count = await serializer.loadFile(file);
+            status.textContent = `SCENE: LOADED (${count} OBJECTS)`;
+        } catch (error) {
+            console.error("Scene load failed:", error);
+            status.textContent = "SCENE: LOAD ERROR";
+            window.alert("تعذر تحميل المشهد. تأكد من صحة ملف JSON.");
+        }
+    });
 
     if (playButton) {
         playButton.disabled = true;
