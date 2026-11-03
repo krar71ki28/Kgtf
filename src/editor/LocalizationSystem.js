@@ -1,4 +1,6 @@
 (() => {
+    "use strict";
+
     const translations = {
         "add-cube": ["Add Cube", "إضافة مكعب"],
         "save-scene": ["Save Scene", "حفظ المشهد"],
@@ -11,36 +13,42 @@
         "lighting-toggle": ["Lighting", "الإضاءة"],
         "terrain-toggle": ["Terrain", "التضاريس"],
         "outliner-toggle": ["Outliner", "قائمة العناصر"],
-        "close-world-settings": ["×", "×"],
-        "close-lighting": ["×", "×"],
-        "close-terrain": ["×", "×"],
-        "close-outliner": ["×", "×"],
         "rename-object": ["Rename", "إعادة تسمية"],
         "delete-object": ["Delete", "حذف"],
         "terrain-reset": ["Reset Terrain", "إعادة التضاريس"],
-        "loading-message": ["KGTF ENGINE — Initializing...", "KGTF ENGINE — جارٍ تجهيز المحرك"]
+        "close-world-settings": ["×", "×"],
+        "close-lighting": ["×", "×"],
+        "close-terrain": ["×", "×"],
+        "close-outliner": ["×", "×"]
     };
 
     const labels = {
-        "label[for='world-size']": ["World Size", "حجم العالم"],
-        "label[for='sun-elevation']": ["Sun Elevation", "ارتفاع الشمس"],
-        "label[for='sun-azimuth']": ["Sun Azimuth", "اتجاه الشمس"],
-        "label[for='sun-intensity']": ["Sun Intensity", "شدة ضوء الشمس"],
-        "label[for='ambient-intensity']": ["Ambient Intensity", "شدة الإضاءة المحيطية"],
-        "label[for='sky-color']": ["Sky Color", "لون السماء"],
-        "label[for='fog-near']": ["Fog Near", "بداية الضباب"],
-        "label[for='fog-far']": ["Fog Far", "نهاية الضباب"],
-        "label[for='terrain-tool']": ["Sculpting Tool", "أداة تشكيل التضاريس"],
-        "label[for='terrain-brush-size']": ["Brush Size", "حجم الفرشاة"],
-        "label[for='terrain-brush-strength']": ["Brush Strength", "قوة الفرشاة"],
-        "label[for='object-name']": ["Selected Object", "العنصر المحدد"],
-        "label[for='details-name']": ["Object Name", "اسم العنصر"],
-        "label[for='details-material-color']": ["Material Color", "لون المادة"],
-        "label[for='details-roughness']": ["Roughness", "الخشونة"],
-        "label[for='details-metalness']": ["Metalness", "المعدنية"]
+        "world-size": ["World Size", "حجم العالم"],
+        "sun-elevation": ["Sun Elevation", "ارتفاع الشمس"],
+        "sun-azimuth": ["Sun Azimuth", "اتجاه الشمس"],
+        "sun-intensity": ["Sun Intensity", "شدة ضوء الشمس"],
+        "ambient-intensity": ["Ambient Intensity", "شدة الإضاءة المحيطية"],
+        "sky-color": ["Sky Color", "لون السماء"],
+        "fog-near": ["Fog Near", "بداية الضباب"],
+        "fog-far": ["Fog Far", "نهاية الضباب"],
+        "terrain-tool": ["Sculpting Tool", "أداة تشكيل التضاريس"],
+        "terrain-brush-size": ["Brush Size", "حجم الفرشاة"],
+        "terrain-brush-strength": ["Brush Strength", "قوة الفرشاة"],
+        "object-name": ["Selected Object", "العنصر المحدد"],
+        "details-name": ["Object Name", "اسم العنصر"],
+        "details-material-color": ["Material Color", "لون المادة"],
+        "details-roughness": ["Roughness", "الخشونة"],
+        "details-metalness": ["Metalness", "المعدنية"]
     };
 
-    const options = {
+    const toggleLabels = {
+        "ground-visible": ["Show Ground", "إظهار الأرض"],
+        "grid-visible": ["Show Grid", "إظهار الشبكة"],
+        "axes-visible": ["Show Axes", "إظهار المحاور"],
+        "fog-enabled": ["Enable Fog", "تفعيل الضباب"]
+    };
+
+    const selectOptions = {
         "terrain-tool": [
             ["Raise", "رفع"],
             ["Lower", "خفض"],
@@ -48,7 +56,24 @@
         ]
     };
 
+    const staticText = {
+        "details-empty": [
+            "Select an object to view its properties",
+            "اختر عنصراً لعرض خصائصه"
+        ],
+        "material-unavailable": [
+            "The current material does not support these properties.",
+            "المادة الحالية لا تدعم هذه الخصائص."
+        ]
+    };
+
     let language = "en";
+    let observer = null;
+    let applying = false;
+
+    function currentIndex() {
+        return language === "ar" ? 1 : 0;
+    }
 
     function setText(element, value) {
         if (element && element.textContent !== value) {
@@ -56,21 +81,24 @@
         }
     }
 
-    function setLabel(selector, value) {
-        const element = document.querySelector(selector);
-        if (!element) return;
+    function translateLabel(id, values) {
+        const input = document.getElementById(id);
+        const label = input?.closest("label");
 
-        const textNode = [...element.childNodes].find(
+        if (!label) return;
+
+        const textNode = [...label.childNodes].find(
             node => node.nodeType === Node.TEXT_NODE &&
-                node.textContent.trim()
+                node.textContent.trim().length > 0
         );
 
         if (textNode) {
-            if (textNode.textContent.trim() !== value) {
-                textNode.textContent = " " + value;
+            const value = values[currentIndex()];
+            const nextValue = ` ${value}`;
+
+            if (textNode.textContent !== nextValue) {
+                textNode.textContent = nextValue;
             }
-        } else if (!element.querySelector("input, output")) {
-            setText(element, value);
         }
     }
 
@@ -79,7 +107,22 @@
         if (!status) return;
 
         const value = status.textContent.trim();
-        let translated = value;
+
+        if (language === "en") {
+            const arabic = {
+                "المحرك: جارٍ التهيئة": "ENGINE: INITIALIZING",
+                "المحرك: يعمل": "ENGINE: RUNNING",
+                "المحرك: وضع التحرير": "ENGINE: EDITOR MODE",
+                "المحرك: خطأ": "ENGINE: ERROR",
+                "التضاريس: تمت إعادة الضبط": "TERRAIN: RESET",
+                "المشهد: تم التصدير": "SCENE: EXPORTED",
+                "المشهد: خطأ في الحفظ": "SCENE: SAVE ERROR",
+                "المشهد: خطأ في التحميل": "SCENE: LOAD ERROR"
+            };
+
+            setText(status, arabic[value] || value);
+            return;
+        }
 
         const exact = {
             "ENGINE: INITIALIZING": "المحرك: جارٍ التهيئة",
@@ -92,37 +135,32 @@
             "SCENE: LOAD ERROR": "المشهد: خطأ في التحميل"
         };
 
-        if (language === "ar") {
-            translated = exact[value] || value;
-            translated = translated.replace(
-                /^TERRAIN: (RAISE|LOWER|SMOOTH|SCULPT MODE)$/,
-                (_, tool) => "التضاريس: " + ({
-                    RAISE: "رفع",
-                    LOWER: "خفض",
-                    SMOOTH: "تنعيم",
-                    "SCULPT MODE": "وضع التشكيل"
-                })[tool]
-            );
+        let translated = exact[value] || value;
 
-            translated = translated.replace(
-                /^SCENE: LOADED \((\d+) OBJECTS\)$/,
-                "المشهد: تم تحميل ($1 عناصر)"
-            );
-        } else {
-            const reverse = Object.fromEntries(
-                Object.entries(exact).map(([en, ar]) => [ar, en])
-            );
+        translated = translated.replace(
+            /^TERRAIN: (RAISE|LOWER|SMOOTH|SCULPT MODE)$/,
+            (_, tool) => "التضاريس: " + ({
+                RAISE: "رفع",
+                LOWER: "خفض",
+                SMOOTH: "تنعيم",
+                "SCULPT MODE": "وضع التشكيل"
+            })[tool]
+        );
 
-            translated = reverse[value] || value;
-        }
+        translated = translated.replace(
+            /^SCENE: LOADED \((\d+) OBJECTS?\)$/,
+            "المشهد: تم تحميل $1 عناصر"
+        );
 
         setText(status, translated);
     }
 
     function translateDynamic() {
         const worldInfo = document.getElementById("world-size-info");
+
         if (worldInfo) {
             const match = worldInfo.textContent.match(/(\d+)\s*×\s*(\d+)/);
+
             if (match) {
                 setText(
                     worldInfo,
@@ -134,13 +172,15 @@
         }
 
         const count = document.getElementById("object-count");
+
         if (count) {
             const match = count.textContent.match(/\d+/);
+
             if (match) {
                 setText(
                     count,
                     language === "ar"
-                        ? `العناصر: ${match[0]}`
+                        ? `عدد العناصر: ${match[0]}`
                         : `OBJECTS: ${match[0]}`
                 );
             }
@@ -149,109 +189,132 @@
         translateStatus();
     }
 
-    function applyLanguage() {
-        document.documentElement.lang = language;
-        document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
+    function translateDetails() {
+        const index = currentIndex();
 
-        for (const [id, values] of Object.entries(translations)) {
-            setText(
-                document.getElementById(id),
-                values[language === "ar" ? 1 : 0]
-            );
-        }
+        setText(
+            document.querySelector("#details-header strong"),
+            "DETAILS"
+        );
 
-        for (const [selector, values] of Object.entries(labels)) {
-            setLabel(selector, values[language === "ar" ? 1 : 0]);
-        }
+        setText(
+            document.querySelector("#details-panel .details-header strong"),
+            language === "ar" ? "التفاصيل" : "DETAILS"
+        );
 
-        for (const [id, values] of Object.entries(options)) {
-            const select = document.getElementById(id);
-            if (!select) continue;
+        const sections = document.querySelectorAll(
+            "#details-panel .details-section > strong"
+        );
 
-            [...select.options].forEach((option, index) => {
-                if (values[index]) {
-                    setText(
-                        option,
-                        values[index][language === "ar" ? 1 : 0]
-                    );
-                }
-            });
-        }
-
-        const toggles = [
-            ["#ground-visible", "Show Ground", "إظهار الأرض"],
-            ["#grid-visible", "Show Grid", "إظهار الشبكة"],
-            ["#axes-visible", "Show Axes", "إظهار المحاور"],
-            ["#fog-enabled", "Enable Fog", "تفعيل الضباب"]
-        ];
-
-        for (const [selector, en, ar] of toggles) {
-            setLabel(
-                `${selector}:not(dummy)`,
-                language === "ar" ? ar : en
-            );
-        }
-
-        const worldHeader = document.querySelector("#world-settings .settings-header strong");
-        setText(worldHeader, language === "ar" ? "إعدادات العالم" : "WORLD SETTINGS");
-
-        const detailsToggle = document.getElementById("details-toggle");
-        setText(detailsToggle, language === "ar" ? "التفاصيل" : "Details");
-
-        const detailsHeader = document.querySelector("#details-panel .details-header strong");
-        setText(detailsHeader, "DETAILS");
-
-        const detailsSections = document.querySelectorAll("#details-panel .details-section > strong");
-        const sectionNames = [
+        const names = [
             ["POSITION", "الموقع"],
             ["ROTATION", "الدوران"],
             ["SCALE", "الحجم"],
             ["MATERIAL", "المادة"]
         ];
 
-        detailsSections.forEach((element, index) => {
-            if (sectionNames[index]) {
-                setText(
-                    element,
-                    language === "ar"
-                        ? sectionNames[index][1]
-                        : sectionNames[index][0]
-                );
-            }
+        sections.forEach((element, i) => {
+            if (names[i]) setText(element, names[i][index]);
         });
 
-        setText(
-            document.getElementById("details-empty"),
-            language === "ar"
-                ? "اختر عنصراً لعرض خصائصه"
-                : "Select an object to view its properties"
-        );
-
-        setText(
-            document.getElementById("material-unavailable"),
-            language === "ar"
-                ? "المادة الحالية لا تدعم هذه الخصائص."
-                : "The current material does not support these properties."
-        );
-
-        const nameInput = document.getElementById("object-name");
-        if (nameInput) {
-            nameInput.placeholder = language === "ar"
-                ? "اختر عنصراً"
-                : "Select an object";
+        for (const [id, values] of Object.entries(labels)) {
+            if (id.startsWith("details-")) {
+                translateLabel(id, values);
+            }
         }
 
-        const detailsName = document.getElementById("details-name");
-        if (detailsName) {
-            detailsName.placeholder = language === "ar"
+        for (const [id, values] of Object.entries(staticText)) {
+            setText(document.getElementById(id), values[index]);
+        }
+
+        const nameInput = document.getElementById("details-name");
+
+        if (nameInput) {
+            nameInput.placeholder = language === "ar"
                 ? "لا يوجد عنصر محدد"
                 : "No object selected";
         }
+    }
 
-        const languageButton = document.getElementById("language-toggle");
-        setText(languageButton, language === "ar" ? "English" : "العربية");
+    function applyLanguage() {
+        if (applying) return;
 
-        translateDynamic();
+        applying = true;
+
+        try {
+            const index = currentIndex();
+
+            document.documentElement.lang = language;
+            document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
+
+            for (const [id, values] of Object.entries(translations)) {
+                setText(document.getElementById(id), values[index]);
+            }
+
+            for (const [id, values] of Object.entries(labels)) {
+                translateLabel(id, values);
+            }
+
+            for (const [id, values] of Object.entries(toggleLabels)) {
+                translateLabel(id, values);
+            }
+
+            for (const [id, values] of Object.entries(selectOptions)) {
+                const select = document.getElementById(id);
+                if (!select) continue;
+
+                [...select.options].forEach((option, i) => {
+                    if (values[i]) setText(option, values[i][index]);
+                });
+            }
+
+            for (const [id, values] of Object.entries(staticText)) {
+                setText(document.getElementById(id), values[index]);
+            }
+
+            setText(
+                document.querySelector("#world-settings .settings-header strong"),
+                language === "ar" ? "إعدادات العالم" : "WORLD SETTINGS"
+            );
+
+            setText(
+                document.querySelector("#lighting-panel .settings-header strong"),
+                language === "ar" ? "الإضاءة والسماء" : "LIGHTING & SKY"
+            );
+
+            setText(
+                document.querySelector("#terrain-panel .settings-header strong"),
+                language === "ar" ? "أدوات التضاريس" : "TERRAIN TOOLS"
+            );
+
+            setText(
+                document.querySelector("#outliner-panel .settings-header strong"),
+                language === "ar" ? "قائمة عناصر العالم" : "WORLD OUTLINER"
+            );
+
+            setText(
+                document.getElementById("details-toggle"),
+                language === "ar" ? "التفاصيل" : "Details"
+            );
+
+            setText(
+                document.getElementById("language-toggle"),
+                language === "ar" ? "English" : "العربية"
+            );
+
+            const objectName = document.getElementById("object-name");
+
+            if (objectName) {
+                objectName.placeholder = language === "ar"
+                    ? "اختر عنصراً"
+                    : "Select an object";
+            }
+
+            translateDetails();
+            translateDynamic();
+        } finally {
+            applying = false;
+        }
     }
 
     function setLanguage(nextLanguage) {
@@ -260,7 +323,7 @@
         try {
             localStorage.setItem("kgtf-language", language);
         } catch (error) {
-            console.warn("Language preference could not be saved.", error);
+            console.warn("Could not save language preference.", error);
         }
 
         applyLanguage();
@@ -268,16 +331,18 @@
 
     try {
         const saved = localStorage.getItem("kgtf-language");
+
         if (saved === "ar" || saved === "en") {
             language = saved;
         }
     } catch (error) {
-        console.warn("Language preference could not be loaded.", error);
+        console.warn("Could not load language preference.", error);
     }
 
-    document.getElementById("language-toggle")?.addEventListener("click", () => {
-        setLanguage(language === "en" ? "ar" : "en");
-    });
+    document.getElementById("language-toggle")?.addEventListener(
+        "click",
+        () => setLanguage(language === "en" ? "ar" : "en")
+    );
 
     window.KGTF_LOCALIZATION = {
         getLanguage: () => language,
@@ -286,8 +351,8 @@
 
     applyLanguage();
 
-    const observer = new MutationObserver(() => {
-        applyLanguage();
+    observer = new MutationObserver(() => {
+        if (!applying) applyLanguage();
     });
 
     observer.observe(document.body, {
