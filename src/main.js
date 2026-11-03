@@ -6,6 +6,7 @@ import { Renderer } from "./rendering/Renderer.js";
 import { SceneManager } from "./scene/SceneManager.js";
 import { CameraSystem } from "./scene/CameraSystem.js";
 import { WorldSystem } from "./world/WorldSystem.js";
+import { TerrainSystem } from "./terrain/TerrainSystem.js";
 import { LightingSystem } from "./lighting/LightingSystem.js";
 import { ObjectManager } from "./objects/ObjectManager.js";
 import { TransformSystem } from "./editor/TransformSystem.js";
@@ -49,6 +50,14 @@ async function startEngine() {
     const fogEnabledInput = $("fog-enabled");
     const fogNearInput = $("fog-near");
     const fogFarInput = $("fog-far");
+
+    const terrainToggle = $("terrain-toggle");
+    const terrainPanel = $("terrain-panel");
+    const closeTerrain = $("close-terrain");
+    const terrainTool = $("terrain-tool");
+    const terrainBrushSize = $("terrain-brush-size");
+    const terrainBrushStrength = $("terrain-brush-strength");
+    const terrainReset = $("terrain-reset");
 
     const outlinerToggle = $("outliner-toggle");
     const outlinerPanel = $("outliner-panel");
@@ -140,6 +149,12 @@ async function startEngine() {
     // Lighting System
     const lightingSystem = new LightingSystem(scene, skyMaterial);
 
+    // Terrain System
+    const terrainSystem = new TerrainSystem(scene, {
+        size: 20,
+        segments: 100
+    });
+
     // Object and transform systems
     const objectManager = new ObjectManager(scene);
 
@@ -152,7 +167,28 @@ async function startEngine() {
 
     const serializer = new Serializer(objectManager);
 
-    window.KGTF_EDITOR = { objectManager, transformSystem, serializer };
+    let terrainMode = false;
+
+    window.KGTF_EDITOR = {
+        objectManager,
+        transformSystem,
+        serializer,
+        terrainSystem
+    };
+
+    function setTerrainMode(enabled) {
+        terrainMode = enabled;
+
+        if (terrainMode) {
+            transformSystem.controls.detach();
+        } else {
+            transformSystem.syncSelection(objectManager.getSelected());
+        }
+
+        status.textContent = terrainMode
+            ? "TERRAIN: SCULPT MODE"
+            : "ENGINE: EDITOR MODE";
+    }
 
     function renderOutliner() {
         if (!objectList) return;
@@ -218,6 +254,9 @@ async function startEngine() {
 
     // Transform toolbar
     function activateTool(mode, activeButton) {
+        setTerrainMode(false);
+        terrainPanel.hidden = true;
+
         transformSystem.setMode(mode);
 
         for (const button of [moveButton, rotateButton, scaleButton]) {
@@ -246,6 +285,8 @@ async function startEngine() {
         if (!settingsPanel.hidden) {
             outlinerPanel.hidden = true;
             lightingPanel.hidden = true;
+            terrainPanel.hidden = true;
+            setTerrainMode(false);
         }
     });
 
@@ -253,10 +294,16 @@ async function startEngine() {
         settingsPanel.hidden = true;
     });
 
+    // Lighting panel
     lightingToggle?.addEventListener("click", () => {
         lightingPanel.hidden = !lightingPanel.hidden;
-        settingsPanel.hidden = true;
-        outlinerPanel.hidden = true;
+
+        if (!lightingPanel.hidden) {
+            settingsPanel.hidden = true;
+            outlinerPanel.hidden = true;
+            terrainPanel.hidden = true;
+            setTerrainMode(false);
+        }
     });
 
     closeLighting?.addEventListener("click", () => {
@@ -326,6 +373,40 @@ async function startEngine() {
         worldSystem.setAxesVisible(axesVisibleInput.checked);
     });
 
+    // Terrain tools
+    terrainToggle?.addEventListener("click", () => {
+        terrainPanel.hidden = !terrainPanel.hidden;
+
+        if (!terrainPanel.hidden) {
+            settingsPanel.hidden = true;
+            lightingPanel.hidden = true;
+            outlinerPanel.hidden = true;
+            setTerrainMode(true);
+        } else {
+            setTerrainMode(false);
+        }
+    });
+
+    closeTerrain?.addEventListener("click", () => {
+        terrainPanel.hidden = true;
+        setTerrainMode(false);
+    });
+
+    terrainBrushSize?.addEventListener("input", () => {
+        $("terrain-brush-size-value").textContent =
+            terrainBrushSize.value;
+    });
+
+    terrainBrushStrength?.addEventListener("input", () => {
+        $("terrain-brush-strength-value").textContent =
+            terrainBrushStrength.value;
+    });
+
+    terrainReset?.addEventListener("click", () => {
+        terrainSystem.reset();
+        status.textContent = "TERRAIN: RESET";
+    });
+
     // Outliner
     outlinerToggle?.addEventListener("click", () => {
         outlinerPanel.hidden = !outlinerPanel.hidden;
@@ -333,6 +414,8 @@ async function startEngine() {
         if (!outlinerPanel.hidden) {
             settingsPanel.hidden = true;
             lightingPanel.hidden = true;
+            terrainPanel.hidden = true;
+            setTerrainMode(false);
         }
     });
 
@@ -360,7 +443,7 @@ async function startEngine() {
         objectManager.removeSelected();
     });
 
-    // Direct viewport selection using Raycasting
+    // Viewport raycasting
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
 
@@ -372,7 +455,6 @@ async function startEngine() {
         if (event.target !== selectionCanvas) return;
         if (event.button !== undefined && event.button !== 0) return;
 
-        // Do not start object selection on a transform handle
         if (transformSystem.isDragging || transformSystem.controls.axis !== null) {
             pointerStart = null;
             return;
@@ -409,6 +491,43 @@ async function startEngine() {
         cameraSystem.camera.updateMatrixWorld();
         raycaster.setFromCamera(pointer, cameraSystem.camera);
 
+        // Terrain sculpting
+        if (terrainMode) {
+            const terrainHits = raycaster.intersectObject(
+                terrainSystem.mesh,
+                false
+            );
+
+            if (terrainHits.length === 0) return;
+
+            const point = terrainHits[0].point;
+            const radius = Number(terrainBrushSize?.value ?? 2);
+            const strength = Number(terrainBrushStrength?.value ?? 0.5);
+            const tool = terrainTool?.value ?? "raise";
+
+            if (tool === "smooth") {
+                terrainSystem.smoothAt(
+                    point.x,
+                    point.z,
+                    radius,
+                    strength
+                );
+            } else {
+                const direction = tool === "lower" ? -1 : 1;
+
+                terrainSystem.sculptAt(
+                    point.x,
+                    point.z,
+                    radius,
+                    strength * direction
+                );
+            }
+
+            status.textContent = `TERRAIN: ${tool.toUpperCase()}`;
+            return;
+        }
+
+        // Object selection
         const objects = objectManager
             .getAll()
             .map((item) => item.object);
@@ -458,6 +577,7 @@ async function startEngine() {
 
     addCubeButton?.addEventListener("click", addCube);
 
+    // Save scene
     saveSceneButton?.addEventListener("click", () => {
         try {
             serializer.download();
@@ -468,6 +588,7 @@ async function startEngine() {
         }
     });
 
+    // Load scene
     const sceneFileInput = document.createElement("input");
     sceneFileInput.type = "file";
     sceneFileInput.accept = ".json,application/json";
@@ -543,6 +664,7 @@ async function startEngine() {
         transformSystem.dispose();
         objectManager.dispose();
         worldSystem.dispose();
+        terrainSystem.dispose();
         lightingSystem.dispose();
         cameraSystem.dispose();
         sceneManager.dispose();

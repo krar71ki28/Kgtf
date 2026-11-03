@@ -108,6 +108,32 @@
                 <input id="fog-far" type="range" min="50" max="500" value="320">
             </section>
 
+            <button id="terrain-toggle" type="button">التضاريس</button>
+
+            <section id="terrain-panel" hidden>
+                <div class="settings-header">
+                    <strong>TERRAIN TOOLS</strong>
+                    <button id="close-terrain" type="button">×</button>
+                </div>
+
+                <label for="terrain-tool">أداة التضاريس</label>
+                <select id="terrain-tool">
+                    <option value="raise">رفع الأرض</option>
+                    <option value="lower">خفض الأرض</option>
+                    <option value="smooth">تنعيم الأرض</option>
+                </select>
+
+                <label for="terrain-brush-size">حجم الفرشاة</label>
+                <input id="terrain-brush-size" type="range" min="0.5" max="6" step="0.5" value="2">
+                <div id="terrain-brush-size-value" class="lighting-value">2</div>
+
+                <label for="terrain-brush-strength">قوة التأثير</label>
+                <input id="terrain-brush-strength" type="range" min="0.05" max="2" step="0.05" value="0.5">
+                <div id="terrain-brush-strength-value" class="lighting-value">0.5</div>
+
+                <button id="terrain-reset" type="button">إعادة التضاريس للوضع الأصلي</button>
+            </section>
+
             <button id="outliner-toggle" type="button">العناصر</button>
 
             <section id="outliner-panel" hidden>
