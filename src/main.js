@@ -150,6 +150,8 @@ async function startEngine() {
         cameraSystem.controls
     );
 
+    window.KGTF_EDITOR = { objectManager, transformSystem };
+
     function renderOutliner() {
         if (!objectList) return;
 
