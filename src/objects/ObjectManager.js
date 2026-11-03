@@ -13,9 +13,32 @@ export class ObjectManager {
         this.onChange = null;
     }
 
-    createCube() {
+    registerObject(object, name = "Imported_Model") {
+        if (!object?.isObject3D || object === this.scene) {
+            throw new TypeError("Invalid 3D object");
+        }
+
         const id = `object-${this.nextId++}`;
 
+        object.name = String(name).slice(0, 40) || "Imported_Model";
+        object.userData.editorObjectId = id;
+
+        object.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+
+        this.scene.add(object);
+        this.objects.set(id, object);
+        this.select(id);
+        this.notify();
+
+        return object;
+    }
+
+    createCube() {
         const cube = new THREE.Mesh(
             new THREE.BoxGeometry(1, 1, 1),
             new THREE.MeshStandardMaterial({
@@ -26,18 +49,9 @@ export class ObjectManager {
         );
 
         cube.name = `Cube_${this.objects.size + 1}`;
-        cube.userData.editorObjectId = id;
         cube.position.set(0, 0.5, 0);
-        cube.castShadow = true;
-        cube.receiveShadow = true;
 
-        this.scene.add(cube);
-        this.objects.set(id, cube);
-
-        this.select(id);
-        this.notify();
-
-        return cube;
+        return this.registerObject(cube, cube.name);
     }
 
     getAll() {
@@ -68,16 +82,28 @@ export class ObjectManager {
         this.restoreSelectionMaterial();
         this.selected = object;
 
-        const material = object.material;
+        object.traverse((child) => {
+            const materials = Array.isArray(child.material)
+                ? child.material
+                : [child.material];
 
-        if (material && !Array.isArray(material) && material.emissive) {
-            object.userData.previousEmissive = material.emissive.getHex();
-            object.userData.previousEmissiveIntensity =
-                material.emissiveIntensity;
+            materials.forEach((material) => {
+                if (!material?.emissive) return;
 
-            material.emissive.setHex(0x263b55);
-            material.emissiveIntensity = 0.7;
-        }
+                material.userData ??= {};
+
+                if (material.userData.kgtfPreviousEmissive === undefined) {
+                    material.userData.kgtfPreviousEmissive =
+                        material.emissive.getHex();
+
+                    material.userData.kgtfPreviousIntensity =
+                        material.emissiveIntensity;
+                }
+
+                material.emissive.setHex(0x263b55);
+                material.emissiveIntensity = 0.7;
+            });
+        });
 
         this.notify();
         return true;
@@ -92,21 +118,26 @@ export class ObjectManager {
     restoreSelectionMaterial() {
         if (!this.selected) return;
 
-        const material = this.selected.material;
+        this.selected.traverse((child) => {
+            const materials = Array.isArray(child.material)
+                ? child.material
+                : [child.material];
 
-        if (material && !Array.isArray(material) && material.emissive) {
-            const previous = this.selected.userData.previousEmissive;
-            const intensity =
-                this.selected.userData.previousEmissiveIntensity;
+            materials.forEach((material) => {
+                if (!material?.emissive || !material.userData) return;
 
-            if (previous !== undefined) {
-                material.emissive.setHex(previous);
-                material.emissiveIntensity = intensity ?? 1;
-            }
-        }
+                const previous = material.userData.kgtfPreviousEmissive;
 
-        delete this.selected.userData.previousEmissive;
-        delete this.selected.userData.previousEmissiveIntensity;
+                if (previous !== undefined) {
+                    material.emissive.setHex(previous);
+                    material.emissiveIntensity =
+                        material.userData.kgtfPreviousIntensity ?? 1;
+
+                    delete material.userData.kgtfPreviousEmissive;
+                    delete material.userData.kgtfPreviousIntensity;
+                }
+            });
+        });
     }
 
     rename(id, name) {
@@ -122,7 +153,6 @@ export class ObjectManager {
 
     remove(id) {
         const object = this.get(id);
-
         if (!object) return false;
 
         if (this.selected === object) {
@@ -154,11 +184,11 @@ export class ObjectManager {
 
             child.geometry?.dispose();
 
-            if (Array.isArray(child.material)) {
-                child.material.forEach((material) => material.dispose());
-            } else {
-                child.material?.dispose();
-            }
+            const materials = Array.isArray(child.material)
+                ? child.material
+                : [child.material];
+
+            materials.forEach((material) => material?.dispose());
         });
     }
 

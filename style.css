@@ -560,3 +560,126 @@ html[dir="rtl"] #viewport-label {
 html[dir="rtl"] #statusbar {
     direction: rtl;
 }
+
+/* Mobile-first editor layout fix */
+@media (max-width: 700px) {
+    #toolbar {
+        height: auto;
+        min-height: 96px;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: center;
+        gap: 7px;
+        padding: 7px 9px;
+    }
+
+    .brand {
+        justify-content: center;
+        min-height: 25px;
+    }
+
+    .toolbar-actions {
+        width: 100%;
+        min-width: 0;
+        display: flex;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        gap: 6px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none;
+        padding-bottom: 2px;
+    }
+
+    .toolbar-actions::-webkit-scrollbar {
+        display: none;
+    }
+
+    .toolbar-actions button {
+        flex: 0 0 auto;
+        min-height: 36px;
+        padding: 0 11px;
+        white-space: nowrap;
+    }
+
+    #world-settings-button,
+    #outliner-toggle {
+        top: 10px;
+    }
+
+    #world-settings-button {
+        right: 10px;
+    }
+
+    #outliner-toggle {
+        right: 145px;
+    }
+
+    #lighting-toggle {
+        top: 54px;
+        right: 10px;
+    }
+
+    #terrain-toggle {
+        top: 54px;
+        right: 115px;
+    }
+
+    #details-toggle {
+        position: absolute;
+        top: 54px;
+        left: 10px;
+        z-index: 4;
+    }
+
+    #viewport-label {
+        top: 100px;
+        left: 10px;
+    }
+
+    #world-settings,
+    #outliner-panel,
+    #lighting-panel,
+    #terrain-panel {
+        top: 100px;
+        right: 10px;
+    }
+
+    html[dir="rtl"] #world-settings-button {
+        left: 10px;
+        right: auto;
+    }
+
+    html[dir="rtl"] #outliner-toggle {
+        left: 145px;
+        right: auto;
+    }
+
+    html[dir="rtl"] #lighting-toggle {
+        left: 10px;
+        right: auto;
+    }
+
+    html[dir="rtl"] #terrain-toggle {
+        left: 115px;
+        right: auto;
+    }
+
+    html[dir="rtl"] #details-toggle {
+        left: auto;
+        right: 10px;
+    }
+
+    html[dir="rtl"] #viewport-label {
+        left: auto;
+        right: 10px;
+    }
+
+    html[dir="rtl"] #world-settings,
+    html[dir="rtl"] #outliner-panel,
+    html[dir="rtl"] #lighting-panel,
+    html[dir="rtl"] #terrain-panel {
+        left: 10px;
+        right: auto;
+    }
+}
