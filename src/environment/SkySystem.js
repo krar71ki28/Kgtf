@@ -7,7 +7,6 @@ export class SkySystem {
         this.sky = null;
         this.sunLight = null;
         this.hemisphereLight = null;
-        this.isSkyVisible = false;
 
         this.sunDirection = new THREE.Vector3(
             0.3, 0.8, -0.5
@@ -18,32 +17,44 @@ export class SkySystem {
         if (this.sky) return;
 
         const scene = this.renderer.scene;
+        const camera = this.renderer.camera;
 
+        // لون احتياطي أزرق خلف السماء
+        scene.background = new THREE.Color(0x87bce8);
+
+        // السماء الإجرائية
         this.sky = new Sky();
         this.sky.scale.setScalar(100000);
+        this.sky.position.copy(camera.position);
+        this.sky.renderOrder = -1000;
+
+        this.sky.material.depthWrite = false;
+        this.sky.material.depthTest = false;
+        this.sky.material.toneMapped = false;
 
         const uniforms = this.sky.material.uniforms;
 
-        uniforms['turbidity'].value = 10;
-        uniforms['rayleigh'].value = 2;
-        uniforms['mieCoefficient'].value = 0.005;
-        uniforms['mieDirectionalG'].value = 0.8;
+        uniforms['turbidity'].value = 2.5;
+        uniforms['rayleigh'].value = 3;
+        uniforms['mieCoefficient'].value = 0.004;
+        uniforms['mieDirectionalG'].value = 0.82;
         uniforms['sunPosition'].value.copy(this.sunDirection);
 
-        // السماء مخفية في المحرر
-        this.sky.visible = false;
+        this.sky.visible = true;
         scene.add(this.sky);
 
+        // الإضاءة البيئية
         this.hemisphereLight = new THREE.HemisphereLight(
-            0xb8d9ff,
-            0x625747,
+            0xc5e3ff,
+            0x77716a,
             1.5
         );
 
         scene.add(this.hemisphereLight);
 
+        // ضوء الشمس
         this.sunLight = new THREE.DirectionalLight(
-            0xfff1d5,
+            0xfff1d6,
             2.5
         );
 
@@ -53,26 +64,9 @@ export class SkySystem {
 
         scene.add(this.sunLight);
 
-        this.renderer.camera.far = 200000;
-        this.renderer.camera.updateProjectionMatrix();
-
-        this.renderer.renderer.toneMapping =
-            THREE.ACESFilmicToneMapping;
-
-        this.renderer.renderer.toneMappingExposure = 0.8;
-    }
-
-    setSkyVisible(visible) {
-        this.isSkyVisible = Boolean(visible);
-
-        if (this.sky) {
-            this.sky.visible = this.isSkyVisible;
-        }
-
-        if (!this.isSkyVisible) {
-            this.renderer.scene.background =
-                new THREE.Color(0x383838);
-        }
+        // مسافة الرؤية
+        camera.far = 200000;
+        camera.updateProjectionMatrix();
     }
 
     setSunDirection(x, y, z) {
@@ -88,7 +82,18 @@ export class SkySystem {
         );
     }
 
-    update() {}
+    setSkyVisible(visible) {
+        if (this.sky) {
+            this.sky.visible = Boolean(visible);
+        }
+    }
+
+    update() {
+        if (!this.sky || !this.renderer.camera) return;
+
+        // إبقاء السماء حول الكاميرا أثناء الحركة
+        this.sky.position.copy(this.renderer.camera.position);
+    }
 
     dispose() {
         if (!this.sky) return;

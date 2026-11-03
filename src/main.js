@@ -10,14 +10,13 @@ import { EditorGridSystem } from './editor/EditorGridSystem.js';
 import { TerrainSystem } from './terrain/TerrainSystem.js';
 import { TerrainSculpt } from './terrain/TerrainSculpt.js';
 import { SkySystem } from './environment/SkySystem.js';
-import { EnvironmentManager } from './environment/EnvironmentManager.js';
 
 const engine = new Engine();
 
 const renderer = new Renderer({
     container: '#viewport-container',
     canvas: '#viewport',
-    background: 0x383838
+    background: 0x87bce8
 });
 
 const sceneManager = new SceneManager(renderer);
@@ -30,12 +29,6 @@ const editorGrid = new EditorGridSystem(renderer);
 const terrain = new TerrainSystem(sceneManager);
 const sculpt = new TerrainSculpt(terrain);
 const sky = new SkySystem(renderer);
-
-const environment = new EnvironmentManager(
-    renderer,
-    editorGrid,
-    sky
-);
 
 const worldSystem = {
     init() {
@@ -50,10 +43,11 @@ const worldSystem = {
 
         cameraController.init();
 
+        // بناء الأرض والسماء والإضاءة
         editorGrid.init();
         sky.init();
-        environment.init();
 
+        // المكعب التجريبي
         const cube = objectFactory.create('cube', {
             name: 'First Cube',
             position: { x: 0, y: 0.5, z: 0 },
@@ -83,7 +77,6 @@ const worldSystem = {
             input = null;
         }
 
-        environment.dispose();
         editorGrid.dispose();
         terrain.dispose();
         sky.dispose();
@@ -108,7 +101,6 @@ window.KGTF = {
     terrain,
     sculpt,
     sky,
-    environment,
 
     get input() {
         return input;
