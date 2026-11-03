@@ -1,4 +1,5 @@
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { assetLibrary } from "./AssetLibrary.js";
 
 const editor = window.KGTF_EDITOR;
 const toolbar = document.querySelector(".toolbar-actions");
@@ -28,8 +29,9 @@ function arrayBufferToBase64(buffer) {
     let binary = "";
 
     for (let i = 0; i < bytes.length; i += chunkSize) {
-        const chunk = bytes.subarray(i, i + chunkSize);
-        binary += String.fromCharCode(...chunk);
+        binary += String.fromCharCode(
+            ...bytes.subarray(i, i + chunkSize)
+        );
     }
 
     return btoa(binary);
@@ -71,7 +73,7 @@ input.addEventListener("change", async () => {
         loader.parse(
             source,
             "",
-            (gltf) => {
+            async (gltf) => {
                 try {
                     const model = gltf.scene;
 
@@ -79,13 +81,22 @@ input.addEventListener("change", async () => {
                         throw new Error("The model has no scene");
                     }
 
-                    model.userData.kgtfAsset = {
+                    const asset = {
+                        id: globalThis.crypto?.randomUUID
+                            ? crypto.randomUUID()
+                            : `asset_${Date.now()}_${Math.random()
+                                .toString(36).slice(2)}`,
                         format: extension,
                         filename: file.name,
                         data: isGLB
                             ? arrayBufferToBase64(source)
-                            : source
+                            : source,
+                        createdAt: Date.now()
                     };
+
+                    await assetLibrary.put(asset);
+
+                    model.userData.kgtfAsset = asset;
 
                     editor.objectManager.registerObject(
                         model,
@@ -95,12 +106,12 @@ input.addEventListener("change", async () => {
                     editor.transformSystem.syncSelection(model);
 
                     const status = document.getElementById("engine-status");
-                    if (status) status.textContent = "MODEL: IMPORTED";
+                    if (status) status.textContent = "MODEL: IMPORTED & SAVED";
 
-                    resetButton();
                 } catch (error) {
                     console.error("Model registration failed:", error);
-                    alert(error.message || "Could not add model to scene");
+                    alert(error.message || "Could not save model");
+                } finally {
                     resetButton();
                 }
             },

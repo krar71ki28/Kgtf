@@ -1,3 +1,5 @@
+import { assetLibrary } from "./AssetLibrary.js";
+
 const editor = window.KGTF_EDITOR;
 const toolbar = document.querySelector(".toolbar-actions");
 
@@ -12,8 +14,8 @@ style.textContent = `
     position: fixed;
     top: 70px;
     left: 12px;
-    width: min(320px, calc(100vw - 24px));
-    max-height: 65vh;
+    width: min(340px, calc(100vw - 24px));
+    max-height: 70vh;
     overflow-y: auto;
     z-index: 30;
     padding: 12px;
@@ -24,9 +26,7 @@ style.textContent = `
     box-shadow: 0 8px 28px #0008;
     font-family: inherit;
 }
-#asset-browser[hidden] {
-    display: none;
-}
+#asset-browser[hidden] { display: none; }
 #asset-browser-header,
 .asset-browser-item {
     display: flex;
@@ -34,9 +34,7 @@ style.textContent = `
     justify-content: space-between;
     gap: 8px;
 }
-#asset-browser-header {
-    margin-bottom: 12px;
-}
+#asset-browser-header { margin-bottom: 12px; }
 .asset-browser-item {
     padding: 9px 0;
     border-top: 1px solid #39414e;
@@ -48,6 +46,7 @@ style.textContent = `
 }
 .asset-browser-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 5px;
 }
 .asset-browser-actions button {
@@ -59,6 +58,11 @@ style.textContent = `
     color: #aab4c3;
     font-size: 12px;
     padding: 12px 0;
+}
+#asset-browser-status {
+    color: #aab4c3;
+    font-size: 11px;
+    margin: 8px 0;
 }
 `;
 
@@ -76,10 +80,11 @@ panel.hidden = true;
 
 panel.innerHTML = `
     <div id="asset-browser-header">
-        <strong>ASSET BROWSER</strong>
+        <strong>ASSET LIBRARY</strong>
         <button id="asset-browser-close" type="button">×</button>
     </div>
     <div id="asset-browser-count">ASSETS: 0</div>
+    <div id="asset-browser-status"></div>
     <div id="asset-browser-list"></div>
 `;
 
@@ -87,97 +92,113 @@ document.body.appendChild(panel);
 
 const list = panel.querySelector("#asset-browser-list");
 const count = panel.querySelector("#asset-browser-count");
+const status = panel.querySelector("#asset-browser-status");
 
-function refreshAssets() {
+async function refreshAssets() {
     list.replaceChildren();
+    status.textContent = "Loading library...";
 
-    const assets = editor.objectManager.getAll().filter(
-        ({ object }) => object.userData.kgtfAsset
-    );
+    try {
+        const assets = await assetLibrary.getAll();
 
-    count.textContent = `ASSETS: ${assets.length}`;
+        count.textContent = `ASSETS: ${assets.length}`;
+        status.textContent = "";
 
-    if (assets.length === 0) {
-        const empty = document.createElement("div");
-        empty.id = "asset-browser-empty";
-        empty.textContent = "No imported models in this scene.";
-        list.appendChild(empty);
-        return;
-    }
+        if (assets.length === 0) {
+            const empty = document.createElement("div");
+            empty.id = "asset-browser-empty";
+            empty.textContent = "No saved assets. Import a model first.";
+            list.appendChild(empty);
+            return;
+        }
 
-    for (const entry of assets) {
-        const { id, object } = entry;
-        const asset = object.userData.kgtfAsset;
+        for (const asset of assets) {
+            const item = document.createElement("div");
+            item.className = "asset-browser-item";
 
-        const item = document.createElement("div");
-        item.className = "asset-browser-item";
+            const info = document.createElement("div");
+            info.className = "asset-browser-info";
 
-        const info = document.createElement("div");
-        info.className = "asset-browser-info";
+            const name = document.createElement("strong");
+            name.textContent = asset.filename;
 
-        const name = document.createElement("strong");
-        name.textContent = object.name;
+            const details = document.createElement("div");
+            details.textContent = asset.format.toUpperCase();
 
-        const details = document.createElement("div");
-        details.textContent =
-            `${asset.format.toUpperCase()} · ${asset.filename}`;
+            info.append(name, details);
 
-        info.append(name, details);
+            const actions = document.createElement("div");
+            actions.className = "asset-browser-actions";
 
-        const actions = document.createElement("div");
-        actions.className = "asset-browser-actions";
+            const addButton = document.createElement("button");
+            addButton.type = "button";
+            addButton.textContent = "Add to Scene";
 
-        const selectButton = document.createElement("button");
-        selectButton.type = "button";
-        selectButton.textContent = "Select";
+            addButton.addEventListener("click", async () => {
+                addButton.disabled = true;
+                addButton.textContent = "Loading...";
 
-        selectButton.addEventListener("click", () => {
-            editor.objectManager.select(id);
-            editor.transformSystem.syncSelection(object);
-        });
+                try {
+                    const model = await editor.serializer.parseModel(asset);
 
-        const duplicateButton = document.createElement("button");
-        duplicateButton.type = "button";
-        duplicateButton.textContent = "Duplicate";
+                    model.userData.kgtfAsset = asset;
 
-        duplicateButton.addEventListener("click", async () => {
-            duplicateButton.disabled = true;
+                    editor.objectManager.registerObject(
+                        model,
+                        asset.filename.replace(/\.(glb|gltf)$/i, "")
+                    );
 
-            try {
-                const duplicate = await editor.serializer.parseModel(asset);
+                    editor.transformSystem.syncSelection(model);
 
-                duplicate.position.copy(object.position);
-                duplicate.position.x += 1.5;
-                duplicate.position.y = object.position.y;
+                    const engineStatus = document.getElementById("engine-status");
+                    if (engineStatus) engineStatus.textContent = "ASSET: ADDED";
 
-                duplicate.rotation.copy(object.rotation);
-                duplicate.scale.copy(object.scale);
+                    addButton.textContent = "Added";
+                } catch (error) {
+                    console.error("Asset loading failed:", error);
+                    alert("Could not add this asset to the scene.");
+                    addButton.disabled = false;
+                    addButton.textContent = "Add to Scene";
+                }
+            });
 
-                editor.objectManager.registerObject(
-                    duplicate,
-                    `${object.name}_Copy`
-                );
+            const deleteButton = document.createElement("button");
+            deleteButton.type = "button";
+            deleteButton.textContent = "Delete";
 
-                editor.transformSystem.syncSelection(duplicate);
-                refreshAssets();
-            } catch (error) {
-                console.error("Asset duplication failed:", error);
-                alert("Could not duplicate this model.");
-                duplicateButton.disabled = false;
-            }
-        });
+            deleteButton.addEventListener("click", async () => {
+                if (!confirm(`Delete ${asset.filename} from the asset library?`)) {
+                    return;
+                }
 
-        actions.append(selectButton, duplicateButton);
-        item.append(info, actions);
-        list.appendChild(item);
+                deleteButton.disabled = true;
+
+                try {
+                    await assetLibrary.remove(asset.id);
+                    await refreshAssets();
+                } catch (error) {
+                    console.error("Asset deletion failed:", error);
+                    alert("Could not delete this asset.");
+                    deleteButton.disabled = false;
+                }
+            });
+
+            actions.append(addButton, deleteButton);
+            item.append(info, actions);
+            list.appendChild(item);
+        }
+    } catch (error) {
+        console.error("Asset library error:", error);
+        status.textContent = "Could not open asset library.";
+        count.textContent = "ASSETS: unavailable";
     }
 }
 
-openButton.addEventListener("click", () => {
+openButton.addEventListener("click", async () => {
     panel.hidden = !panel.hidden;
 
     if (!panel.hidden) {
-        refreshAssets();
+        await refreshAssets();
     }
 });
 
